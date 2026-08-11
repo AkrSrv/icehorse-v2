@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 import crud, models, schemas, database
 from auth import get_current_user
+from datetime import datetime, timedelta
+from email_service import send_invoice_email
 import os
 
 router = APIRouter(prefix="/clubs", tags=["clubs"])
@@ -170,7 +172,128 @@ def create_competition_for_club(
     current_user: models.User = Depends(get_current_user)
 ):
     get_club_if_owner(club_id, db, current_user)
-    return crud.create_competition(db=db, competition=competition, club_id=club_id)
+    
+    comp_data = competition.model_dump(exclude={"post_ids", "import_standards"})
+    db_competition = models.Competition(**comp_data, club_id=club_id)
+    db.add(db_competition)
+    db.commit()
+    db.refresh(db_competition)
+    
+    if competition.import_standards:
+        disciplines = [d.strip() for d in db_competition.discipline.split(",") if d.strip()]
+        if not disciplines:
+            disciplines = ["gait"]
+            
+        standards = []
+        if "dressage" in disciplines:
+            dressage_names = [
+                "Intro / bom / skridt-trav",
+                "LD1", "LD2",
+                "LC1", "LC2", "LC3",
+                "LB1", "LB2", "LB3",
+                "LA1", "LA2", "LA3", "LA4",
+                "MB0", "MB1", "MB2", "MB3",
+                "MA1", "MA2", "Prix St. Georges (PSG)", "Intermediaire I", "Intermediaire II",
+                "Grand Prix", "Grand Prix Special", "Kür"
+            ]
+            for name in dressage_names:
+                standards.append({
+                    "name": name,
+                    "coefficient": 1.0,
+                    "max_value": 10.0,
+                    "discipline": "dressage",
+                    "scoring_method": "percentage"
+                })
+                
+        if "jumping" in disciplines:
+            jumping_classes = [
+                ("Bom på jord / kryds / mini", "clear_round"),
+                ("LF", "faults_time"),
+                ("LE", "faults_time"),
+                ("LD", "faults_time"),
+                ("LC", "faults_time"),
+                ("LB1*", "jump_off"),
+                ("LB2*", "jump_off"),
+                ("LA1*", "jump_off"),
+                ("LA2*", "jump_off"),
+                ("MB1*", "jump_off"),
+                ("MB2*", "jump_off"),
+                ("MA", "jump_off"),
+                ("S", "jump_off")
+            ]
+            for name, method in jumping_classes:
+                standards.append({
+                    "name": name,
+                    "coefficient": 1.0,
+                    "max_value": 10.0,
+                    "discipline": "jumping",
+                    "scoring_method": method
+                })
+                
+        if "gait" in disciplines:
+            gait_names = ["T8 Tølt", "T1 Tølt", "4.1 Firgang", "5.1 Femgang"]
+            for name in gait_names:
+                standards.append({
+                    "name": name,
+                    "coefficient": 1.0,
+                    "max_value": 10.0,
+                    "discipline": "gait",
+                    "scoring_method": "standard"
+                })
+                
+        imported_posts = []
+        for std in standards:
+            existing_post = db.query(models.ClubPost).filter(
+                models.ClubPost.club_id == club_id,
+                models.ClubPost.name == std["name"],
+                models.ClubPost.discipline == std["discipline"]
+            ).first()
+            
+            if not existing_post:
+                new_post = models.ClubPost(
+                    club_id=club_id,
+                    name=std["name"],
+                    coefficient=std["coefficient"],
+                    max_value=std["max_value"],
+                    discipline=std["discipline"],
+                    scoring_method=std["scoring_method"]
+                )
+                db.add(new_post)
+                db.commit()
+                db.refresh(new_post)
+                imported_posts.append(new_post)
+            else:
+                imported_posts.append(existing_post)
+                
+        for post in imported_posts:
+            assoc = db.query(models.CompetitionPost).filter(
+                models.CompetitionPost.competition_id == db_competition.id,
+                models.CompetitionPost.club_post_id == post.id
+            ).first()
+            if not assoc:
+                db_assoc = models.CompetitionPost(
+                    competition_id=db_competition.id,
+                    club_post_id=post.id
+                )
+                db.add(db_assoc)
+        db.commit()
+        
+    elif competition.post_ids:
+        for pid in competition.post_ids:
+            assoc = db.query(models.CompetitionPost).filter(
+                models.CompetitionPost.competition_id == db_competition.id,
+                models.CompetitionPost.club_post_id == pid
+            ).first()
+            if not assoc:
+                db_assoc = models.CompetitionPost(
+                    competition_id=db_competition.id,
+                    club_post_id=pid
+                )
+                db.add(db_assoc)
+        db.commit()
+        
+    db.refresh(db_competition)
+    return db_competition
 
 @router.get("/{club_id}/competitions", response_model=List[schemas.CompetitionOut])
 def read_competitions_for_club(
@@ -180,6 +303,16 @@ def read_competitions_for_club(
 ):
     get_club_if_owner(club_id, db, current_user)
     return crud.get_competitions(db=db, club_id=club_id)
+
+@router.get("/{club_id}/competitions/{comp_id}", response_model=schemas.CompetitionOut)
+def read_competition(
+    club_id: int,
+    comp_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return get_competition_if_owner(comp_id, club_id, db, current_user)
+
 
 @router.delete("/{club_id}/competitions/{comp_id}")
 def delete_competition_for_club(
@@ -192,6 +325,130 @@ def delete_competition_for_club(
     if crud.delete_competition(db, comp_id):
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="Competition not found")
+
+@router.post("/{club_id}/competitions/{comp_id}/posts", response_model=schemas.CompetitionOut)
+def set_competition_posts(
+    club_id: int,
+    comp_id: int,
+    post_ids: List[int],
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    comp = get_competition_if_owner(comp_id, club_id, db, current_user)
+    crud.set_competition_posts(db, comp_id, post_ids)
+    db.refresh(comp)
+    return comp
+
+@router.post("/{club_id}/competitions/{comp_id}/import-standard-classes", response_model=schemas.CompetitionOut)
+def import_standard_classes(
+    club_id: int,
+    comp_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    comp = get_competition_if_owner(comp_id, club_id, db, current_user)
+    
+    # Parse disciplines
+    disciplines = [d.strip() for d in comp.discipline.split(",") if d.strip()]
+    if not disciplines:
+        disciplines = ["gait"]
+        
+    standards = []
+    if "dressage" in disciplines:
+        dressage_names = [
+            "Intro / bom / skridt-trav",
+            "LD1", "LD2",
+            "LC1", "LC2", "LC3",
+            "LB1", "LB2", "LB3",
+            "LA1", "LA2", "LA3", "LA4",
+            "MB0", "MB1", "MB2", "MB3",
+            "MA1", "MA2", "Prix St. Georges (PSG)", "Intermediaire I", "Intermediaire II",
+            "Grand Prix", "Grand Prix Special", "Kür"
+        ]
+        for name in dressage_names:
+            standards.append({
+                "name": name,
+                "coefficient": 1.0,
+                "max_value": 10.0,
+                "discipline": "dressage",
+                "scoring_method": "percentage"
+            })
+            
+    if "jumping" in disciplines:
+        jumping_classes = [
+            ("Bom på jord / kryds / mini", "clear_round"),
+            ("LF", "faults_time"),
+            ("LE", "faults_time"),
+            ("LD", "faults_time"),
+            ("LC", "faults_time"),
+            ("LB1*", "jump_off"),
+            ("LB2*", "jump_off"),
+            ("LA1*", "jump_off"),
+            ("LA2*", "jump_off"),
+            ("MB1*", "jump_off"),
+            ("MB2*", "jump_off"),
+            ("MA", "jump_off"),
+            ("S", "jump_off")
+        ]
+        for name, method in jumping_classes:
+            standards.append({
+                "name": name,
+                "coefficient": 1.0,
+                "max_value": 10.0,
+                "discipline": "jumping",
+                "scoring_method": method
+            })
+            
+    if "gait" in disciplines:
+        gait_names = ["T8 Tølt", "T1 Tølt", "4.1 Firgang", "5.1 Femgang"]
+        for name in gait_names:
+            standards.append({
+                "name": name,
+                "coefficient": 1.0,
+                "max_value": 10.0,
+                "discipline": "gait",
+                "scoring_method": "standard"
+            })
+            
+    imported_posts = []
+    for std in standards:
+        existing_post = db.query(models.ClubPost).filter(
+            models.ClubPost.club_id == club_id,
+            models.ClubPost.name == std["name"],
+            models.ClubPost.discipline == std["discipline"]
+        ).first()
+        
+        if not existing_post:
+            new_post = models.ClubPost(
+                club_id=club_id,
+                name=std["name"],
+                coefficient=std["coefficient"],
+                max_value=std["max_value"],
+                discipline=std["discipline"],
+                scoring_method=std["scoring_method"]
+            )
+            db.add(new_post)
+            db.commit()
+            db.refresh(new_post)
+            imported_posts.append(new_post)
+        else:
+            imported_posts.append(existing_post)
+            
+    for post in imported_posts:
+        assoc = db.query(models.CompetitionPost).filter(
+            models.CompetitionPost.competition_id == comp_id,
+            models.CompetitionPost.club_post_id == post.id
+        ).first()
+        if not assoc:
+            db_assoc = models.CompetitionPost(
+                competition_id=comp_id,
+                club_post_id=post.id
+            )
+            db.add(db_assoc)
+            
+    db.commit()
+    db.refresh(comp)
+    return comp
 
 # --- COMPETITION ATTACHMENTS (RIDERS/JUDGES/POSTS) ---
 @router.post("/{club_id}/competitions/{comp_id}/riders", response_model=schemas.CompetitionRiderOut)
@@ -291,7 +548,7 @@ def send_magic_link_email(
     # Afsend email via Simply.com (eller anden SMTP)
     try:
         from email_service import send_judge_magic_link_email
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        frontend_url = os.environ.get("FRONTEND_URL", "http://192.168.1.59:3000").rstrip("/")
         magic_link = f"{frontend_url}/?magic={comp_judge.magic_link_uuid}"
         send_judge_magic_link_email(
             to_email=club_judge.email,
@@ -334,3 +591,85 @@ def delete_post_from_club(
     if crud.delete_club_post(db, post_id, club_id):
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="ClubPost not found")
+
+# --- BILLING & ACTIVATION ---
+@router.get("/{club_id}/check-discount")
+def check_discount_code(
+    club_id: int,
+    code: str,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    get_club_if_owner(club_id, db, current_user)
+    discount = db.query(models.DiscountCode).filter(
+        models.DiscountCode.code == code,
+        models.DiscountCode.is_active == True
+    ).first()
+    if not discount:
+        raise HTTPException(status_code=400, detail="Ugyldig eller deaktiveret rabatkode.")
+    return {
+        "code": discount.code,
+        "discount_amount": discount.discount_amount
+    }
+
+@router.post("/{club_id}/competitions/{comp_id}/activate", response_model=schemas.CompetitionOut)
+def activate_competition(
+    club_id: int,
+    comp_id: int,
+    payload: schemas.ActivateCompetitionRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    club = get_club_if_owner(club_id, db, current_user)
+    if not club.contact_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Udfyld venligst klubbens kontakt-e-mail under Profil, før du kan aktivere stævnet, så vi kan sende en faktura."
+        )
+
+    comp = get_competition_if_owner(comp_id, club_id, db, current_user)
+    
+    if comp.is_active:
+        raise HTTPException(status_code=400, detail="Dette stævne er allerede aktiveret.")
+        
+    price = 299.0
+    
+    if payload.discount_code:
+        discount = db.query(models.DiscountCode).filter(
+            models.DiscountCode.code == payload.discount_code,
+            models.DiscountCode.is_active == True
+        ).first()
+        if not discount:
+            raise HTTPException(status_code=400, detail="Ugyldig eller deaktiveret rabatkode.")
+        
+        discount_pct = discount.discount_amount
+        if discount_pct >= 100.0:
+            price = 0.0
+        elif discount_pct > 0.0:
+            price = 299.0 * (1.0 - (discount_pct / 100.0))
+            
+    comp.is_active = True
+    comp.price_paid = price
+    
+    start_point = comp.date if comp.date else datetime.utcnow()
+    if start_point < datetime.utcnow():
+        start_point = datetime.utcnow()
+    comp.active_until = start_point + timedelta(days=14)
+    
+    db.commit()
+    db.refresh(comp)
+
+    # Send faktura email
+    try:
+        send_invoice_email(
+            to_email=club.contact_email,
+            club_name=club.name,
+            comp_name=comp.name,
+            price=price,
+            discount_code=payload.discount_code
+        )
+    except Exception as e:
+        print(f"Fejl ved afsendelse af faktura email: {e}")
+
+    return comp
+

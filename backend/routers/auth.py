@@ -30,7 +30,10 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 def register_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        if not verify_password(user.password, db_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Emailen er allerede registreret med en anden adgangskode.")
+        crud.create_club(db=db, club=schemas.ClubCreate(name=user.club_name), user_id=db_user.id)
+        return db_user
     return crud.create_user_and_club(db=db, user=user)
 
 @router.post("/forgot-password")
@@ -38,7 +41,7 @@ def forgot_password(req: schemas.ForgotPasswordRequest, db: Session = Depends(da
     user = crud.get_user_by_email(db, email=req.email)
     if user:
         token = create_reset_token(email=user.email)
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        frontend_url = os.environ.get("FRONTEND_URL", "http://192.168.1.59:3000").rstrip("/")
         reset_link = f"{frontend_url}/?reset_token={token}"
         try:
             send_password_reset_email(to_email=user.email, reset_link=reset_link)

@@ -56,9 +56,13 @@ class Competition(Base):
     active_until = Column(DateTime, nullable=True)
     price_paid = Column(Float, nullable=True)
 
+    discipline = Column(String, default="gait")
+    scoring_method = Column(String, default="standard")
+
     club = relationship("Club", back_populates="competitions")
     competition_judges = relationship("CompetitionJudge", back_populates="competition", cascade="all, delete-orphan")
     competition_riders = relationship("CompetitionRider", back_populates="competition", cascade="all, delete-orphan")
+    club_posts = relationship("ClubPost", secondary="competition_posts", back_populates="competitions")
 
 class ClubPost(Base):
     __tablename__ = "club_posts"
@@ -68,9 +72,15 @@ class ClubPost(Base):
     description = Column(Text, nullable=True)
     location = Column(String, nullable=True)
 
+    coefficient = Column(Float, default=1.0)
+    max_value = Column(Float, default=10.0)
+    discipline = Column(String, default="gait")
+    scoring_method = Column(String, default="standard")
+
     club = relationship("Club", back_populates="club_posts")
     scores = relationship("Score", back_populates="club_post", cascade="all, delete-orphan")
     competition_judges = relationship("CompetitionJudge", secondary="judge_posts", back_populates="club_posts")
+    competitions = relationship("Competition", secondary="competition_posts", back_populates="club_posts")
 
 class ClubRider(Base):
     __tablename__ = "club_riders"
@@ -104,6 +114,21 @@ class ClubJudge(Base):
     club = relationship("Club", back_populates="club_judges")
     competitions_participated = relationship("CompetitionJudge", back_populates="club_judge", cascade="all, delete-orphan")
 
+class CompetitionPost(Base):
+    __tablename__ = "competition_posts"
+    competition_id = Column(Integer, ForeignKey("competitions.id", ondelete="CASCADE"), primary_key=True)
+    club_post_id = Column(Integer, ForeignKey("club_posts.id", ondelete="CASCADE"), primary_key=True)
+
+class CompetitionRiderPost(Base):
+    __tablename__ = "competition_rider_posts"
+    id = Column(Integer, primary_key=True, index=True)
+    competition_rider_id = Column(Integer, ForeignKey("competition_riders.id", ondelete="CASCADE"))
+    club_post_id = Column(Integer, ForeignKey("club_posts.id", ondelete="CASCADE"))
+    start_number = Column(Integer, nullable=True)
+
+    competition_rider = relationship("CompetitionRider", back_populates="rider_posts")
+    club_post = relationship("ClubPost")
+
 class CompetitionRider(Base):
     __tablename__ = "competition_riders"
     id = Column(Integer, primary_key=True, index=True)
@@ -118,6 +143,7 @@ class CompetitionRider(Base):
     club_rider = relationship("ClubRider", back_populates="competitions_participated")
     horse = relationship("Horse", back_populates="competitions_participated")
     scores = relationship("Score", back_populates="competition_rider", cascade="all, delete-orphan")
+    rider_posts = relationship("CompetitionRiderPost", back_populates="competition_rider", cascade="all, delete-orphan")
 
 class CompetitionJudge(Base):
     __tablename__ = "competition_judges"
@@ -141,14 +167,125 @@ class JudgePost(Base):
 class Score(Base):
     __tablename__ = "scores"
     id = Column(Integer, primary_key=True, index=True)
-    club_post_id = Column(Integer, ForeignKey("club_posts.id"))
+    club_post_id = Column(Integer, ForeignKey("club_posts.id"), nullable=True)
     competition_judge_id = Column(Integer, ForeignKey("competition_judges.id"))
     competition_rider_id = Column(Integer, ForeignKey("competition_riders.id"))
     
-    points = Column(Float)
+    points = Column(Float, nullable=True)
     comment = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    # Nye felter til Dressur og Spring
+    deductions = Column(Float, default=0.0)
+    faults = Column(Integer, nullable=True)
+    time_seconds = Column(Float, nullable=True)
+    style_points = Column(Float, nullable=True)
+    is_eliminated = Column(Boolean, default=False)
+    is_retired = Column(Boolean, default=False)
+    is_clear = Column(Boolean, default=False)
+    jump_off_faults = Column(Integer, nullable=True)
+    jump_off_time = Column(Float, nullable=True)
 
     club_post = relationship("ClubPost", back_populates="scores")
     competition_judge = relationship("CompetitionJudge", back_populates="scores")
     competition_rider = relationship("CompetitionRider", back_populates="scores")
+
+
+class RuleSet(Base):
+    __tablename__ = "rulesets"
+    version = Column(String, primary_key=True)
+    valid_from = Column(DateTime, default=datetime.utcnow)
+    source_url = Column(String, nullable=True)
+    configuration = Column(Text)  # JSON text storing rules/consequences
+
+
+class ClassDefinition(Base):
+    __tablename__ = "class_definitions"
+    id = Column(Integer, primary_key=True, index=True)
+    discipline = Column(String)  # dressage, jumping, gait
+    code = Column(String)  # e.g., LA2, T8, V5, LB1
+    name = Column(String)
+    scoring_model = Column(String)  # e.g., dressage_percentage, jumping_a, etc.
+    configuration = Column(Text, nullable=True)  # JSON configuration for exercises/sections/parameters
+
+
+class Entry(Base):
+    __tablename__ = "entries"
+    id = Column(Integer, primary_key=True, index=True)
+    class_id = Column(Integer, ForeignKey("class_definitions.id"))
+    rider_id = Column(Integer, ForeignKey("club_riders.id"))
+    horse_id = Column(Integer, ForeignKey("horses.id"))
+    start_number = Column(Integer, nullable=True)
+    competition_id = Column(Integer, ForeignKey("competitions.id"))
+
+    class_def = relationship("ClassDefinition")
+    rider = relationship("ClubRider")
+    horse = relationship("Horse")
+    competition = relationship("Competition")
+    score_sheets = relationship("ScoreSheet", back_populates="entry", cascade="all, delete-orphan")
+    result = relationship("Result", uselist=False, back_populates="entry", cascade="all, delete-orphan")
+
+
+class Judge(Base):
+    __tablename__ = "judges"
+    id = Column(Integer, primary_key=True, index=True)
+    competition_id = Column(Integer, ForeignKey("competitions.id"))
+    name = Column(String)
+    position = Column(String, nullable=True)  # e.g., C, M, H or 1, 2, 3, 4, 5
+    magic_link_uuid = Column(String, unique=True, index=True)
+
+    competition = relationship("Competition")
+
+
+class ScoreSheet(Base):
+    __tablename__ = "score_sheets"
+    id = Column(Integer, primary_key=True, index=True)
+    entry_id = Column(Integer, ForeignKey("entries.id"))
+    judge_id = Column(Integer, ForeignKey("judges.id"))
+    status = Column(String, default="DRAFT")  # DRAFT, SUBMITTED, VALIDATED, APPROVED, ELIMINATED, DISQUALIFIED, WITHDRAWN, NO_SHOW
+    rule_version = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(String, nullable=True)
+    revision = Column(Integer, default=1)
+    change_reason = Column(String, nullable=True)
+
+    entry = relationship("Entry", back_populates="score_sheets")
+    judge = relationship("Judge")
+    items = relationship("ScoreItem", back_populates="score_sheet", cascade="all, delete-orphan")
+
+
+class ScoreItem(Base):
+    __tablename__ = "score_items"
+    id = Column(Integer, primary_key=True, index=True)
+    score_sheet_id = Column(Integer, ForeignKey("score_sheets.id"))
+    sequence = Column(Integer)
+    type = Column(String)  # mark, event, time, deduction
+    value = Column(Text)  # JSON representation of the item value (e.g. {"mark": 7.5, "comment": "..."})
+
+    score_sheet = relationship("ScoreSheet", back_populates="items")
+
+
+class Result(Base):
+    __tablename__ = "results"
+    entry_id = Column(Integer, ForeignKey("entries.id"), primary_key=True)
+    status = Column(String)  # APPROVED, ELIMINATED, etc.
+    primary_score = Column(Float)  # percentage, faults, or average mark
+    secondary_score = Column(Float, nullable=True)  # e.g., time or style points for tie breaker
+    tie_breaker = Column(Text, nullable=True)
+    calculation_trace = Column(Text, nullable=True)  # JSON trace of calculation steps
+
+    entry = relationship("Entry", back_populates="result")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(String)  # e.g., "ScoreSheet"
+    entity_id = Column(Integer)
+    revision = Column(Integer)
+    changed_at = Column(DateTime, default=datetime.utcnow)
+    changed_by = Column(String, nullable=True)
+    change_reason = Column(String, nullable=True)
+    snapshot = Column(Text)  # JSON representation of the entity before this change
+
+

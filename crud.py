@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import List
 import models, schemas
 import uuid
 import auth
@@ -25,7 +26,24 @@ def get_user_clubs(db: Session, user_id: int):
     return db.query(models.Club).filter(models.Club.user_id == user_id).all()
 
 def create_club(db: Session, club: schemas.ClubCreate, user_id: int):
-    db_club = models.Club(name=club.name, user_id=user_id)
+    existing_club = db.query(models.Club).filter(models.Club.user_id == user_id).first()
+    if existing_club:
+        db_club = models.Club(
+            name=club.name,
+            user_id=user_id,
+            contact_name=existing_club.contact_name,
+            phone=existing_club.phone,
+            contact_email=existing_club.contact_email,
+            address=existing_club.address,
+            zip_code=existing_club.zip_code,
+            city=existing_club.city,
+            logo_url=existing_club.logo_url,
+            facebook_url=existing_club.facebook_url,
+            instagram_url=existing_club.instagram_url,
+            website_url=existing_club.website_url
+        )
+    else:
+        db_club = models.Club(name=club.name, user_id=user_id)
     db.add(db_club)
     db.commit()
     db.refresh(db_club)
@@ -138,14 +156,29 @@ def delete_club_judge(db: Session, judge_id: int):
 # --- COMPETITION ATTACHMENTS ---
 def create_competition_rider(db: Session, comp_rider: schemas.CompetitionRiderCreate, competition_id: int):
     magic_token = str(uuid.uuid4())
+    rider_data = comp_rider.model_dump(exclude={"rider_posts"})
     db_comp_rider = models.CompetitionRider(
-        **comp_rider.model_dump(), 
+        **rider_data, 
         competition_id=competition_id,
         magic_link_uuid=magic_token
     )
     db.add(db_comp_rider)
     db.commit()
     db.refresh(db_comp_rider)
+    
+    # Store class registrations
+    for rp in comp_rider.rider_posts:
+        db_rp = models.CompetitionRiderPost(
+            competition_rider_id=db_comp_rider.id,
+            club_post_id=rp.club_post_id,
+            start_number=rp.start_number
+        )
+        db.add(db_rp)
+        
+    if comp_rider.rider_posts:
+        db.commit()
+        db.refresh(db_comp_rider)
+        
     return db_comp_rider
 
 def get_competition_riders(db: Session, competition_id: int):
@@ -158,6 +191,44 @@ def delete_competition_rider(db: Session, comp_rider_id: int):
         db.commit()
         return True
     return False
+
+def add_post_to_competition(db: Session, competition_id: int, club_post_id: int):
+    existing = db.query(models.CompetitionPost).filter(
+        models.CompetitionPost.competition_id == competition_id,
+        models.CompetitionPost.club_post_id == club_post_id
+    ).first()
+    if not existing:
+        db_comp_post = models.CompetitionPost(
+            competition_id=competition_id,
+            club_post_id=club_post_id
+        )
+        db.add(db_comp_post)
+        db.commit()
+    return True
+
+def remove_post_from_competition(db: Session, competition_id: int, club_post_id: int):
+    db_comp_post = db.query(models.CompetitionPost).filter(
+        models.CompetitionPost.competition_id == competition_id,
+        models.CompetitionPost.club_post_id == club_post_id
+    ).first()
+    if db_comp_post:
+        db.delete(db_comp_post)
+        db.commit()
+        return True
+    return False
+
+def set_competition_posts(db: Session, competition_id: int, post_ids: List[int]):
+    db.query(models.CompetitionPost).filter(
+        models.CompetitionPost.competition_id == competition_id
+    ).delete()
+    for pid in post_ids:
+        db_comp_post = models.CompetitionPost(
+            competition_id=competition_id,
+            club_post_id=pid
+        )
+        db.add(db_comp_post)
+    db.commit()
+    return True
 
 def create_competition_judge(db: Session, comp_judge: schemas.CompetitionJudgeCreate, competition_id: int):
     magic_token = str(uuid.uuid4())
@@ -252,3 +323,34 @@ def get_club_directory(db: Session, club_id: int):
         "riders": dir_riders,
         "judges": dir_judges
     }
+
+# --- SCORES ---
+def create_score(db: Session, score: schemas.ScoreCreate, judge_id: int):
+    db_score = models.Score(
+        **score.model_dump(),
+        competition_judge_id=judge_id
+    )
+    db.add(db_score)
+    db.commit()
+    db.refresh(db_score)
+    return db_score
+
+def update_score(db: Session, score_id: int, score_update: schemas.ScoreUpdate, judge_id: int):
+    db_score = db.query(models.Score).filter(models.Score.id == score_id, models.Score.competition_judge_id == judge_id).first()
+    if db_score:
+        update_data = score_update.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_score, key, value)
+        db.commit()
+        db.refresh(db_score)
+    return db_score
+
+def get_scores_for_competition(db: Session, competition_id: int):
+    # Retrieve all scores that belong to a specific competition
+    # We join via competition_rider
+    return db.query(models.Score).join(
+        models.CompetitionRider, models.Score.competition_rider_id == models.CompetitionRider.id
+    ).filter(
+        models.CompetitionRider.competition_id == competition_id
+    ).all()
+

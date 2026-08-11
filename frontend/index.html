@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Icehorse Competition Admin</title>
+    <title>EquiEvent Competition Admin</title>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("JS FEJL: " + message + "\nFil: " + source + "\nLinje: " + lineno);
+            return false;
+        };
+        window.onunhandledrejection = function(event) {
+            alert("UNHANDLED REJECTION: " + event.reason);
+        };
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -77,13 +86,13 @@
         .sidebar { width: 250px; background: rgba(0,0,0,0.2); padding: 2rem; border-right: 1px solid var(--glass-border); display: flex; flex-direction: column; }
         .main-content { flex: 1; padding: 2rem; overflow-y: auto; }
 
-        .tab-btn { text-align: left; margin-bottom: 0.5rem; padding: 1rem; border-radius: 8px; font-weight: 400; display: flex; align-items: center; gap: 10px; }
+        .tab-btn, .nav-guide-btn { text-align: left; margin-bottom: 0.5rem; padding: 1rem; border-radius: 8px; font-weight: 400; display: flex; align-items: center; gap: 10px; }
         .tab-btn.active { background: var(--primary); box-shadow: 0 4px 14px 0 rgba(244, 63, 94, 0.39); font-weight: 600; }
 
         .content-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 2rem; }
         
         .list-item { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
-        .badge { background: rgba(255,255,255,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.3rem; }
+        .badge { background: rgba(255,255,255,0.1); color: #ffffff; font-weight: bold; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.3rem; display: inline-block; }
 
         .flex-col-min { flex: 1; min-width: 300px; }
 
@@ -226,29 +235,36 @@
         <div id="club-selection-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
             <!-- Renderes via JS -->
         </div>
-        <div style="text-align: center; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
             <button type="button" class="btn btn-secondary" onclick="document.getElementById('create-new-club-modal').style.display='flex'">+ Opret en anden klub</button>
-            <button type="button" class="btn btn-danger" style="margin-left: 1rem;" onclick="logout()">Log ud</button>
+            <button type="button" class="btn btn-danger" onclick="logout()">Log ud</button>
         </div>
     </main>
 
     <!-- DASHBOARD -->
     <main id="dashboard" class="dashboard glass-panel" style="display: none;">
         <div class="mobile-topbar">
-            <h2>Icehorse</h2>
+            <div>
+                <h2>EquiEvent</h2>
+                <div id="active-club-name-topbar" style="display: none; font-size: 0.8rem; color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.1); padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid rgba(251, 191, 36, 0.2); display: inline-block; margin-top: 0.25rem;"></div>
+            </div>
             <button class="btn btn-secondary btn-sm" onclick="window.toggleSidebar()" style="background: transparent; border: 1px solid var(--glass-border);"><i class="fas fa-bars" style="font-size: 1.2rem;"></i></button>
         </div>
         <div id="sidebar-overlay" class="sidebar-overlay" onclick="window.toggleSidebar()"></div>
 
         <nav class="sidebar" id="sidebar-nav">
             <button class="mobile-close-btn" onclick="window.toggleSidebar()"><i class="fas fa-times"></i></button>
-            <h2 style="margin-bottom: 2rem; color: var(--primary); text-align: left;">Icehorse</h2>
+            <h2 style="margin-bottom: 0.25rem; color: var(--primary); text-align: left;">EquiEvent</h2>
+            <div id="active-club-name-sidebar" style="display: none; font-size: 0.9rem; color: #fbbf24; font-weight: bold; margin-bottom: 2rem; text-align: left; background: rgba(251, 191, 36, 0.1); padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.2); word-break: break-all;"></div>
             <div id="tabs" style="display: flex; flex-direction: column; gap: 0.5rem;">
                 <button class="btn btn-secondary tab-btn active" data-tab="competitions"><i class="fas fa-trophy"></i> Stævner</button>
                 <button class="btn btn-secondary tab-btn" data-tab="directory"><i class="fas fa-address-book"></i> Personkartotek</button>
                 <button class="btn btn-secondary tab-btn" data-tab="posts"><i class="fas fa-flag"></i> Poster / Klasser</button>
                 <button class="btn btn-secondary tab-btn" data-tab="profile"><i class="fas fa-user-cog"></i> Profil</button>
+                <button class="btn btn-secondary tab-btn" id="superadmin-tab-btn" data-tab="superadmin" style="display: none; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #3b82f6;"><i class="fas fa-user-shield"></i> Super Admin</button>
+                <a href="/guide.html" target="_blank" class="btn btn-secondary nav-guide-btn" style="text-decoration: none;"><i class="fas fa-question-circle"></i> Vejledning</a>
             </div>
+
             
             <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
                 <button class="btn btn-secondary btn-sm" onclick="showClubSelection()"><i class="fas fa-exchange-alt"></i> Skift / Opret Klub</button>
@@ -257,18 +273,52 @@
         </nav>
 
         <div class="main-content">
+            <!-- Aktiv Klub Banner -->
+            <div id="active-club-banner" style="display: none; background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.2); padding: 0.75rem 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; justify-content: space-between; align-items: center; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--primary); font-size: 1.5rem;"></i>
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; font-weight: 600;">Administrerer Klub</span>
+                        <strong id="active-club-banner-name" style="font-size: 1.1rem; color: white; font-weight: 600;"></strong>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="showClubSelection()" style="background: transparent; border: 1px solid var(--glass-border);"><i class="fas fa-exchange-alt"></i> Skift Klub</button>
+            </div>
             
             <!-- STÆVNER -->
             <div class="tab-content active" id="competitions-tab">
                 <div class="content-header">
-                    <h3>Stævner</h3>
-                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-comp-form').style.display='block'"><i class="fas fa-plus"></i> Nyt Stævne</button>
+                    <h3 id="competitions-header-title">Stævner</h3>
+                    <button id="new-comp-btn" class="btn btn-primary btn-sm" onclick="window.showCreateCompetitionForm()"><i class="fas fa-plus"></i> Nyt Stævne</button>
                 </div>
 
                 <form id="new-comp-form" style="display: none; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
                     <div class="input-group">
                         <label>Navn</label>
                         <input type="text" id="comp-name" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Discipliner</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--glass-border); margin-bottom: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; cursor: pointer; color: white;">
+                                <input type="checkbox" name="comp-discipline-cb" value="gait" checked style="width: auto; margin: 0;">
+                                <span>Gangart (Islandske Heste)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; cursor: pointer; color: white;">
+                                <input type="checkbox" name="comp-discipline-cb" value="dressage" style="width: auto; margin: 0;">
+                                <span>Dressur (Traditionel)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; cursor: pointer; color: white;">
+                                <input type="checkbox" name="comp-discipline-cb" value="jumping" style="width: auto; margin: 0;">
+                                <span>Springning (Traditionel)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-group" id="scoring-method-group" style="display: none;">
+                        <label>Bedømmelsesmetode</label>
+                        <select id="comp-scoring-method">
+                            <option value="standard" selected>Standard (Karakter sum/gns)</option>
+                        </select>
                     </div>
                     <div class="input-group">
                         <label>Dato</label>
@@ -288,7 +338,25 @@
                         <label>Lokation</label>
                         <input type="text" id="comp-location" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Opret</button>
+                    <div id="new-comp-classes-section" style="margin-top: 1rem; border-top: 1px dashed var(--glass-border); padding-top: 1rem; margin-bottom: 1rem;">
+                        <label style="font-weight: bold; margin-bottom: 0.5rem; display: block; color: #fbbf24;">Klasser til stævnet</label>
+                        <div style="margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; cursor: pointer; color: white;">
+                                <input type="checkbox" id="comp-import-standards-cb" checked style="width: auto; margin: 0;" onchange="window.toggleNewCompCustomClasses()">
+                                <span>Opret og tilknyt standardklasser automatisk (LD, LC, LA etc. for de valgte discipliner)</span>
+                            </label>
+                        </div>
+                        <div id="comp-creation-custom-classes-container" style="display: none; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--glass-border); max-height: 150px; overflow-y: auto;">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Vælg blandt dine eksisterende klubklasser:</span>
+                            <div id="comp-creation-custom-classes-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                                <!-- Fyldes dynamisk af JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button type="submit" class="btn btn-primary">Opret</button>
+                        <button type="button" class="btn btn-secondary" onclick="window.showCompetitionsList()">Annuller</button>
+                    </div>
                 </form>
 
                 <div id="competitions-list" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -306,14 +374,43 @@
                             <button class="btn btn-primary btn-sm" onclick="copyPublicLink()" style="background: #fbbf24; color: #0f172a; border: none; font-weight: bold;"><i class="fas fa-link"></i> Kopiér Offentligt Link</button>
                             <button class="btn btn-secondary btn-sm" onclick="window.open('?leaderboard=' + window.currentCompId, '_blank')" style="border: 1px solid #fbbf24; color: #fbbf24;"><i class="fas fa-external-link-alt"></i> Vis</button>
                             <button class="btn btn-secondary btn-sm" onclick="deleteCompetition()" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);"><i class="fas fa-trash"></i> Slet</button>
-                            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('competition-details').style.display='none'; document.getElementById('competitions-list').style.display='flex'; document.getElementById('new-comp-form').style.display='none';"><i class="fas fa-times"></i> Luk</button>
+                            <button class="btn btn-secondary btn-sm" onclick="window.showCompetitionsList()"><i class="fas fa-times"></i> Luk</button>
                         </div>
                     </div>
                     
+                    <!-- BETALINGS BANNER -->
+                    <div id="comp-payment-banner" style="display: none; background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25); border-left: 4px solid #fbbf24; padding: 1.25rem 1.5rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-exclamation-triangle" style="color: #fbbf24; font-size: 1.5rem;"></i>
+                            <div>
+                                <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er inaktivt (Ikke betalt)</h4>
+                                <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Dommere vil ikke kunne afgive karakterer, før stævnet aktiveres. Pris: 299 DKK.</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="openPaymentModal()" style="background: #fbbf24; color: #0f172a; border: none; font-weight: bold;"><i class="fas fa-credit-card"></i> Aktiver Stævne</button>
+                    </div>
+                    
                     <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                        <button class="btn btn-secondary detail-tab-btn active" onclick="showCompTab('riders')"><i class="fas fa-horse"></i> Tilknyttede Ryttere</button>
+                        <button class="btn btn-secondary detail-tab-btn active" onclick="showCompTab('classes')"><i class="fas fa-list"></i> Klasser / Poster</button>
+                        <button class="btn btn-secondary detail-tab-btn" onclick="showCompTab('riders')"><i class="fas fa-horse"></i> Tilknyttede Ryttere</button>
                         <button class="btn btn-secondary detail-tab-btn" onclick="showCompTab('judges')"><i class="fas fa-gavel"></i> Tilknyttede Dommere & Poster</button>
                         <button class="btn btn-secondary detail-tab-btn" onclick="showCompTab('leaderboard')"><i class="fas fa-list-ol"></i> Resultater / Leaderboard</button>
+                    </div>
+
+                    <!-- COMP CLASSES -->
+                    <div id="comp-classes-section" style="display: none;">
+                        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                                <h4 style="margin: 0;">Administrér klasser for dette stævne</h4>
+                                <button class="btn btn-primary btn-sm" type="button" onclick="importStandardClasses()" style="background: #10b981; border: none; font-weight: bold;"><i class="fas fa-download"></i> Importer standardklasser</button>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Vælg hvilke af klubbens oprettede klasser/poster der skal afvikles ved dette stævne. Du kan også klikke på "Importer standardklasser" for automatisk at oprette standardklasser for de valgte discipliner.</p>
+                            
+                            <div id="comp-classes-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 6px; border: 1px solid var(--glass-border);">
+                                <!-- Bliver fyldt af JS -->
+                            </div>
+                            <button class="btn btn-primary" type="button" onclick="saveCompetitionClasses()"><i class="fas fa-save"></i> Gem Klassevalg</button>
+                        </div>
                     </div>
 
                     <!-- COMP RIDERS -->
@@ -334,8 +431,10 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label>Startnummer (Valgfrit)</label>
-                                <input type="number" id="comp-start-number">
+                                <label>Vælg klasser & startnumre</label>
+                                <div id="comp-rider-classes-container" style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 6px; border: 1px solid var(--glass-border); max-height: 200px; overflow-y: auto;">
+                                    <!-- Bliver fyldt af JS -->
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary">Tilknyt Rytter</button>
                         </form>
@@ -413,8 +512,35 @@
                         <form id="club-post-form" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
                             <h4 style="margin-bottom: 1rem;">Opret Ny Post / Klasse</h4>
                             <div class="input-group">
-                                <label>Navn (F.eks. T.1)</label>
+                                <label>Navn (F.eks. LC1 el. 80 cm)</label>
                                 <input type="text" id="club-post-name" required>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <div class="input-group" style="flex: 1;">
+                                    <label>Disciplin</label>
+                                    <select id="club-post-discipline" onchange="window.updateClubPostScoringMethodOptions(); window.renderClubPosts();" required>
+                                        <option value="all" selected>Alle poster/klasser</option>
+                                        <option value="gait">Gangart (Islandske Heste)</option>
+                                        <option value="dressage">Dressur (Traditionel)</option>
+                                        <option value="jumping">Springning (Traditionel)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group" style="flex: 1;">
+                                    <label>Bedømmelsesmetode</label>
+                                    <select id="club-post-scoring-method" required>
+                                        <option value="standard" selected>Standard (sum/gns)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <div class="input-group" style="flex: 1;">
+                                    <label>Koefficient (Dressur)</label>
+                                    <input type="number" step="0.1" id="club-post-coefficient" value="1.0">
+                                </div>
+                                <div class="input-group" style="flex: 1;">
+                                    <label>Max karakter</label>
+                                    <input type="number" step="0.5" id="club-post-max-value" value="10.0">
+                                </div>
                             </div>
                             <div class="input-group">
                                 <label>Lokation (Valgfri)</label>
@@ -472,6 +598,145 @@
                     <button type="submit" class="btn btn-primary">Gem Profil</button>
                     <p id="prof-msg" style="color: #10b981; margin-top: 1rem; display: none;">Profil gemt!</p>
                 </form>
+
+                <div style="margin-top: 3rem; border-top: 1px solid var(--glass-border); padding-top: 2rem; max-width: 500px;">
+                    <h3 style="margin-bottom: 0.5rem; color: var(--primary);">Tilknyt endnu en klub</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">
+                        Her kan du oprette en ny klub under din nuværende profil. Den nye klub vil automatisk overtage denne klubs stamdata (adresse, telefon, kontaktperson osv.).
+                    </p>
+                    <form id="profile-add-club-form">
+                        <div class="input-group">
+                            <label>Ny Klubs Navn</label>
+                            <input type="text" id="prof-new-club-name" required placeholder="Indtast navnet på den nye klub">
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="margin-top: 1rem;">+ Opret klub</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SUPER ADMIN DASHBOARD -->
+            <div class="tab-content" id="superadmin-tab" style="display: none;">
+                <div class="content-header">
+                    <h3>Super Admin Dashboard <span style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.2); color: #3b82f6; padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.3); margin-left: 0.5rem;">System Ejer</span></h3>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button class="btn btn-secondary sa-tab-btn active" id="sa-tab-stats-btn" onclick="showSaTab('stats')"><i class="fas fa-chart-line"></i> Statistik & Rengøring</button>
+                    <button class="btn btn-secondary sa-tab-btn" id="sa-tab-discount-btn" onclick="showSaTab('discount')"><i class="fas fa-percentage"></i> Administrér Rabatkoder</button>
+                </div>
+
+                <!-- SA STATS TAB -->
+                <div id="sa-stats-section">
+                    <!-- Overordnede tal -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(59, 130, 246, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Klubber i alt</div>
+                            <h2 id="sa-stat-clubs" style="font-size: 2.5rem; color: #3b82f6; margin: 0.5rem 0 0 0;">0</h2>
+                        </div>
+                        <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(16, 185, 129, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Aktive/Betalte Stævner</div>
+                            <h2 id="sa-stat-active-comps" style="font-size: 2.5rem; color: #10b981; margin: 0.5rem 0 0 0;">0</h2>
+                        </div>
+                        <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(244, 63, 94, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Inaktive Stævner</div>
+                            <h2 id="sa-stat-inactive-comps" style="font-size: 2.5rem; color: #f43f5e; margin: 0.5rem 0 0 0;">0</h2>
+                        </div>
+                        <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(251, 191, 36, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Overskredet startdato</div>
+                            <h2 id="sa-stat-outdated-comps" style="font-size: 2.5rem; color: #fbbf24; margin: 0.5rem 0 0 0;">0</h2>
+                        </div>
+                    </div>
+
+                    <!-- Kluboversigt -->
+                    <div class="glass-panel" style="margin-bottom: 2rem; border-radius: 12px;">
+                        <h4 style="margin-bottom: 1rem; color: #ffffff;"><i class="fas fa-shield-alt"></i> Statistik pr. Klub</h4>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
+                                        <th style="padding: 0.75rem;">Klub Navn</th>
+                                        <th style="padding: 0.75rem;">Ejer E-mail</th>
+                                        <th style="padding: 0.75rem;">Oprettede Stævner</th>
+                                        <th style="padding: 0.75rem;">Betalte/Aktive</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sa-club-stats-list">
+                                    <!-- Indsættes dynamisk via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Stævneoversigt & Oprydning -->
+                    <div class="glass-panel" style="border-radius: 12px;">
+                        <h4 style="margin-bottom: 0.5rem; color: #ffffff;"><i class="fas fa-broom"></i> Stævneadministration & Oprydning</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Her kan du slette eller manuelt aktivere stævner på tværs af systemet. Inaktive stævner med overskredet dato bør slettes for at frigøre plads.</p>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
+                                        <th style="padding: 0.75rem;">Stævnenavn</th>
+                                        <th style="padding: 0.75rem;">Klub</th>
+                                        <th style="padding: 0.75rem;">Dato</th>
+                                        <th style="padding: 0.75rem;">Status</th>
+                                        <th style="padding: 0.75rem;">Betalt beløb</th>
+                                        <th style="padding: 0.75rem; text-align: right;">Handling</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sa-comp-stats-list">
+                                    <!-- Indsættes dynamisk via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SA DISCOUNT TAB -->
+                <div id="sa-discount-section" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; align-items: start;">
+                        <!-- Opret form -->
+                        <div class="glass-panel" style="border-radius: 12px;">
+                            <h4 style="margin-bottom: 1.5rem; color: #ffffff;">Opret ny rabatkode</h4>
+                            <form id="sa-discount-form">
+                                <div class="input-group">
+                                    <label>Rabatkode (fx 'SOMMER50')</label>
+                                    <input type="text" id="sa-discount-code" required placeholder="Indtast kode" style="text-transform: uppercase;">
+                                </div>
+                                <div class="input-group">
+                                    <label>Rabatprocent</label>
+                                    <select id="sa-discount-pct" required style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 8px; color: white;">
+                                        <option value="10">10% rabat</option>
+                                        <option value="25">25% rabat</option>
+                                        <option value="50">50% rabat</option>
+                                        <option value="75">75% rabat</option>
+                                        <option value="100">100% rabat (Gratis stævne)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Opret rabatkode</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Liste -->
+                        <div class="glass-panel" style="border-radius: 12px;">
+                            <h4 style="margin-bottom: 1.5rem; color: #ffffff;">Aktive rabatkoder</h4>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
+                                            <th style="padding: 0.75rem;">Kode</th>
+                                            <th style="padding: 0.75rem;">Rabat</th>
+                                            <th style="padding: 0.75rem;">Status</th>
+                                            <th style="padding: 0.75rem; text-align: right;">Handling</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sa-discount-list">
+                                        <!-- Indsættes dynamisk via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -557,6 +822,94 @@
         </div>
     </div>
 
+    <!-- MODAL: BETALING & AKTIVERING -->
+    <div id="payment-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1001; justify-content: center; align-items: center; padding: 1rem;">
+        <div class="glass-panel" style="max-width: 480px; width: 100%; overflow-y: auto; max-height: 95vh; border-color: rgba(251, 191, 36, 0.3); border-radius: 20px;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(251, 191, 36, 0.1); border: 2px solid #fbbf24; display: flex; justify-content: center; align-items: center; margin: 0 auto 1rem auto;">
+                    <i class="fas fa-credit-card" style="color: #fbbf24; font-size: 1.5rem;"></i>
+                </div>
+                <h3 style="margin: 0; color: #ffffff; font-size: 1.4rem;">Aktiver Stævne</h3>
+                <p id="pay-comp-name" style="color: var(--text-secondary); margin: 0.25rem 0 0 0; font-size: 0.9rem;">Klub Mesterskab 2026</p>
+            </div>
+            
+            <!-- Trin 1: Opsummering & Rabat -->
+            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; border: 1px solid var(--glass-border); margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    <span>Aktiveringslicens (Engangspris)</span>
+                    <strong style="color: white;">299,00 DKK</strong>
+                </div>
+                <div id="pay-discount-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem; color: #10b981;">
+                    <span>Rabat (<span id="pay-discount-pct-label">0</span>%)</span>
+                    <strong>-<span id="pay-discount-amount-label">0,00</span> DKK</strong>
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 0.75rem 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold;">
+                    <span>At betale</span>
+                    <span style="color: #fbbf24;"><span id="pay-total-amount-label">299,00</span> DKK</span>
+                </div>
+            </div>
+
+            <!-- Rabatkode felt -->
+            <div class="input-group" style="margin-bottom: 1.5rem;">
+                <label>Har du en rabatkode?</label>
+                <div style="display: flex; gap: 0.5rem; width: 100%;">
+                    <input type="text" id="pay-discount-code-input" placeholder="Indtast rabatkode" style="flex: 2; text-transform: uppercase; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.75rem 1.25rem; font-size: 1rem; width: auto; min-width: 0;">
+                    <button class="btn btn-secondary" type="button" onclick="applyDiscountCode()" style="flex: 1; background: rgba(255,255,255,0.08); border-color: var(--glass-border); font-size: 1rem; padding: 0.75rem 1rem; width: auto; white-space: nowrap;">Anvend</button>
+                </div>
+                <p id="pay-discount-error" style="color: #f43f5e; font-size: 0.8rem; margin: 0.25rem 0 0 0; display: none;"></p>
+                <p id="pay-discount-success" style="color: #10b981; font-size: 0.8rem; margin: 0.25rem 0 0 0; display: none;">Rabatkode godkendt!</p>
+            </div>
+
+            <!-- Betalingskort Formular (Simuleret) -->
+            <form id="payment-form" onsubmit="submitPayment(event)">
+                <div id="pay-card-details-section">
+                    <h4 style="margin-bottom: 1rem; color: white; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-lock"></i> Sikker kortbetaling (Simuleret)</h4>
+                    
+                    <!-- Kortlayout mockup -->
+                    <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: space-between; height: 130px; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <i class="fas fa-sim-card" style="color: #fbbf24; font-size: 1.8rem;"></i>
+                            <span style="font-weight: bold; color: rgba(255,255,255,0.8); font-size: 0.9rem; font-style: italic;">VISA / Mastercard</span>
+                        </div>
+                        <div style="font-family: monospace; font-size: 1.1rem; color: white; letter-spacing: 2px;">•••• •••• •••• ••••</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-secondary);">
+                            <div>
+                                <div style="text-transform: uppercase; font-size: 0.6rem;">Kortholder</div>
+                                <div style="color: white; font-weight: bold;">RIDEKLUB ADMIN</div>
+                            </div>
+                            <div>
+                                <div style="text-transform: uppercase; font-size: 0.6rem;">Udløber</div>
+                                <div style="color: white; font-weight: bold;">MM/ÅÅ</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Kortnummer</label>
+                        <input type="text" id="pay-card-number" placeholder="4000 1234 5678 9010" required>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="input-group" style="flex: 1;">
+                            <label>Udløbsdato</label>
+                            <input type="text" id="pay-card-expiry" placeholder="MM/ÅÅ" required maxlength="5">
+                        </div>
+                        <div class="input-group" style="flex: 1;">
+                            <label>CVC</label>
+                            <input type="text" id="pay-card-cvc" placeholder="123" required maxlength="3">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" id="pay-submit-btn" style="flex: 2; background: #fbbf24; color: #0f172a; border: none; font-weight: bold;"><i class="fas fa-check-circle"></i> Gennemfør & Aktiver</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closePaymentModal()">Annuller</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MAGIC JUDGE SECTION -->
     <main id="magic-judge-section" class="glass-panel" style="display: none; max-width: 600px; margin: 1rem auto; padding: 2rem;">
         <div style="text-align: center; margin-bottom: 2rem;">
@@ -592,10 +945,65 @@
                 <input type="hidden" id="mj-score-id">
                 <h4 id="mj-selected-rider-name" style="margin-bottom: 1rem; color: white;"></h4>
                 
-                <div class="input-group">
-                    <label>Point (0.00 - 10.00)</label>
-                    <input type="number" step="0.01" min="0" max="10" id="mj-points" required style="font-size: 1.5rem; text-align: center; color: #10b981; font-weight: bold;">
+                <div class="input-group" id="mj-points-group">
+                    <label id="mj-points-label">Point (0.00 - 10.00)</label>
+                    <input type="number" step="0.01" min="0" max="10" id="mj-points" style="font-size: 1.5rem; text-align: center; color: #10b981; font-weight: bold;">
                 </div>
+                
+                <div class="input-group" id="mj-deductions-group" style="display: none;">
+                    <label>Fejl/Fradrag (Samlet for programmet, f.eks. -2 point)</label>
+                    <input type="number" step="1" min="0" id="mj-deductions" value="0" style="font-size: 1.25rem; text-align: center; color: #ef4444; font-weight: bold;">
+                </div>
+
+                <div id="mj-jumping-fields" style="display: none; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="mj-jump-status" onchange="window.toggleJumpingStatusFields()">
+                            <option value="completed">Gennemført</option>
+                            <option value="clear">Fejlfri (Clear)</option>
+                            <option value="eliminated">Elimineret</option>
+                            <option value="retired">Udgået / Retired</option>
+                        </select>
+                    </div>
+                    <div id="mj-jumping-stats-fields">
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                            <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                                <label>Nedslag (á 4 fejl)</label>
+                                <input type="number" min="0" id="mj-jump-faults-nedslag" value="0">
+                            </div>
+                            <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                                <label>Refuseringer</label>
+                                <input type="number" min="0" id="mj-jump-faults-refus" value="0">
+                            </div>
+                            <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                                <label>Tidsfejl</label>
+                                <input type="number" min="0" id="mj-jump-faults-time" value="0">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Ridetid (Sekunder, f.eks. 68.45)</label>
+                            <input type="number" step="0.01" min="0" id="mj-jump-time" value="0.0">
+                        </div>
+                        <div class="input-group" id="mj-jump-style-group" style="display: none;">
+                            <label>Stilkarakter (0.0 - 10.0)</label>
+                            <input type="number" step="0.1" min="0" max="10" id="mj-jump-style" value="0.0" style="color: #fbbf24; font-weight: bold; text-align: center; font-size: 1.25rem;">
+                        </div>
+                        <div id="mj-jump-off-group" style="display: none; border-top: 1px dashed var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
+                            <h5 style="margin-bottom: 0.5rem; color: #fbbf24;">Omspringning</h5>
+                            <div style="display: flex; gap: 1rem;">
+                                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                                    <label>Omsp. fejl</label>
+                                    <input type="number" min="0" id="mj-jump-off-faults" value="0">
+                                </div>
+                                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                                    <label>Omsp. tid (sek.)</label>
+                                    <input type="number" step="0.01" min="0" id="mj-jump-off-time" value="0.0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="input-group">
                     <label>Kommentar / Gode råd (Valgfrit men anbefales)</label>
                     <textarea id="mj-comment" rows="4" style="width: 100%; padding: 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; color: white; resize: vertical;"></textarea>
@@ -629,6 +1037,9 @@
     </main>
 
     <script type="module" src="/scores.js"></script>
+    <script type="module" src="/v1_judging.js"></script>
     <script type="module" src="/main.js"></script>
+    <script type="module" src="/support-chat.js"></script>
 </body>
+
 </html>

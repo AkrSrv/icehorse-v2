@@ -1,5 +1,26 @@
 window.activeClubId = null;
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+let API_BASE = 'https://api.equievent.dk';
+try {
+    const host = window.location.hostname;
+    if (host) {
+        if (host.includes('equievent.online')) {
+            API_BASE = 'https://api.equievent.online';
+        } else if (host.includes('equievent.dk')) {
+            API_BASE = 'https://api.equievent.dk';
+        } else if (host.includes('alkdata.dk')) {
+            API_BASE = 'https://api.alkdata.dk';
+        } else {
+            API_BASE = `http://${host}:8082`;
+        }
+    }
+} catch (e) {
+    const host = window.location.hostname;
+    if (host) {
+        API_BASE = `http://${host}:8082`;
+    }
+}
+
+
 
 window.toggleSidebar = function() {
     const sidebar = document.getElementById('sidebar-nav');
@@ -22,11 +43,68 @@ window.closeSidebar = function() {
 window.copyPublicLink = function() {
     if (!window.currentCompId) return;
     const url = `${window.location.origin}/?leaderboard=${window.currentCompId}`;
-    navigator.clipboard.writeText(url).then(() => {
-        alert('Offentligt link er kopieret!\nDu kan nu indsætte det på Facebook, hjemmesider eller i en mail.');
-    }).catch(err => {
-        prompt('Kopiér dette link manuelt:', url);
-    });
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Offentligt link er kopieret!\nDu kan nu indsætte det på Facebook, hjemmesider eller i en mail.');
+        }).catch(err => {
+            prompt('Kopiér dette link manuelt:', url);
+        });
+    } else {
+        // Fallback for non-secure HTTP contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                alert('Offentligt link er kopieret!\nDu kan nu indsætte det på Facebook, hjemmesider eller i en mail.');
+            } else {
+                prompt('Kopiér dette link manuelt:', url);
+            }
+        } catch (err) {
+            prompt('Kopiér dette link manuelt:', url);
+        }
+        document.body.removeChild(textArea);
+    }
+};
+
+window.copyJudgeLink = function(uuid) {
+    const url = `${window.location.origin}/?magic=${uuid}`;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Dommer-link er kopieret!\nDu kan nu sende det til dommeren.');
+        }).catch(err => {
+            prompt('Kopiér dette link manuelt:', url);
+        });
+    } else {
+        // Fallback for non-secure HTTP contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                alert('Dommer-link er kopieret!\nDu kan nu sende det til dommeren.');
+            } else {
+                prompt('Kopiér dette link manuelt:', url);
+            }
+        } catch (err) {
+            prompt('Kopiér dette link manuelt:', url);
+        }
+        document.body.removeChild(textArea);
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Auth Logic
     function getToken() {
-        return localStorage.getItem('icehorse_token') || sessionStorage.getItem('icehorse_token');
+        return localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
     }
 
     if (getToken()) {
@@ -97,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (forgotPasswordForm) {
         forgotPasswordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('forgot-email').value;
+            const email = document.getElementById('forgot-email').value.trim();
             const btn = document.getElementById('forgot-btn');
             const msg = document.getElementById('forgot-msg');
             
@@ -127,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
+        const email = document.getElementById('login-email').value.trim();
         const password = document.getElementById('login-password').value;
         const remember = document.getElementById('login-remember').checked;
 
@@ -145,18 +223,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 if (remember) {
-                    localStorage.setItem('icehorse_token', data.access_token);
+                    localStorage.setItem('equievent_token', data.access_token);
                 } else {
-                    sessionStorage.setItem('icehorse_token', data.access_token);
+                    sessionStorage.setItem('equievent_token', data.access_token);
                 }
                 document.getElementById('login-error').style.display = 'none';
                 checkUserClubs();
             } else {
-                document.getElementById('login-error').style.display = 'block';
+                const errorData = await response.json().catch(() => ({}));
+                const detail = errorData.detail || "Forkert email eller adgangskode.";
+                const errElement = document.getElementById('login-error');
+                errElement.innerText = detail === "Incorrect email or password" ? "Forkert email eller adgangskode." : detail;
+                errElement.style.display = 'block';
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('login-error').style.display = 'block';
+            const errElement = document.getElementById('login-error');
+            errElement.innerText = "Kunne ikke forbinde til serveren (" + err.message + "). Sørg for at API-serveren kører på " + API_BASE;
+            errElement.style.display = 'block';
         }
     });
 
@@ -165,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const club_name = document.getElementById('reg-name').value;
-            const email = document.getElementById('reg-email').value;
+            const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
 
             try {
@@ -176,25 +260,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (response.ok) {
-                    alert("Bruger og klub oprettet! Du kan nu logge ind.");
-                    document.getElementById('register-section').style.display = 'none';
-                    document.getElementById('login-section').style.display = 'block';
-                    document.getElementById('login-email').value = email;
-                    document.getElementById('login-password').value = password;
+                    localStorage.setItem('just_registered_club', 'true');
+                    
+                    // Auto-login after registration
+                    try {
+                        const formData = new URLSearchParams();
+                        formData.append('username', email);
+                        formData.append('password', password);
+
+                        const loginResp = await fetch(`${API_BASE}/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: formData
+                        });
+
+                        if (loginResp.ok) {
+                            const loginData = await loginResp.json();
+                            localStorage.setItem('equievent_token', loginData.access_token);
+                            document.getElementById('register-section').style.display = 'none';
+                            await checkUserClubs();
+                        } else {
+                            // Fallback: If auto-login fails, redirect to standard login form
+                            document.getElementById('register-section').style.display = 'none';
+                            document.getElementById('login-section').style.display = 'block';
+                            document.getElementById('login-email').value = email;
+                            document.getElementById('login-password').value = password;
+                        }
+                    } catch (err) {
+                        console.error("Auto-login error:", err);
+                        document.getElementById('register-section').style.display = 'none';
+                        document.getElementById('login-section').style.display = 'block';
+                        document.getElementById('login-email').value = email;
+                        document.getElementById('login-password').value = password;
+                    }
                 } else {
-                    document.getElementById('reg-error').style.display = 'block';
+                    const errorData = await response.json().catch(() => ({}));
+                    const detail = errorData.detail || "Fejl ved oprettelse (måske findes emailen allerede).";
+                    const errElement = document.getElementById('reg-error');
+                    errElement.innerText = detail;
+                    errElement.style.display = 'block';
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('reg-error').style.display = 'block';
+                const errElement = document.getElementById('reg-error');
+                errElement.innerText = "Kunne ikke forbinde til serveren (" + err.message + "). Sørg for at API-serveren kører på " + API_BASE;
+                errElement.style.display = 'block';
             }
         });
+    }
+
+    // Helper til at afkode JWT payload
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch(e) {
+            return null;
+        }
     }
 
     // MULTI-KLUB LOGIK
     async function checkUserClubs() {
         const token = getToken();
         if(!token) return;
+
+        const payload = parseJwt(token);
+        const email = payload ? payload.sub : null;
+        const saBtn = document.getElementById('superadmin-tab-btn');
+        if (saBtn) {
+            if (email === 'arno@alkdata.dk' || email === 'arnolkristiansen@outlook.com') {
+                saBtn.style.display = 'block';
+            } else {
+                saBtn.style.display = 'none';
+            }
+        }
 
         try {
             const response = await fetch(`${API_BASE}/clubs/me`, {
@@ -206,7 +349,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Måske vise "Opret din første klub" skærm
                     showClubSelectionSection([]);
                 } else if(clubs.length === 1) {
-                    selectClub(clubs[0].id);
+                    const justCreated = localStorage.getItem('just_registered_club') === 'true';
+                    localStorage.removeItem('just_registered_club');
+                    selectClub(clubs[0].id, justCreated);
                 } else {
                     showClubSelectionSection(clubs);
                 }
@@ -237,9 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.selectClub = function(id) {
+    window.selectClub = function(id, goToProfile = false) {
         window.activeClubId = id;
         showDashboard();
+        if (goToProfile) {
+            window.switchTab('profile');
+        }
     };
 
     window.showClubSelection = function() {
@@ -260,15 +408,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newClub = await response.json();
                 document.getElementById('create-new-club-modal').style.display = 'none';
                 document.getElementById('create-new-club-form').reset();
-                selectClub(newClub.id);
+                selectClub(newClub.id, true);
             }
         } catch(err) { console.error(err); }
     });
 
     window.logout = function() {
-        localStorage.removeItem('icehorse_token');
-        sessionStorage.removeItem('icehorse_token');
+        localStorage.removeItem('equievent_token');
+        sessionStorage.removeItem('equievent_token');
         window.activeClubId = null;
+        
+        // Hide active club banner on logout
+        const activeClubBanner = document.getElementById('active-club-banner');
+        if (activeClubBanner) activeClubBanner.style.display = 'none';
+
         clubSelectionSection.style.display = 'none';
         showLogin();
     };
@@ -282,23 +435,41 @@ document.addEventListener('DOMContentLoaded', () => {
         loginSection.style.display = 'none';
         clubSelectionSection.style.display = 'none';
         dashboardSection.style.display = 'flex';
+        
+        // Reset active competition state and hide details panel when switching clubs
+        window.showCompetitionsList();
+
         fetchProfile();
         fetchGlobalDirectory();
-        fetchCompetitions();
         fetchClubPosts();
+        window.updateScoringMethodOptions();
     }
+
+    window.switchTab = function(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            if (b.getAttribute('data-tab') === tabName) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+        document.querySelectorAll('.tab-content').forEach(c => {
+            if (c.id === `${tabName}-tab`) {
+                c.style.display = 'block';
+            } else {
+                c.style.display = 'none';
+            }
+        });
+        
+        if (tabName === 'directory') fetchGlobalDirectory();
+        window.closeSidebar();
+    };
 
     // Tabs navigation
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            e.currentTarget.classList.add('active');
-            const tabId = e.currentTarget.getAttribute('data-tab') + '-tab';
-            document.getElementById(tabId).style.display = 'block';
-            
-            if (tabId === 'directory-tab') fetchGlobalDirectory();
-            window.closeSidebar();
+            const tabName = e.currentTarget.getAttribute('data-tab');
+            window.switchTab(tabName);
         });
     });
 
@@ -321,6 +492,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('prof-zip').value = data.zip_code || '';
                 document.getElementById('prof-city').value = data.city || '';
                 document.getElementById('prof-address').value = data.address || '';
+                
+                // Update active club name in sidebar and topbar
+                const clubName = data.name || 'Ingen klub valgt';
+                const activeClubNameSidebar = document.getElementById('active-club-name-sidebar');
+                if (activeClubNameSidebar) {
+                    activeClubNameSidebar.innerText = clubName;
+                    activeClubNameSidebar.style.display = 'block';
+                }
+                const activeClubNameTopbar = document.getElementById('active-club-name-topbar');
+                if (activeClubNameTopbar) {
+                    activeClubNameTopbar.innerText = clubName;
+                    activeClubNameTopbar.style.display = 'inline-block';
+                }
+
+                // Update active club banner
+                const activeClubBanner = document.getElementById('active-club-banner');
+                const activeClubBannerName = document.getElementById('active-club-banner-name');
+                if (activeClubBanner && activeClubBannerName) {
+                    activeClubBannerName.innerText = clubName;
+                    activeClubBanner.style.display = 'flex';
+                }
             }
         } catch(err) { console.error(err); }
     }
@@ -346,9 +538,54 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
                 if (response.ok) {
+                    // Update active club name in sidebar and topbar immediately
+                    const newName = document.getElementById('prof-name').value;
+                    const activeClubNameSidebar = document.getElementById('active-club-name-sidebar');
+                    if (activeClubNameSidebar) {
+                        activeClubNameSidebar.innerText = newName;
+                        activeClubNameSidebar.style.display = 'block';
+                    }
+                    const activeClubNameTopbar = document.getElementById('active-club-name-topbar');
+                    if (activeClubNameTopbar) {
+                        activeClubNameTopbar.innerText = newName;
+                        activeClubNameTopbar.style.display = 'inline-block';
+                    }
+
+                    // Update active club banner name immediately
+                    const activeClubBanner = document.getElementById('active-club-banner');
+                    const activeClubBannerName = document.getElementById('active-club-banner-name');
+                    if (activeClubBanner && activeClubBannerName) {
+                        activeClubBannerName.innerText = newName;
+                        activeClubBanner.style.display = 'flex';
+                    }
+
                     const msg = document.getElementById('prof-msg');
                     msg.style.display = 'block';
                     setTimeout(() => msg.style.display = 'none', 3000);
+                }
+            } catch(err) { console.error(err); }
+        });
+    }
+
+    const profileAddClubForm = document.getElementById('profile-add-club-form');
+    if (profileAddClubForm) {
+        profileAddClubForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('prof-new-club-name').value;
+            const token = getToken();
+            try {
+                const response = await fetch(`${API_BASE}/clubs/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ name })
+                });
+                if(response.ok) {
+                    const newClub = await response.json();
+                    document.getElementById('prof-new-club-name').value = '';
+                    alert(`Klubben "${newClub.name}" er oprettet! Du skifter nu til denne klub.`);
+                    selectClub(newClub.id, true);
+                } else {
+                    alert("Kunne ikke oprette klubben. Prøv igen.");
                 }
             } catch(err) { console.error(err); }
         });
@@ -625,12 +862,24 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if(!window.activeClubId) return;
         const token = getToken();
+        const disciplines = Array.from(document.querySelectorAll('input[name="comp-discipline-cb"]:checked')).map(cb => cb.value).join(',');
+        if (!disciplines) {
+            alert('Vælg venligst mindst én disciplin.');
+            return;
+        }
+        const importStandards = document.getElementById('comp-import-standards-cb').checked;
+        const selectedPosts = Array.from(document.querySelectorAll('.new-comp-custom-class-cb:checked')).map(cb => parseInt(cb.value));
+
         const payload = {
             name: document.getElementById('comp-name').value,
             date: new Date(document.getElementById('comp-date').value).toISOString(),
             start_time: document.getElementById('comp-start-time')?.value || null,
             end_time: document.getElementById('comp-end-time')?.value || null,
-            location: document.getElementById('comp-location').value
+            location: document.getElementById('comp-location').value,
+            discipline: disciplines,
+            scoring_method: document.getElementById('comp-scoring-method').value,
+            import_standards: importStandards,
+            post_ids: importStandards ? [] : selectedPosts
         };
         try {
             const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions`, {
@@ -639,25 +888,164 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
-                document.getElementById('new-comp-form').reset();
-                document.getElementById('new-comp-form').style.display = 'none';
-                fetchCompetitions();
+                window.showCompetitionsList();
             }
         } catch(err) { console.error(err); }
     });
 
+    // Event listener to update custom classes when disciplines toggle
+    document.querySelectorAll('input[name="comp-discipline-cb"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const importCb = document.getElementById('comp-import-standards-cb');
+            if (importCb && !importCb.checked) {
+                window.updateNewCompCustomClassesList();
+            }
+        });
+    });
+
+    // Centralized visibility controllers for stævner
+    console.log("main.js: Registering stævner visibility controllers");
+    window.showCreateCompetitionForm = function() {
+        console.log("main.js: showCreateCompetitionForm called");
+        document.getElementById('competitions-list').style.display = 'none';
+        document.getElementById('competition-details').style.display = 'none';
+        document.getElementById('new-comp-form').style.display = 'block';
+        
+        const newCompBtn = document.getElementById('new-comp-btn');
+        if (newCompBtn) newCompBtn.style.display = 'none';
+        
+        const headerTitle = document.getElementById('competitions-header-title');
+        if (headerTitle) headerTitle.innerText = "Opret Nyt Stævne";
+    };
+
+    window.showCompetitionsList = function() {
+        console.log("main.js: showCompetitionsList called");
+        const newCompForm = document.getElementById('new-comp-form');
+        if (newCompForm) {
+            newCompForm.reset();
+            newCompForm.style.display = 'none';
+        }
+        
+        const customClassesContainer = document.getElementById('comp-creation-custom-classes-container');
+        if (customClassesContainer) customClassesContainer.style.display = 'none';
+        
+        document.getElementById('competition-details').style.display = 'none';
+        
+        window.currentCompId = null;
+        currentCompId = null;
+        
+        document.getElementById('competitions-list').style.display = 'flex';
+        
+        const newCompBtn = document.getElementById('new-comp-btn');
+        if (newCompBtn) newCompBtn.style.display = 'inline-block';
+        
+        const headerTitle = document.getElementById('competitions-header-title');
+        if (headerTitle) headerTitle.innerText = "Stævner";
+        
+        fetchCompetitions();
+    };
+
     // STÆVNE DETALJER
-    window.openCompetition = function(id, name) {
+    window.openCompetition = async function(id, name) {
         currentCompId = id;
         window.currentCompId = id;
         document.getElementById('competitions-list').style.display = 'none';
         document.getElementById('new-comp-form').style.display = 'none';
+        
+        const newCompBtn = document.getElementById('new-comp-btn');
+        if (newCompBtn) newCompBtn.style.display = 'none';
+        
+        const headerTitle = document.getElementById('competitions-header-title');
+        if (headerTitle) headerTitle.innerText = "Stævnedetaljer";
+
         document.getElementById('competition-details').style.display = 'block';
         document.getElementById('detail-comp-name').innerText = name;
         
         document.getElementById('competition-details').scrollIntoView({ behavior: 'smooth' });
         
-        showCompTab('riders');
+        try {
+            const token = getToken();
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                window.activeCompetition = await response.json();
+                
+                const banner = document.getElementById('comp-payment-banner');
+                if (banner) {
+                    const now = new Date();
+                    const compDate = window.activeCompetition.date ? new Date(window.activeCompetition.date) : null;
+                    const activeUntil = window.activeCompetition.active_until ? new Date(window.activeCompetition.active_until) : null;
+                    
+                    const isArchived = compDate && (now - compDate) > (365 * 24 * 60 * 60 * 1000);
+                    const isExpired = window.activeCompetition.is_active && activeUntil && activeUntil < now;
+                    
+                    if (isArchived) {
+                        banner.style.background = 'rgba(148, 163, 184, 0.08)';
+                        banner.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+                        banner.style.borderLeft = '4px solid #94a3b8';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-archive" style="color: #94a3b8; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er arkiveret (Ældre end 1 år)</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Stævnet er låst. Du kan se alle resultater, ryttere og klasser, men yderligere pointafgivelse er deaktiveret.</p>
+                                </div>
+                            </div>
+                        `;
+                        banner.style.display = 'flex';
+                    } else if (isExpired) {
+                        banner.style.background = 'rgba(239, 68, 68, 0.08)';
+                        banner.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                        banner.style.borderLeft = '4px solid #ef4444';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-lock" style="color: #ef4444; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er lukket (Aktivering udløbet)</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Perioden på 14 dage efter stævnets afholdelse er udløbet. Pointafgivelse er deaktiveret, men alle data kan stadig læses.</p>
+                                </div>
+                            </div>
+                        `;
+                        banner.style.display = 'flex';
+                    } else if (window.activeCompetition.is_active) {
+                        const validUntilStr = activeUntil ? activeUntil.toLocaleDateString('da-DK') : 'Ubegrænset';
+                        banner.style.background = 'rgba(16, 185, 129, 0.08)';
+                        banner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+                        banner.style.borderLeft = '4px solid #10b981';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er Aktivt & Betalt</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Dommere kan frit afgive karakterer. Aktiveringen gælder indtil: <strong>${validUntilStr}</strong> (14 dage efter stævnets afholdelse).</p>
+                                </div>
+                            </div>
+                        `;
+                        banner.style.display = 'flex';
+                    } else {
+                        banner.style.background = 'rgba(251, 191, 36, 0.08)';
+                        banner.style.borderColor = 'rgba(251, 191, 36, 0.25)';
+                        banner.style.borderLeft = '4px solid #fbbf24';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-triangle" style="color: #fbbf24; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er inaktivt (Ikke betalt)</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Dommere vil ikke kunne afgive karakterer, før stævnet aktiveres. Pris: 299 DKK. Gælder indtil 14 dage efter afholdelse.</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="openPaymentModal()" style="background: #fbbf24; color: #0f172a; border: none; font-weight: bold; width: auto; white-space: nowrap; padding: 0.5rem 1rem;"><i class="fas fa-credit-card"></i> Aktiver Stævne</button>
+                        `;
+                        banner.style.display = 'flex';
+                    }
+                }
+            }
+        } catch(err) {
+            console.error('Error fetching competition:', err);
+        }
+        
+        showCompTab('classes');
         updateCompetitionSelects();
     };
 
@@ -671,9 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
             if(response.ok) {
-                document.getElementById('competition-details').style.display = 'none';
-                document.getElementById('competitions-list').style.display = 'flex';
-                fetchCompetitions();
+                window.showCompetitionsList();
             } else {
                 alert('Kunne ikke slette stævnet. Prøv igen.');
             }
@@ -709,14 +1095,24 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showCompTab = function(tab) {
         document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('comp-riders-section').style.display = 'none';
+        document.getElementById('comp-classes-section').style.display = 'none';
         document.getElementById('comp-judges-section').style.display = 'none';
 
+        // Add active class based on onclick content
+        document.querySelectorAll('.detail-tab-btn').forEach(b => {
+            if (b.getAttribute('onclick').includes(`'${tab}'`)) {
+                b.classList.add('active');
+            }
+        });
+
         if(tab === 'riders') {
-            document.querySelectorAll('.detail-tab-btn')[0].classList.add('active');
             document.getElementById('comp-riders-section').style.display = 'block';
             fetchCompRiders();
-        } else {
-            document.querySelectorAll('.detail-tab-btn')[1].classList.add('active');
+            renderRiderClassesCheckboxes();
+        } else if(tab === 'classes') {
+            document.getElementById('comp-classes-section').style.display = 'block';
+            loadCompetitionClassesSection();
+        } else if(tab === 'judges') {
             document.getElementById('comp-judges-section').style.display = 'block';
             fetchCompJudges();
         }
@@ -759,17 +1155,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const riderId = document.getElementById('comp-rider-select').value;
         const horseId = document.getElementById('comp-horse-select').value;
-        const startNumber = document.getElementById('comp-start-number').value;
 
         if(!riderId || !horseId) {
             alert("Du skal vælge både rytter og hest.");
             return;
         }
 
+        const riderPosts = [];
+        document.querySelectorAll('.rider-class-cb:checked').forEach(cb => {
+            const postId = parseInt(cb.value);
+            const startNumInput = document.querySelector(`.rider-class-start-num[data-post-id="${postId}"]`);
+            const startNumber = startNumInput && startNumInput.value ? parseInt(startNumInput.value) : null;
+            riderPosts.push({
+                club_post_id: postId,
+                start_number: startNumber
+            });
+        });
+
+        if (riderPosts.length === 0) {
+            alert("Vælg venligst mindst én klasse at tilmelde rytteren til.");
+            return;
+        }
+
         const payload = {
             club_rider_id: parseInt(riderId),
             horse_id: parseInt(horseId),
-            start_number: startNumber ? parseInt(startNumber) : null
+            rider_posts: riderPosts
         };
 
         const token = getToken();
@@ -781,9 +1192,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if(response.ok) {
                 document.getElementById('add-comp-rider-form').reset();
-                updateHorseSelect(); 
+                document.getElementById('comp-horse-select').innerHTML = '<option value="">-- Vælg rytter først --</option>';
+                renderRiderClassesCheckboxes();
                 fetchCompRiders();
                 fetchGlobalDirectory();
+            } else {
+                const data = await response.json();
+                alert(data.detail || 'Kunne ikke tilknytte rytter.');
             }
         } catch(err) { console.error(err); }
     });
@@ -800,12 +1215,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const list = document.getElementById('comp-riders-list');
                 list.innerHTML = '';
                 riders.forEach(r => {
+                    let classesHtml = '';
+                    if (r.rider_posts && r.rider_posts.length > 0) {
+                        classesHtml = r.rider_posts.map(rp => {
+                            const discColor = rp.club_post.discipline === 'gait' ? '#fbbf24' : rp.club_post.discipline === 'dressage' ? '#60a5fa' : '#f87171';
+                            const textColor = rp.club_post.discipline === 'gait' ? '#0f172a' : '#ffffff';
+                            return `<span class="badge" style="background: ${discColor}; color: ${textColor}; margin-right: 0.3rem;">${rp.club_post.name} ${rp.start_number ? `#${rp.start_number}` : ''}</span>`;
+                        }).join(' ');
+                    }
+                    
                     list.innerHTML += `
                         <div class="list-item" style="border-left: 4px solid var(--primary);">
                             <div>
                                 <strong>${r.club_rider.name}</strong> 
-                                ${r.start_number ? `<span class="badge" style="background: var(--primary);">#${r.start_number}</span>` : ''}
-                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;"><i class="fas fa-horse-head"></i> ${r.horse.name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <span><i class="fas fa-horse-head"></i> ${r.horse.name}</span>
+                                    <span style="color: var(--text-secondary);">|</span>
+                                    <span style="display: flex; gap: 0.25rem; flex-wrap: wrap;">${classesHtml}</span>
+                                </div>
                             </div>
                             <button class="btn btn-danger btn-sm" onclick="deleteCompRider(${r.id})"><i class="fas fa-unlink"></i> Fjern</button>
                         </div>
@@ -876,7 +1303,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 list.innerHTML = '';
                 judges.forEach(j => {
                     const postBadges = j.club_posts && j.club_posts.length > 0 
-                        ? j.club_posts.map(p => `<span class="badge" style="background: var(--primary); margin-right: 0.3rem;">${p.name}</span>`).join('')
+                        ? j.club_posts.map(p => {
+                            const bg = p.discipline === 'gait' ? '#fbbf24' : p.discipline === 'dressage' ? '#60a5fa' : '#f87171';
+                            const text = p.discipline === 'gait' ? '#0f172a' : '#ffffff';
+                            return `<span class="badge" style="background: ${bg}; color: ${text}; margin-right: 0.3rem;">${p.name}</span>`;
+                        }).join('')
                         : '<span style="font-size: 0.8rem; color: var(--text-secondary);">Ingen poster tilknyttet</span>';
                         
                     list.innerHTML += `
@@ -890,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="btn btn-danger btn-sm" onclick="deleteCompJudge(${j.id})"><i class="fas fa-unlink"></i> Fjern</button>
                             </div>
                             <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(window.location.origin + '?magic=${j.magic_link_uuid}'); alert('Link kopieret!');"><i class="fas fa-copy"></i> Kopiér Link</button>
+                                <button class="btn btn-secondary btn-sm" onclick="window.copyJudgeLink('${j.magic_link_uuid}')"><i class="fas fa-copy"></i> Kopiér Link</button>
                                 <button class="btn btn-secondary btn-sm" onclick="sendJudgeEmail(${j.id})"><i class="fas fa-envelope"></i> Send Email</button>
                                 <button class="btn btn-primary btn-sm" style="background: #10b981;" onclick="window.open('?magic=${j.magic_link_uuid}', '_blank')"><i class="fas fa-external-link-alt"></i> Åbn Dommer Panel</button>
                             </div>
@@ -920,6 +1351,72 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- KLUB POSTER ---
     let clubPosts = [];
 
+    async function loadClubPosts() {
+        if(!window.activeClubId) return;
+        const token = getToken();
+        if(!token) return;
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/club_posts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if(response.ok) {
+                clubPosts = await response.json();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    window.toggleNewCompCustomClasses = async function() {
+        const importCb = document.getElementById('comp-import-standards-cb');
+        const container = document.getElementById('comp-creation-custom-classes-container');
+        if (!importCb || !container) return;
+        
+        if (importCb.checked) {
+            container.style.display = 'none';
+        } else {
+            container.style.display = 'flex';
+            await window.updateNewCompCustomClassesList();
+        }
+    };
+
+    window.updateNewCompCustomClassesList = async function() {
+        const listContainer = document.getElementById('comp-creation-custom-classes-list');
+        if (!listContainer) return;
+        listContainer.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-secondary);">Henter klasser...</span>';
+        
+        const checkedDisciplines = Array.from(document.querySelectorAll('input[name="comp-discipline-cb"]:checked')).map(cb => cb.value);
+        if (checkedDisciplines.length === 0) {
+            listContainer.innerHTML = '<span style="font-size: 0.85rem; color: #f43f5e;">Vælg mindst én disciplin ovenfor for at se klasser.</span>';
+            return;
+        }
+        
+        try {
+            await loadClubPosts();
+            
+            const filteredPosts = clubPosts.filter(p => checkedDisciplines.includes(p.discipline || 'gait'));
+            
+            listContainer.innerHTML = '';
+            if (filteredPosts.length === 0) {
+                listContainer.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-secondary);">Ingen oprettede klubklasser fundet for de valgte discipliner. Opret dem under "Poster / Klasser" eller vælg standardklasser.</span>';
+                return;
+            }
+            
+            filteredPosts.forEach(p => {
+                const discName = p.discipline === 'gait' ? 'Gangart' : p.discipline === 'dressage' ? 'Dressur' : 'Spring';
+                const discColor = p.discipline === 'gait' ? '#fbbf24' : p.discipline === 'dressage' ? '#60a5fa' : '#f87171';
+                
+                listContainer.innerHTML += `
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; color: white;">
+                        <input type="checkbox" class="new-comp-custom-class-cb" value="${p.id}" checked style="width: auto; margin: 0;">
+                        <span>${p.name} <small style="color: ${discColor};">(${discName})</small></span>
+                    </label>
+                `;
+            });
+        } catch (err) {
+            console.error('Error updating new competition custom classes:', err);
+            listContainer.innerHTML = '<span style="font-size: 0.85rem; color: #f43f5e;">Fejl ved indlæsning af klasser.</span>';
+        }
+    };
+
     window.fetchClubPosts = async function() {
         if(!window.activeClubId) return;
         const token = getToken();
@@ -940,13 +1437,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('club-posts-list');
         if(!list) return;
         list.innerHTML = '';
-        clubPosts.forEach(p => {
+        
+        const filterVal = document.getElementById('club-post-filter')?.value || 'all';
+        const filteredPosts = clubPosts.filter(p => {
+            if (filterVal === 'all') return true;
+            return (p.discipline || 'gait') === filterVal;
+        });
+
+        filteredPosts.forEach(p => {
             const locStr = p.location ? ` | <i class="fas fa-map-marker-alt"></i> ${p.location}` : '';
             const descStr = p.description ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">${p.description}</div>` : '';
+            const discName = p.discipline === 'gait' ? 'Islandske Heste' : p.discipline === 'dressage' ? 'Dressur' : 'Spring';
+            const discColor = p.discipline === 'gait' ? '#fbbf24' : p.discipline === 'dressage' ? '#60a5fa' : '#f87171';
+            const textColor = p.discipline === 'gait' ? '#0f172a' : '#ffffff';
+            const methodStr = p.scoring_method ? ` | Metode: ${p.scoring_method}` : '';
+            const coefStr = ` <span style="color: #fbbf24; font-size: 0.8rem;">(Koefficient: ${p.coefficient || 1.0}, Max: ${p.max_value || 10.0})</span>`;
             list.innerHTML += `
-                <div class="list-item" style="border-left: 4px solid var(--primary);">
+                <div class="list-item" style="border-left: 4px solid ${discColor};">
                     <div>
-                        <strong>${p.name}</strong><span style="font-size: 0.8rem; color: var(--text-secondary);">${locStr}</span>
+                        <strong>${p.name}</strong> <span class="badge" style="background: ${discColor}; color: ${textColor}; font-size: 0.7rem; padding: 0.1rem 0.4rem; vertical-align: middle;">${discName}</span>${coefStr}${locStr}${methodStr}
                         ${descStr}
                     </div>
                     <button class="btn btn-danger btn-sm" onclick="deleteClubPost(${p.id})"><i class="fas fa-trash"></i></button>
@@ -954,15 +1463,27 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
     }
+    window.renderClubPosts = renderClubPosts;
 
     document.getElementById('club-post-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if(!window.activeClubId) return;
+
+        const discipline = document.getElementById('club-post-discipline').value;
+        if (discipline === 'all') {
+            alert('Vælg venligst en specifik disciplin (Gangart, Dressur eller Spring) for at oprette en klasse.');
+            return;
+        }
+
         const token = getToken();
         const payload = {
             name: document.getElementById('club-post-name').value,
+            coefficient: parseFloat(document.getElementById('club-post-coefficient').value || "1.0"),
+            max_value: parseFloat(document.getElementById('club-post-max-value').value || "10.0"),
             location: document.getElementById('club-post-location').value || null,
-            description: document.getElementById('club-post-description').value || null
+            description: document.getElementById('club-post-description').value || null,
+            discipline: document.getElementById('club-post-discipline').value,
+            scoring_method: document.getElementById('club-post-scoring-method').value
         };
         try {
             const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/club_posts`, {
@@ -972,6 +1493,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if(response.ok) {
                 document.getElementById('club-post-form').reset();
+                document.getElementById('club-post-coefficient').value = "1.0";
+                document.getElementById('club-post-max-value').value = "10.0";
+                window.updateClubPostScoringMethodOptions();
                 fetchClubPosts();
             }
         } catch(err) { console.error(err); }
@@ -996,17 +1520,551 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('comp-judge-posts-checkboxes');
         if(!container) return;
         container.innerHTML = '';
-        if(clubPosts.length === 0) {
-            container.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-secondary);">Ingen poster oprettet i klubben endnu.</span>';
+        
+        const activePosts = (window.activeCompetition && window.activeCompetition.club_posts) || [];
+        
+        if(activePosts.length === 0) {
+            container.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-secondary);">Ingen aktive stævneklasser endnu.</span>';
         } else {
-            clubPosts.forEach(p => {
+            activePosts.forEach(p => {
+                const discName = p.discipline === 'gait' ? 'Gangart' : p.discipline === 'dressage' ? 'Dressur' : 'Spring';
                 container.innerHTML += `
                     <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
                         <input type="checkbox" class="post-checkbox" value="${p.id}" style="width: auto; margin: 0;">
-                        <span>${p.name}</span>
+                        <span>${p.name} <small style="color: var(--text-secondary);">(${discName} x${p.coefficient || 1.0})</small></span>
                     </label>
                 `;
             });
         }
     }
+
+    window.updateClubPostScoringMethodOptions = function() {
+        const disciplineSelect = document.getElementById('club-post-discipline');
+        const methodSelect = document.getElementById('club-post-scoring-method');
+        if (!disciplineSelect || !methodSelect) return;
+        
+        const discipline = disciplineSelect.value;
+        methodSelect.innerHTML = '';
+
+        if (discipline === 'all') {
+            methodSelect.innerHTML += '<option value="">-- Vælg disciplin først --</option>';
+        } else if (discipline === 'gait') {
+            methodSelect.innerHTML += '<option value="standard" selected>Standard (sum/gns)</option>';
+        } else if (discipline === 'dressage') {
+            methodSelect.innerHTML += '<option value="percentage" selected>Procent-bedømmelse (%)</option>';
+        } else if (discipline === 'jumping') {
+            methodSelect.innerHTML += `
+                <option value="clear_round" selected>B0 / Clear Round (Sløjfe)</option>
+                <option value="faults_time">Fejl og tid (Metode A)</option>
+                <option value="style">Stilspringning</option>
+                <option value="jump_off">Metode med omspringning</option>
+            `;
+        }
+    };
+
+    window.loadCompetitionClassesSection = async function() {
+        if (!window.activeClubId || !window.currentCompId) return;
+        
+        const container = document.getElementById('comp-classes-checkboxes');
+        if (!container) return;
+        container.innerHTML = '<span style="color: var(--text-secondary);">Henter klasser...</span>';
+        
+        try {
+            const token = getToken();
+            const compResponse = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (compResponse.ok) {
+                window.activeCompetition = await compResponse.json();
+            }
+            
+            await loadClubPosts();
+            
+            container.innerHTML = '';
+            if (clubPosts.length === 0) {
+                container.innerHTML = '<span style="font-size: 0.9rem; color: var(--text-secondary); grid-column: 1/-1;">Ingen poster/klasser oprettet i klubben endnu. Opret poster under "Poster / Klasser"-fanen først.</span>';
+                return;
+            }
+            
+            const activePostIds = new Set(window.activeCompetition.club_posts.map(p => p.id));
+            
+            const disciplines = {
+                gait: { name: 'Gangart (Islandske Heste)', color: '#fbbf24', posts: [] },
+                dressage: { name: 'Dressur', color: '#60a5fa', posts: [] },
+                jumping: { name: 'Springning', color: '#f87171', posts: [] }
+            };
+            
+            clubPosts.forEach(p => {
+                const disc = p.discipline || 'gait';
+                if (disciplines[disc]) {
+                    disciplines[disc].posts.push(p);
+                } else {
+                    disciplines.gait.posts.push(p);
+                }
+            });
+            
+            Object.keys(disciplines).forEach(key => {
+                const group = disciplines[key];
+                if (group.posts.length > 0) {
+                    const groupTitle = document.createElement('h5');
+                    groupTitle.style.gridColumn = '1 / -1';
+                    groupTitle.style.color = group.color;
+                    groupTitle.style.marginTop = '0.5rem';
+                    groupTitle.style.borderBottom = '1px solid var(--glass-border)';
+                    groupTitle.style.paddingBottom = '0.25rem';
+                    groupTitle.innerText = group.name;
+                    container.appendChild(groupTitle);
+                    
+                    group.posts.forEach(p => {
+                        const isChecked = activePostIds.has(p.id) ? 'checked' : '';
+                        const label = document.createElement('label');
+                        label.className = 'glass-card';
+                        label.style.display = 'flex';
+                        label.style.alignItems = 'center';
+                        label.style.gap = '0.75rem';
+                        label.style.padding = '0.75rem';
+                        label.style.cursor = 'pointer';
+                        label.style.margin = '0';
+                        label.innerHTML = `
+                            <input type="checkbox" class="comp-class-cb" value="${p.id}" ${isChecked} style="width: auto; margin: 0;">
+                            <div>
+                                <span style="font-weight: bold; color: white; display: block; font-size: 0.9rem;">${p.name}</span>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">${p.scoring_method === 'percentage' ? 'Procent' : p.scoring_method === 'standard' ? 'Standard' : 'Spring (' + p.scoring_method + ')'}</span>
+                            </div>
+                        `;
+                        container.appendChild(label);
+                    });
+                }
+            });
+            
+            if (container.children.length === 0) {
+                container.innerHTML = '<span style="font-size: 0.9rem; color: var(--text-secondary); grid-column: 1/-1;">Ingen poster/klasser i systemet.</span>';
+            }
+            
+        } catch(err) {
+            console.error('Error loading classes selection:', err);
+            container.innerHTML = '<span style="color: #ef4444;">Kunne ikke hente klasser.</span>';
+        }
+    };
+
+    window.saveCompetitionClasses = async function() {
+        if (!window.activeClubId || !window.currentCompId) return;
+        
+        const selectedIds = Array.from(document.querySelectorAll('.comp-class-cb:checked')).map(cb => parseInt(cb.value));
+        const token = getToken();
+        
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/posts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(selectedIds)
+            });
+            
+            if (response.ok) {
+                alert('Klassevalg gemt succesfuldt!');
+                window.activeCompetition = await response.json();
+                loadCompetitionClassesSection();
+                updateCompetitionJudgePostsCheckboxes();
+            } else {
+                alert('Kunne ikke gemme klassevalg. Prøv igen.');
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Der opstod en fejl.');
+        }
+    };
+
+    window.importStandardClasses = async function() {
+        if (!window.activeClubId || !window.currentCompId) return;
+        
+        if (!confirm('Dette vil oprette standardklasser for de valgte discipliner og tilknytte dem til stævnet. Fortsæt?')) return;
+        
+        const token = getToken();
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/import-standard-classes`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                alert('Standardklasser importeret succesfuldt!');
+                window.activeCompetition = await response.json();
+                loadCompetitionClassesSection();
+            } else {
+                alert('Kunne ikke importere standardklasser. Sørg for at du har valgt mindst én disciplin på stævnet.');
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Der opstod en fejl.');
+        }
+    };
+
+    window.renderRiderClassesCheckboxes = function() {
+        const container = document.getElementById('comp-rider-classes-container');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        if (!window.activeCompetition || !window.activeCompetition.club_posts || window.activeCompetition.club_posts.length === 0) {
+            container.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-secondary);">Ingen aktive klasser på dette stævne endnu. Gå til tabben "Klasser / Poster" for at tilføje klasser.</span>';
+            return;
+        }
+        
+        const disciplines = {
+            gait: { name: 'Gangart (Islandske Heste)', color: '#fbbf24', posts: [] },
+            dressage: { name: 'Dressur', color: '#60a5fa', posts: [] },
+            jumping: { name: 'Springning', color: '#f87171', posts: [] }
+        };
+        
+        window.activeCompetition.club_posts.forEach(p => {
+            const disc = p.discipline || 'gait';
+            if (disciplines[disc]) {
+                disciplines[disc].posts.push(p);
+            } else {
+                disciplines.gait.posts.push(p);
+            }
+        });
+        
+        Object.keys(disciplines).forEach(key => {
+            const group = disciplines[key];
+            if (group.posts.length > 0) {
+                const groupTitle = document.createElement('div');
+                groupTitle.style.color = group.color;
+                groupTitle.style.fontWeight = 'bold';
+                groupTitle.style.fontSize = '0.8rem';
+                groupTitle.style.marginTop = '0.5rem';
+                groupTitle.innerText = group.name.toUpperCase();
+                container.appendChild(groupTitle);
+                
+                group.posts.forEach(p => {
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.justifyContent = 'space-between';
+                    row.style.gap = '1rem';
+                    row.style.padding = '0.25rem 0';
+                    row.innerHTML = `
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; margin: 0; flex: 1;">
+                            <input type="checkbox" class="rider-class-cb" value="${p.id}" style="width: auto; margin: 0;">
+                            <span>${p.name}</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 0.25rem;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Startnr:</span>
+                            <input type="number" class="rider-class-start-num" data-post-id="${p.id}" style="width: 70px; padding: 0.25rem; font-size: 0.8rem; margin: 0;" placeholder="Valgfrit">
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+        });
+    };
+
+    // --- BETALING & AKTIVERING HANDLERS ---
+    window.openPaymentModal = function() {
+        if (!window.activeCompetition) return;
+        
+        document.getElementById('pay-discount-code-input').value = '';
+        document.getElementById('pay-discount-error').style.display = 'none';
+        document.getElementById('pay-discount-success').style.display = 'none';
+        document.getElementById('pay-discount-row').style.display = 'none';
+        
+        document.getElementById('pay-card-number').value = '';
+        document.getElementById('pay-card-expiry').value = '';
+        document.getElementById('pay-card-cvc').value = '';
+        
+        document.getElementById('pay-comp-name').innerText = window.activeCompetition.name;
+        document.getElementById('pay-total-amount-label').innerText = '299,00';
+        
+        const cardSec = document.getElementById('pay-card-details-section');
+        cardSec.style.display = 'block';
+        document.getElementById('pay-card-number').setAttribute('required', 'required');
+        document.getElementById('pay-card-expiry').setAttribute('required', 'required');
+        document.getElementById('pay-card-cvc').setAttribute('required', 'required');
+        
+        document.getElementById('payment-modal').style.display = 'flex';
+    };
+
+    window.closePaymentModal = function() {
+        document.getElementById('payment-modal').style.display = 'none';
+    };
+
+    window.applyDiscountCode = async function() {
+        const codeInput = document.getElementById('pay-discount-code-input');
+        const code = codeInput.value.trim().toUpperCase();
+        const errLabel = document.getElementById('pay-discount-error');
+        const succLabel = document.getElementById('pay-discount-success');
+        const discountRow = document.getElementById('pay-discount-row');
+        
+        errLabel.style.display = 'none';
+        succLabel.style.display = 'none';
+        discountRow.style.display = 'none';
+        
+        if (!code) {
+            errLabel.innerText = "Indtast venligst en rabatkode.";
+            errLabel.style.display = 'block';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/check-discount?code=${code}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const discountPct = data.discount_amount;
+                
+                document.getElementById('pay-discount-pct-label').innerText = discountPct;
+                
+                const savings = 299.0 * (discountPct / 100.0);
+                const total = 299.0 - savings;
+                
+                document.getElementById('pay-discount-amount-label').innerText = savings.toFixed(2).replace('.', ',');
+                document.getElementById('pay-total-amount-label').innerText = total.toFixed(2).replace('.', ',');
+                
+                discountRow.style.display = 'flex';
+                succLabel.style.display = 'block';
+                
+                const cardSec = document.getElementById('pay-card-details-section');
+                if (discountPct >= 100) {
+                    cardSec.style.display = 'none';
+                    document.getElementById('pay-card-number').removeAttribute('required');
+                    document.getElementById('pay-card-expiry').removeAttribute('required');
+                    document.getElementById('pay-card-cvc').removeAttribute('required');
+                } else {
+                    cardSec.style.display = 'block';
+                    document.getElementById('pay-card-number').setAttribute('required', 'required');
+                    document.getElementById('pay-card-expiry').setAttribute('required', 'required');
+                    document.getElementById('pay-card-cvc').setAttribute('required', 'required');
+                }
+            } else {
+                const errorData = await response.json();
+                errLabel.innerText = errorData.detail || "Rabatkoden er ugyldig.";
+                errLabel.style.display = 'block';
+            }
+        } catch(err) {
+            console.error(err);
+            errLabel.innerText = "Der opstod en fejl under verifikation af koden.";
+            errLabel.style.display = 'block';
+        }
+    };
+
+    window.submitPayment = async function(event) {
+        event.preventDefault();
+        
+        const codeInput = document.getElementById('pay-discount-code-input');
+        const discountCode = codeInput.value.trim().toUpperCase() || null;
+        const submitBtn = document.getElementById('pay-submit-btn');
+        
+        const oldHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Behandler...';
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/activate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({
+                    discount_code: discountCode
+                })
+            });
+            
+            if (response.ok) {
+                alert('Stævnet blev aktiveret med succes! Karakterafgivelse er nu låst op.');
+                window.closePaymentModal();
+                if (window.activeCompetition) {
+                    window.openCompetition(window.currentCompId, window.activeCompetition.name);
+                }
+            } else {
+                const errData = await response.json();
+                alert('Aktivering fejlede: ' + (errData.detail || 'Ukendt fejl'));
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = oldHtml;
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Netværksfejl under aktivering.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = oldHtml;
+        }
+    };
+
+    // --- SUPER ADMIN LOGIK ---
+    window.showSaTab = function(saTab) {
+        document.querySelectorAll('.sa-tab-btn').forEach(btn => {
+            if (btn.id === `sa-tab-${saTab}-btn`) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        if (saTab === 'stats') {
+            document.getElementById('sa-stats-section').style.display = 'block';
+            document.getElementById('sa-discount-section').style.display = 'none';
+            fetchSaStats();
+        } else {
+            document.getElementById('sa-stats-section').style.display = 'none';
+            document.getElementById('sa-discount-section').style.display = 'block';
+            fetchSaDiscounts();
+        }
+    };
+
+    async function fetchSaStats() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/stats`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                
+                document.getElementById('sa-stat-clubs').innerText = data.total_clubs;
+                document.getElementById('sa-stat-active-comps').innerText = data.active_competitions;
+                document.getElementById('sa-stat-inactive-comps').innerText = data.inactive_competitions;
+                document.getElementById('sa-stat-outdated-comps').innerText = data.outdated_inactive_competitions;
+                
+                const clubList = document.getElementById('sa-club-stats-list');
+                clubList.innerHTML = '';
+                data.club_stats.forEach(c => {
+                    clubList.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 0.75rem;"><strong>${c.club_name}</strong></td>
+                            <td style="padding: 0.75rem; color: var(--text-secondary);">${c.owner_email}</td>
+                            <td style="padding: 0.75rem;">${c.created_count} stævner</td>
+                            <td style="padding: 0.75rem; color: #10b981;">${c.active_count} aktive</td>
+                        </tr>
+                    `;
+                });
+                
+                const compList = document.getElementById('sa-comp-stats-list');
+                compList.innerHTML = '';
+                data.competitions.forEach(c => {
+                    const dateStr = c.date ? new Date(c.date).toLocaleDateString('da-DK') : 'Ingen dato';
+                    const statusHtml = c.is_active 
+                        ? '<span style="color: #10b981; background: rgba(16,185,129,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(16,185,129,0.2); font-size: 0.8rem;">Aktiv / Betalt</span>' 
+                        : '<span style="color: #f43f5e; background: rgba(244,63,94,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(244,63,94,0.2); font-size: 0.8rem;">Inaktiv</span>';
+                    
+                    const pricePaidStr = c.price_paid !== null ? `${c.price_paid.toFixed(2).replace('.', ',')} DKK` : '-';
+                    
+                    compList.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 0.75rem;"><strong>${c.name}</strong></td>
+                            <td style="padding: 0.75rem;">${c.club_name}</td>
+                            <td style="padding: 0.75rem; color: var(--text-secondary);">${dateStr}</td>
+                            <td style="padding: 0.75rem;">${statusHtml}</td>
+                            <td style="padding: 0.75rem; font-weight: bold;">${pricePaidStr}</td>
+                            <td style="padding: 0.75rem; text-align: right;">
+                                <button class="btn btn-danger btn-sm" onclick="deleteCompAsAdmin(${c.id})" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class="fas fa-trash"></i> Slet</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch(err) {
+            console.error('Error fetching admin stats:', err);
+        }
+    }
+
+    async function fetchSaDiscounts() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/discount-codes`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                const codes = await response.json();
+                const list = document.getElementById('sa-discount-list');
+                list.innerHTML = '';
+                codes.forEach(d => {
+                    list.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 0.75rem;"><strong style="letter-spacing: 1px;">${d.code}</strong></td>
+                            <td style="padding: 0.75rem; color: #10b981; font-weight: bold;">${d.discount_amount}% rabat</td>
+                            <td style="padding: 0.75rem;">
+                                ${d.is_active ? '<span style="color: #10b981;">Aktiv</span>' : '<span style="color: var(--text-secondary);">Inaktiv</span>'}
+                            </td>
+                            <td style="padding: 0.75rem; text-align: right;">
+                                <button class="btn btn-danger btn-sm" onclick="deleteDiscountCode(${d.id})" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class="fas fa-trash"></i> Slet</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
+    document.getElementById('sa-discount-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = document.getElementById('sa-discount-code').value.trim().toUpperCase();
+        const pct = parseFloat(document.getElementById('sa-discount-pct').value);
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/discount-codes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({
+                    code: code,
+                    discount_amount: pct,
+                    is_active: true
+                })
+            });
+            if (response.ok) {
+                document.getElementById('sa-discount-code').value = '';
+                fetchSaDiscounts();
+            } else {
+                const errData = await response.json();
+                alert('Kunne ikke oprette rabatkode: ' + (errData.detail || 'Fejl'));
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Netværksfejl.');
+        }
+    });
+
+    window.deleteDiscountCode = async function(id) {
+        if (!confirm('Vil du slette denne rabatkode?')) return;
+        try {
+            const response = await fetch(`${API_BASE}/admin/discount-codes/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                fetchSaDiscounts();
+            } else {
+                alert('Kunne ikke slette koden.');
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    };
+
+    window.deleteCompAsAdmin = async function(id) {
+        if (!confirm('Er du sikker på, at du vil slette dette stævne som Super Admin? Dette vil permanent slette alt stævnets data og kan ikke fortrydes!')) return;
+        try {
+            const response = await fetch(`${API_BASE}/admin/competitions/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                fetchSaStats();
+            } else {
+                alert('Kunne ikke slette stævnet.');
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    };
+
+    // Initialize dropdown options on load
+    window.updateClubPostScoringMethodOptions();
 });

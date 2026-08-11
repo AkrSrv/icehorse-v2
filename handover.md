@@ -7,7 +7,7 @@ Dette dokument fungerer som vores "bogmærke". Her er en komplet oversigt over, 
 ## 1. Infrastruktur og Adgang (Maskinskiftet)
 Vi har nu succesfuldt migreret dit udviklingsmiljø fra den gamle maskine over til den nye.
 
-*   **Netværk og Server:** Din nye maskine er godkendt på din server (`192.168.1.66`) via SSH-nøgler (`id_ed25519_akr_bankdata`). Du kan logge direkte ind uden password.
+*   **Netværk og Server:** Din nye maskine er godkendt på din server (`192.168.1.59`) via SSH-nøgler (`id_ed25519_akr_bankdata`). Du kan logge direkte ind uden password.
 *   **GitHub Integration:** Nøglen giver også automatisk adgang til dine private repositories på GitHub.
 *   **Kodebase:** Alt kode ligger klar i `~/.gemini/antigravity/scratch/`.
 

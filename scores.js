@@ -1,16 +1,12 @@
 // scores.js - Håndterer Magic Link Dommer-visning og Public Leaderboard
 
-let API_BASE = 'https://api.equievent.dk';
+let API_BASE = 'http://localhost:8082';
 try {
-    const host = window.location.hostname;
-    if (host) {
-        if (host.includes('equievent.online')) {
-            API_BASE = 'https://api.equievent.online';
-        } else if (host.includes('equievent.dk')) {
-            API_BASE = 'https://api.equievent.dk';
-        } else if (host.includes('alkdata.dk')) {
-            API_BASE = 'https://api.alkdata.dk';
-        } else {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('192.168.1.66')) {
+        API_BASE = import.meta.env.VITE_API_URL;
+    } else {
+        const host = window.location.hostname;
+        if (host) {
             API_BASE = `http://${host}:8082`;
         }
     }
@@ -20,7 +16,6 @@ try {
         API_BASE = `http://${host}:8082`;
     }
 }
-
 let magicUuid = null;
 let magicJudge = null;
 let activePostId = null;

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EquiEvent — Omfattende Brugervejledning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --primary-hover: #e11d48;
+            --bg-color: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            background-image: radial-gradient(circle at top right, #1e1b4b, #0f172a); 
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 2rem;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .logo i {
+            color: var(--primary);
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 0.6rem 1.25rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid var(--glass-border);
+            transition: background 0.2s, transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .layout-container {
+            display: flex;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            flex: 1;
+        }
+
+        /* SIDEBAR NAVIGATION */
+        .guide-sidebar {
+            width: 320px;
+            border-right: 1px solid var(--glass-border);
+            padding: 2.5rem 2rem 2.5rem 0;
+            position: sticky;
+            top: 75px;
+            height: calc(100vh - 75px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            padding-left: 1rem;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .nav-item a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item a:hover, .nav-item.active a {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+            border-left-color: var(--primary);
+            padding-left: 1.25rem;
+        }
+
+        /* MAIN CONTENT AREA */
+        .guide-content {
+            flex: 1;
+            padding: 2.5rem 0 2.5rem 3rem;
+            overflow-y: auto;
+        }
+
+        .section-intro {
+            margin-bottom: 4rem;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 2rem;
+        }
+
+        .section-intro h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+            background: linear-gradient(to right, #ffffff, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section-intro p {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            max-width: 800px;
+        }
+
+        .guide-section {
+            margin-bottom: 6rem;
+            scroll-margin-top: 100px;
+        }
+
+        .guide-section h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            letter-spacing: -0.5px;
+        }
+
+        .guide-section h2 i {
+            color: var(--primary);
+            font-size: 1.8rem;
+        }
+
+        .section-description {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+            max-width: 900px;
+        }
+
+        /* STEP CARD (IMAGE + TEXT GRID) */
+        .step-card {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            gap: 3rem;
+            align-items: flex-start;
+        }
+
+        .step-card.reverse {
+            grid-template-columns: 1fr 1.1fr;
+        }
+
+        .step-visual {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .step-visual img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .step-details-content h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-details-content h3 span {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--primary);
+            font-size: 0.8rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .step-details-content p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .instruction-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .instruction-list li {
+            position: relative;
+            padding-left: 2rem;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .instruction-list li i {
+            position: absolute;
+            left: 0;
+            top: 0.2rem;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .instruction-list li strong {
+            color: #ffffff;
+        }
+
+        .badge-info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-top: 1rem;
+        }
+
+        /* INFO BOX */
+        .info-box {
+            background: rgba(244, 63, 94, 0.08);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .info-box i {
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-top: 0.1rem;
+        }
+
+        .info-box div h4 {
+            color: #ffffff;
+            font-size: 1.05rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box div p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        footer {
+            border-top: 1px solid var(--glass-border);
+            padding: 2.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            background: rgba(15, 23, 42, 0.5);
+            margin-top: 6rem;
+            font-size: 0.9rem;
+        }
+
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 1100px) {
+            .layout-container {
+                flex-direction: column;
+                padding: 0 1.5rem;
+            }
+            .guide-sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid var(--glass-border);
+                padding: 2rem 0;
+            }
+            .guide-content {
+                padding: 2rem 0;
+            }
+            .step-card, .step-card.reverse {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 1.75rem;
+            }
+            .step-visual {
+                order: 1;
+            }
+            .step-details-content {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <a href="/" class="logo">
+                <i class="fas fa-horse-head"></i>
+                <span>EquiEvent</span>
+            </a>
+            <a href="/" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Tilbage til Admin
+            </a>
+        </div>
+    </header>
+
+    <div class="layout-container">
+        <!-- SIDEBAR NAV -->
+        <aside class="guide-sidebar">
+            <div>
+                <div class="sidebar-title">1. Profil & Klub</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#opret-profil"><i class="fas fa-user-plus fa-fw"></i> Opret profil / ny klub</a></li>
+                    <li class="nav-item"><a href="#administrer-profil"><i class="fas fa-id-card fa-fw"></i> Administrer klubprofil</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="sidebar-title">2. Personkartotek</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#opret-rytter"><i class="fas fa-user-tag fa-fw"></i> Opret rytter & heste</a></li>
+                    <li class="nav-item"><a href="#opret-dommer"><i class="fas fa-gavel fa-fw"></i> Opret dommer</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="sidebar-title">3. Poster & Klasser</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#opret-klubklasser"><i class="fas fa-flag fa-fw"></i> Opret faste klubklasser</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="sidebar-title">4. Stævneafvikling</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#opret-staevne"><i class="fas fa-calendar-plus fa-fw"></i> Opret nyt stævne</a></li>
+                    <li class="nav-item"><a href="#knyt-klasser"><i class="fas fa-check-double fa-fw"></i> Knyt klasser til stævne</a></li>
+                    <li class="nav-item"><a href="#knyt-deltagere"><i class="fas fa-horse fa-fw"></i> Tilknyt ryttere & heste</a></li>
+                    <li class="nav-item"><a href="#knyt-dommere"><i class="fas fa-users-cog fa-fw"></i> Tilknyt dommere & roller</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="sidebar-title">5. Bedømmelse & Resultater</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#magic-link"><i class="fas fa-magic fa-fw"></i> Hvordan dømmer dommeren?</a></li>
+                    <li class="nav-item"><a href="#leaderboard-resultater"><i class="fas fa-list-ol"></i> Live Leaderboard</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="guide-content">
+            <section class="section-intro">
+                <h1>Trin-for-trin guide til EquiEvent</h1>
+                <p>Velkommen til den komplette vejledning. Nedenfor finder du en detaljeret beskrivelse af hver enkelt funktion i systemet, illustreret med skærmbilleder fra din egen klubadgang, så du let kan følge stævne-flowet fra start til slut.</p>
+            </section>
+
+            <!-- SECTION 1 -->
+            <section id="opret-profil" class="guide-section">
+                <h2><i class="fas fa-user-plus"></i> 1. Profil & Kluboprettelse</h2>
+                <p class="section-description">Her beskrives det, hvordan du opretter din profil, logger ind og tilknytter flere klubber.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/login_screen.png" alt="Login og registrering skærmbillede">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Hvordan opretter jeg en profil? <span>Klub Login</span></h3>
+                        <p>Første gang du besøger EquiEvent, skal du registrere din klub for at komme i gang.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Klik på knappen <strong>"Opret ny klub"</strong> nederst i login-feltet.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast dit <strong>Klubnavn</strong>, din <strong>E-mail</strong> og opret en stærk <strong>Adgangskode</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret Klub"</strong>. Systemet opretter dig nu som administrator og logger dig ind automatisk.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="administrer-profil" class="guide-section">
+                <h2><i class="fas fa-id-card"></i> Administrer klubprofil</h2>
+                <p class="section-description">Lær at styre din klubs kontaktoplysninger og oprette flere klubber under samme login.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Udfyld og opret ekstra klubber <span>Klubprofil</span></h3>
+                        <p>Under fanen <strong>Profil</strong> styrer du de informationer, der vises på deltagernes live-sider.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Indtast <strong>Klubbens Navn</strong>, <strong>Kontaktperson</strong>, <strong>Telefon</strong>, <strong>E-mail</strong> og <strong>Adresse</strong>, og klik derefter på <strong>"Gem Profil"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Tilknyt endnu en klub:</strong> Skal du administrere mere end én klub? Indtast navnet på den nye klub under "Tilknyt endnu en klub" og klik på den grå knap.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Skift mellem klubber:</strong> Klik på <strong>"Skift Klub"</strong> øverst til højre. Her kan du lynhurtigt skifte mellem dine oprettede klubber.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual">
+                        <img src="/images/profile_screen.png" alt="Klubprofil redigering og tilføjelse">
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2 -->
+            <section id="opret-rytter" class="guide-section">
+                <h2><i class="fas fa-user-tag"></i> 2. Personkartoteket</h2>
+                <p class="section-description">Her samles dine deltagere og heste, så du let kan vælge dem til fremtidige stævner uden dobbeltarbejde.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/directory_screen.png" alt="Det Globale Personkartotek">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Hvordan opretter jeg en rytter og heste? <span>Ryttere & Heste</span></h3>
+                        <p>Det er nemt at knytte heste til den enkelte rytter, så de hænger sammen som ekvipager.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>Personkartotek</strong> i venstremenuen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"+ Opret Ny"</strong> ud for *Ryttere & Heste*.</li>
+                            <li><i class="fas fa-arrow-right"></i> Udfyld rytterens <strong>Navn</strong>, <strong>E-mail</strong> (vigtigt til magic link) og <strong>Telefon</strong>. Klik på **Gem Stamdata**.</li>
+                            <li><i class="fas fa-arrow-right"></i> **Knyt heste til rytteren:** I bunden af den gemte rytter kan du indtaste hestens navn og klikke på **"+"**. Hesten er nu knyttet direkte til denne rytter.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="opret-dommer" class="guide-section">
+                <h2><i class="fas fa-gavel"></i> Opret dommer</h2>
+                <p class="section-description">Opret dommerprofiler, så de kan modtage personlige links til karakterafgivelse.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Hvordan opretter jeg en dommer? <span>Dommere</span></h3>
+                        <p>Dommerne tilføjes separat i kartoteket og har ikke brug for hestetilknytning.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Gå til <strong>Personkartotek</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på den grønne knap <strong>"+ Opret Ny"</strong> ud for *Dommere*.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast dommerens <strong>Navn</strong>, <strong>E-mail</strong> og <strong>Telefon</strong>. Klik på <strong>"Gem Dommer"</strong>.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual">
+                        <img src="/images/directory_screen.png" alt="Opret dommer i kartoteket">
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3 -->
+            <section id="opret-klubklasser" class="guide-section">
+                <h2><i class="fas fa-flag"></i> 3. Poster & Klasser</h2>
+                <p class="section-description">Her opretter du de klasser eller discipliner, som din klub afholder. Disse fungerer som skabeloner til stævnerne.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/posts_screen.png" alt="Poster og klasser skabelon-formular">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Hvordan opretter jeg poster og klasser? <span>Opret Ny Post / Klasse</span></h3>
+                        <p>Definer reglerne for bedømmelsen af hver enkelt klasse én gang for alle.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Gå til fanen <strong>Poster / Klasser</strong> i menuen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast klassens <strong>Navn</strong> (fx *T8 Tølt* eller *4.1 Firgang*).</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg **Disciplin** (fx *Gangart*). Dette tilpasser input-skærmen til dommeren.</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg **Bedømmelsesmetode** (fx *Standard*) samt **Koefficient** (typisk 1,0) og **Max karakter** (fx 10,0).</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret Post"</strong>. Klassen gemmes og vises i listen til højre.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4 -->
+            <section id="opret-staevne" class="guide-section">
+                <h2><i class="fas fa-calendar-plus"></i> 4. Stævneafvikling</h2>
+                <p class="section-description">Når dit kartotek er klar, kan du oprette dit stævne og sammensætte de forskellige elementer.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Hvordan opretter jeg et stævne? <span>Stævner</span></h3>
+                        <p>Opret stævnets overordnede ramme på få sekunder.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Gå til <strong>Stævner</strong> i menuen og klik på den røde knap <strong>"+ Nyt Stævne"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Udfyld stævnets **Navn** (fx *Klub mesterskab 2026*), discipliner, dato, tid og sted.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret"</strong>. Klik på det nye stævne på listen for at gå til stævnets administrationsside.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual">
+                        <img src="/images/competitions_screen.png" alt="Opret stævne knap og liste">
+                    </div>
+                </div>
+            </section>
+
+            <section id="knyt-klasser" class="guide-section">
+                <h2><i class="fas fa-check-double"></i> Knyt klasser til et stævne</h2>
+                <p class="section-description">Vælg hvilke af din klubs oprettede klasser/poster der skal rides under dette stævne.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/comp_details_screen.png" alt="Knytte klasser til stævne skærmbillede">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Klassevalg <span>Klasser / Poster</span></h3>
+                        <p>Du kan enten vælge dine egne klasser manuelt eller hente standardklasser lynhurtigt.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Klik på fanen <strong>Klasser / Poster</strong> inde i stævnets detaljevisning.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Hurtig import:</strong> Klik på <strong>"Importer standardklasser"</strong> for automatisk at hente standardklasser ind (fx T8, T1, 4.1 for islandske heste).</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Manuelt valg:</strong> Sæt flueben i de klasser, du ønsker at afvikle til netop dette stævne.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Gem Klassevalg"</strong>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="knyt-deltagere" class="guide-section">
+                <h2><i class="fas fa-horse"></i> Tilknyt ryttere & heste til stævne</h2>
+                <p class="section-description">Tilmeld ekvipagerne til de valgte stævneklasser og tildel startnumre.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Ekvipagetilmelding <span>Tilknyttede Ryttere</span></h3>
+                        <p>Her sammensætter du startlisterne til de enkelte klasser.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Klik på fanen <strong>Tilknyttede Ryttere</strong> i stævneadgangen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg en **Rytter** og derefter den **Hest**, rytteren skal ride på.</li>
+                            <li><i class="fas fa-arrow-right"></i> Sæt flueben i de klasser, ekvipagen skal deltage i til dette stævne.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast et **Startnummer** for hver klasse (fx 1, 2, 3...) og klik på <strong>"Tilknyt Rytter"</strong>.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual">
+                        <img src="/images/comp_riders_screen.png" alt="Tilknyt ryttere og heste til klasser under stævnet">
+                    </div>
+                </div>
+            </section>
+
+            <section id="knyt-dommere" class="guide-section">
+                <h2><i class="fas fa-users-cog"></i> Tilknyt dommere og poster</h2>
+                <p class="section-description">Tildel dommere til stævnet og vælg, hvilke klasser og poster de skal dømme.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/comp_judges_screen.png" alt="Tilknyt dommere og tildel stævneklasser">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Tildeling af dommerroller <span>Tilknyttede Dommere & Poster</span></h3>
+                        <p>Sørg for, at dommerne har adgang til de rigtige startlister.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Gå til fanen <strong>Tilknyttede Dommere & Poster</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg dommeren i dropdown-menuen (fx *Vibeke*).</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast dommerens **Rolle** (fx *Dommer A* eller *Hoveddommer*).</li>
+                            <li><i class="fas fa-arrow-right"></i> Sæt flueben i de klasser/poster, dommeren skal give karakterer i på stævnedagen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Tilknyt"</strong> for at bekræfte.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5 -->
+            <section id="magic-link" class="guide-section">
+                <h2><i class="fas fa-magic"></i> 5. Bedømmelse & Dommerens opgave</h2>
+                <p class="section-description">Her beskrives det, hvordan selve bedømmelsen foregår, og hvad dommeren skal gøre på banekanten.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Hvordan fungerer Magic Link, og hvordan dømmer dommeren? <span>Dommerens opgave</span></h3>
+                        <p>Systemet er papir- og kodeordsfrit, hvilket gør det utrolig nemt for dommerne under stævnet.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Send Magic Link:</strong> Som administrator går du til fanen *Tilknyttede Dommere*. Klik på knappen **"Send Magic Link"** ud for dommeren. Dette sender en e-mail til dommeren med en sikker, direkte genvej.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Åbn link på telefon:</strong> Dommeren modtager mailen på sin telefon eller tablet, trykker på linket og kommer direkte ind på sin personlige bedømmelsesskærm uden at skulle huske koder.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Afgiv karakterer:</strong> Dommeren ser listen over deltagere i den aktive klasse. De trykker på den ekvipage, der rider, vælger karakteren på skærmen (fx 6.0, 6.5, 7.0) og trykker **"Submit"**.</li>
+                            <li><i class="fas fa-arrow-right"></i> Karaktererne indsendes øjeblikkeligt til serveren og gemmes sikkert.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual" style="padding: 3rem; background: rgba(15, 23, 42, 0.4); text-align: center; border-radius: 12px;">
+                        <i class="fas fa-mobile-alt" style="font-size: 6rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+                        <h4 style="font-size: 1.3rem; color: white; margin-bottom: 0.5rem;">Dommerens bedømmelsesskærm</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Det touch-venlige mobilinterface gør det muligt at afgive bedømmelser på få sekunder direkte fra banen.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="leaderboard-resultater" class="guide-section">
+                <h2><i class="fas fa-list-ol"></i> Live Leaderboard & Resultater</h2>
+                <p class="section-description">Udregningen af gennemsnit og placeringer sker øjeblikkeligt og kan følges live af tilskuere.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/comp_results_screen.png" alt="Live leaderboard tab i stævneadgangen">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Hvordan fungerer resultater/leaderboard? <span>Live Leaderboard</span></h3>
+                        <p>Ingen ventetid på sekretariatet. Ranglisten er opdateret i samme sekund, som rytteren rider ud af banen.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Del linket:</strong> Klik på den gule knap **"Kopiér Offentligt Link"** øverst i dine stævnedetaljer. Dette link kan deles med ryttere og tilskuere eller laves til en QR-kode.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Følg stillingen live:</strong> Når dommerne indtaster karakterer på banen, genberegner systemet automatisk gennemsnittet for hver ekvipage i realtid.</li>
+                            <li><i class="fas fa-arrow-right"></i> Tabellen opdateres automatisk hos alle tilskuere. Førende ekvipager og deres karakterer fremhæves øverst på listen!</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <div class="info-box">
+                <i class="fas fa-lightbulb"></i>
+                <div>
+                    <h4>Tip til afviklingen</h4>
+                    <p>Du kan med fordel printe det offentlige stævnelink ud som en **QR-kode** og hænge op i rytterstuen og ved banen, så tilskuere og ryttere hurtigt kan scanne sig ind på live-leaderboardet med deres mobiltelefoner under arrangementet.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 EquiEvent. Alle rettigheder forbeholdes.</p>
+    </footer>
+
+    <script>
+        // Simple sidebar navigation active state highlight on scroll
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('.guide-section');
+            const navItems = document.querySelectorAll('.nav-item');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    if (pageYOffset >= (sectionTop - 150)) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navItems.forEach(item => {
+                    item.classList.remove('active');
+                    const link = item.querySelector('a').getAttribute('href').substring(1);
+                    if (link === current) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+    <script type="module" src="/support-chat.js"></script>
+</body>
+</html>

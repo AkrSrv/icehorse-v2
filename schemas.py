@@ -74,9 +74,13 @@ class CompetitionBase(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     location: str
+    discipline: Optional[str] = "gait"
+    scoring_method: Optional[str] = "standard"
 
 class CompetitionCreate(CompetitionBase):
-    pass
+    import_standards: Optional[bool] = False
+    post_ids: Optional[List[int]] = []
+
 
 class CompetitionOut(CompetitionBase):
     id: int
@@ -84,6 +88,7 @@ class CompetitionOut(CompetitionBase):
     is_active: bool
     active_until: Optional[datetime] = None
     price_paid: Optional[float] = None
+    club_posts: List["ClubPostOut"] = []
     class Config:
         from_attributes = True
 
@@ -91,6 +96,10 @@ class ClubPostBase(BaseModel):
     name: str
     description: Optional[str] = None
     location: Optional[str] = None
+    coefficient: Optional[float] = 1.0
+    max_value: Optional[float] = 10.0
+    discipline: Optional[str] = "gait"
+    scoring_method: Optional[str] = "standard"
 
 class ClubPostCreate(ClubPostBase):
     pass
@@ -142,20 +151,35 @@ class ClubJudgeOut(ClubJudgeBase):
     class Config:
         from_attributes = True
 
-class CompetitionRiderBase(BaseModel):
+class CompetitionRiderPostBase(BaseModel):
+    club_post_id: int
     start_number: Optional[int] = None
+
+class CompetitionRiderPostCreate(CompetitionRiderPostBase):
+    pass
+
+class CompetitionRiderPostOut(CompetitionRiderPostBase):
+    id: int
+    competition_rider_id: int
+    club_post: ClubPostOut
+    class Config:
+        from_attributes = True
+
+class CompetitionRiderBase(BaseModel):
     horse_id: int
     club_rider_id: int
 
 class CompetitionRiderCreate(CompetitionRiderBase):
-    pass
+    rider_posts: List[CompetitionRiderPostBase] = []
 
 class CompetitionRiderOut(CompetitionRiderBase):
     id: int
     competition_id: int
+    start_number: Optional[int] = None
     magic_link_uuid: str
     club_rider: ClubRiderOut
     horse: HorseOut
+    rider_posts: List[CompetitionRiderPostOut] = []
     class Config:
         from_attributes = True
 
@@ -188,3 +212,173 @@ class DirectoryJudgeOut(ClubJudgeOut):
 class DirectoryOut(BaseModel):
     riders: List[DirectoryRiderOut]
     judges: List[DirectoryJudgeOut]
+
+class ScoreBase(BaseModel):
+    points: Optional[float] = None
+    comment: Optional[str] = None
+    deductions: Optional[float] = 0.0
+    faults: Optional[int] = None
+    time_seconds: Optional[float] = None
+    style_points: Optional[float] = None
+    is_eliminated: Optional[bool] = False
+    is_retired: Optional[bool] = False
+    is_clear: Optional[bool] = False
+    jump_off_faults: Optional[int] = None
+    jump_off_time: Optional[float] = None
+
+class ScoreCreate(ScoreBase):
+    club_post_id: Optional[int] = None
+    competition_rider_id: int
+
+class ScoreUpdate(ScoreBase):
+    pass
+
+class ScoreOut(ScoreBase):
+    id: int
+    club_post_id: Optional[int] = None
+    competition_judge_id: int
+    competition_rider_id: int
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class ActivateCompetitionRequest(BaseModel):
+    discount_code: Optional[str] = None
+
+
+# --- NEW JUDGING SCHEMAS ---
+
+class RuleSetBase(BaseModel):
+    version: str
+    valid_from: Optional[datetime] = None
+    source_url: Optional[str] = None
+    configuration: str  # JSON string
+
+class RuleSetCreate(RuleSetBase):
+    pass
+
+class RuleSetOut(RuleSetBase):
+    class Config:
+        from_attributes = True
+
+class ClassDefinitionBase(BaseModel):
+    discipline: str
+    code: str
+    name: str
+    scoring_model: str
+    configuration: Optional[str] = None
+
+class ClassDefinitionCreate(ClassDefinitionBase):
+    pass
+
+class ClassDefinitionOut(ClassDefinitionBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class JudgeBase(BaseModel):
+    name: str
+    position: Optional[str] = None
+
+class JudgeCreate(JudgeBase):
+    pass
+
+class JudgeOut(JudgeBase):
+    id: int
+    competition_id: int
+    magic_link_uuid: str
+    class Config:
+        from_attributes = True
+
+class ScoreItemBase(BaseModel):
+    sequence: int
+    type: str  # mark, event, time, deduction
+    value: str  # JSON representation
+
+class ScoreItemCreate(ScoreItemBase):
+    pass
+
+class ScoreItemOut(ScoreItemBase):
+    id: int
+    score_sheet_id: int
+    class Config:
+        from_attributes = True
+
+class ScoreSheetBase(BaseModel):
+    status: str = "DRAFT"
+    rule_version: str
+
+class ScoreSheetCreate(ScoreSheetBase):
+    judge_id: int
+
+class ScoreSheetUpdate(BaseModel):
+    status: Optional[str] = None
+    change_reason: Optional[str] = None
+
+class ScoreSheetOut(ScoreSheetBase):
+    id: int
+    entry_id: int
+    judge_id: int
+    created_at: datetime
+    created_by: Optional[str] = None
+    revision: int
+    change_reason: Optional[str] = None
+    items: List[ScoreItemOut] = []
+    judge: JudgeOut
+    class Config:
+        from_attributes = True
+
+class ResultOut(BaseModel):
+    entry_id: int
+    status: str
+    primary_score: float
+    secondary_score: Optional[float] = None
+    tie_breaker: Optional[str] = None
+    calculation_trace: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+class EntryBase(BaseModel):
+    class_id: int
+    rider_id: int
+    horse_id: int
+    start_number: Optional[int] = None
+    competition_id: int
+
+class EntryCreate(EntryBase):
+    pass
+
+class EntryOut(EntryBase):
+    id: int
+    class_def: ClassDefinitionOut
+    rider: ClubRiderOut
+    horse: HorseOut
+    score_sheets: List[ScoreSheetOut] = []
+    result: Optional[ResultOut] = None
+    class Config:
+        from_attributes = True
+
+
+class AuditLogOut(BaseModel):
+    id: int
+    entity_type: str
+    entity_id: int
+    revision: int
+    changed_at: datetime
+    changed_by: Optional[str] = None
+    change_reason: Optional[str] = None
+    snapshot: str
+    class Config:
+        from_attributes = True
+
+
+
