@@ -41,6 +41,22 @@ class DiscountCode(Base):
     code = Column(String, unique=True, index=True)
     discount_amount = Column(Float)
     is_active = Column(Boolean, default=True)
+    max_uses_per_club = Column(Integer, nullable=True, default=None)
+    max_total_uses = Column(Integer, nullable=True, default=None)
+
+    usages = relationship("DiscountUsage", back_populates="discount_code", cascade="all, delete-orphan")
+
+class DiscountUsage(Base):
+    __tablename__ = "discount_usages"
+    id = Column(Integer, primary_key=True, index=True)
+    discount_code_id = Column(Integer, ForeignKey("discount_codes.id"))
+    club_id = Column(Integer, ForeignKey("clubs.id"))
+    competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    used_at = Column(DateTime, default=datetime.utcnow)
+
+    discount_code = relationship("DiscountCode", back_populates="usages")
+    club = relationship("Club")
 
 class Competition(Base):
     __tablename__ = "competitions"
@@ -58,6 +74,7 @@ class Competition(Base):
 
     discipline = Column(String, default="gait")
     scoring_method = Column(String, default="standard")
+    ruleVersion = Column(String, default="2026.1")
 
     club = relationship("Club", back_populates="competitions")
     competition_judges = relationship("CompetitionJudge", back_populates="competition", cascade="all, delete-orphan")
@@ -76,6 +93,8 @@ class ClubPost(Base):
     max_value = Column(Float, default=10.0)
     discipline = Column(String, default="gait")
     scoring_method = Column(String, default="standard")
+    is_active = Column(Boolean, default=True)
+    configuration = Column(Text, nullable=True)
 
     club = relationship("Club", back_populates="club_posts")
     scores = relationship("Score", back_populates="club_post", cascade="all, delete-orphan")
@@ -207,6 +226,9 @@ class ClassDefinition(Base):
     name = Column(String)
     scoring_model = Column(String)  # e.g., dressage_percentage, jumping_a, etc.
     configuration = Column(Text, nullable=True)  # JSON configuration for exercises/sections/parameters
+    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=True)
+    
+    club = relationship("Club")
 
 
 class Entry(Base):

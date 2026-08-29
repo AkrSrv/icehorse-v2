@@ -22,6 +22,48 @@ try {
 
 
 
+window.showLandingPage = function() {
+    const landing = document.getElementById('landing-section');
+    if (landing) landing.style.display = 'block';
+    const login = document.getElementById('login-section');
+    if (login) login.style.display = 'none';
+    const reg = document.getElementById('register-section');
+    if (reg) reg.style.display = 'none';
+    const forgot = document.getElementById('forgot-password-section');
+    if (forgot) forgot.style.display = 'none';
+    const reset = document.getElementById('reset-password-section');
+    if (reset) reset.style.display = 'none';
+    const dash = document.getElementById('dashboard');
+    if (dash) dash.style.display = 'none';
+    const clubs = document.getElementById('club-selection-section');
+    if (clubs) clubs.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.showLoginSection = function() {
+    const landing = document.getElementById('landing-section');
+    if (landing) landing.style.display = 'none';
+    const login = document.getElementById('login-section');
+    if (login) login.style.display = 'block';
+    const reg = document.getElementById('register-section');
+    if (reg) reg.style.display = 'none';
+    const forgot = document.getElementById('forgot-password-section');
+    if (forgot) forgot.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.showRegisterSection = function() {
+    const landing = document.getElementById('landing-section');
+    if (landing) landing.style.display = 'none';
+    const login = document.getElementById('login-section');
+    if (login) login.style.display = 'none';
+    const reg = document.getElementById('register-section');
+    if (reg) reg.style.display = 'block';
+    const forgot = document.getElementById('forgot-password-section');
+    if (forgot) forgot.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 window.toggleSidebar = function() {
     const sidebar = document.getElementById('sidebar-nav');
     const overlay = document.getElementById('sidebar-overlay');
@@ -162,13 +204,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const clubSelectionSection = document.getElementById('club-selection-section');
     const loginForm = document.getElementById('login-form');
     
+    // Landing Page & Auth Navigation Hooks
+    window.showLandingPage = function() {
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'block';
+        if (loginSection) loginSection.style.display = 'none';
+        const reg = document.getElementById('register-section');
+        if (reg) reg.style.display = 'none';
+        const forgot = document.getElementById('forgot-password-section');
+        if (forgot) forgot.style.display = 'none';
+        const reset = document.getElementById('reset-password-section');
+        if (reset) reset.style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
+        if (clubSelectionSection) clubSelectionSection.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.showLoginSection = function() {
+        const token = getToken();
+        if (token) {
+            const landing = document.getElementById('landing-section');
+            if (landing) landing.style.display = 'none';
+            if (window.activeClubId) {
+                showDashboard();
+            } else {
+                checkUserClubs();
+            }
+            return;
+        }
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'none';
+        if (loginSection) loginSection.style.display = 'block';
+        const reg = document.getElementById('register-section');
+        if (reg) reg.style.display = 'none';
+        const forgot = document.getElementById('forgot-password-section');
+        if (forgot) forgot.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.showRegisterSection = function() {
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'none';
+        if (loginSection) loginSection.style.display = 'none';
+        const reg = document.getElementById('register-section');
+        if (reg) reg.style.display = 'block';
+        const forgot = document.getElementById('forgot-password-section');
+        if (forgot) forgot.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     // Auth Logic
     function getToken() {
         return localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
     }
 
     if (getToken()) {
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'none';
         checkUserClubs();
+    } else {
+        if (urlParams.get('app') === 'login') {
+            window.showLoginSection();
+        } else if (urlParams.get('app') === 'register') {
+            window.showRegisterSection();
+        } else {
+            window.showLandingPage();
+        }
     }
 
     const forgotPasswordForm = document.getElementById('forgot-password-form');
@@ -423,15 +524,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeClubBanner) activeClubBanner.style.display = 'none';
 
         clubSelectionSection.style.display = 'none';
-        showLogin();
+        dashboardSection.style.display = 'none';
+        window.showLandingPage();
     };
 
     function showLogin() {
-        loginSection.style.display = 'block';
-        dashboardSection.style.display = 'none';
+        window.showLoginSection();
     }
 
     function showDashboard() {
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'none';
         loginSection.style.display = 'none';
         clubSelectionSection.style.display = 'none';
         dashboardSection.style.display = 'flex';
@@ -462,6 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         if (tabName === 'directory') fetchGlobalDirectory();
+        if (tabName === 'posts' && window.loadV1ClassTemplates) window.loadV1ClassTemplates();
         window.closeSidebar();
     };
 
@@ -870,9 +974,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const importStandards = document.getElementById('comp-import-standards-cb').checked;
         const selectedPosts = Array.from(document.querySelectorAll('.new-comp-custom-class-cb:checked')).map(cb => parseInt(cb.value));
 
+        const dateVal = document.getElementById('comp-date').value;
+        let parsedDate = null;
+        if (dateVal) {
+            // Check if Danish format DD.MM.YYYY
+            const parts = dateVal.split('.');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const year = parseInt(parts[2]);
+                parsedDate = new Date(year, month, day);
+            } else {
+                parsedDate = new Date(dateVal);
+            }
+        }
+        
+        if (!parsedDate || isNaN(parsedDate.getTime())) {
+            alert('Vælg eller indtast venligst en gyldig dato (f.eks. DD.MM.YYYY).');
+            return;
+        }
+
         const payload = {
             name: document.getElementById('comp-name').value,
-            date: new Date(document.getElementById('comp-date').value).toISOString(),
+            date: parsedDate.toISOString(),
             start_time: document.getElementById('comp-start-time')?.value || null,
             end_time: document.getElementById('comp-end-time')?.value || null,
             location: document.getElementById('comp-location').value,
@@ -889,8 +1013,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 window.showCompetitionsList();
+            } else {
+                const data = await response.json();
+                alert('Fejl ved oprettelse af stævne: ' + (data.detail || 'Ukendt fejl'));
             }
-        } catch(err) { console.error(err); }
+        } catch(err) { 
+            console.error(err); 
+            alert('Kunne ikke oprette forbindelse til serveren.');
+        }
     });
 
     // Event listener to update custom classes when disciplines toggle
@@ -1433,37 +1563,139 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) { console.error(err); }
     };
 
+    window.activeClubPostsFilter = 'all';
+
+    window.filterActiveClubPosts = function(disc) {
+        window.activeClubPostsFilter = disc;
+        
+        document.querySelectorAll('.active-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.background = 'rgba(255,255,255,0.05)';
+            btn.style.borderColor = 'var(--glass-border)';
+            btn.style.color = 'var(--text-secondary)';
+        });
+        
+        const targetBtn = Array.from(document.querySelectorAll('.active-filter-btn')).find(b => b.getAttribute('onclick')?.includes(`'${disc}'`));
+        if (targetBtn) {
+            targetBtn.classList.add('active');
+            targetBtn.style.background = 'rgba(255,255,255,0.2)';
+            targetBtn.style.color = '#fff';
+        }
+        
+        renderClubPosts();
+    };
+
+    function updateClubPostsCounters() {
+        const elAll = document.getElementById('count-active-all');
+        const elGait = document.getElementById('count-active-gait');
+        const elDress = document.getElementById('count-active-dressage');
+        const elJump = document.getElementById('count-active-jumping');
+        
+        if (elAll) elAll.innerText = clubPosts.length;
+        if (elGait) elGait.innerText = clubPosts.filter(p => (p.discipline || 'gait') === 'gait').length;
+        if (elDress) elDress.innerText = clubPosts.filter(p => p.discipline === 'dressage').length;
+        if (elJump) elJump.innerText = clubPosts.filter(p => p.discipline === 'jumping').length;
+    }
+
     function renderClubPosts() {
+        updateClubPostsCounters();
         const list = document.getElementById('club-posts-list');
         if(!list) return;
         list.innerHTML = '';
         
-        const filterVal = document.getElementById('club-post-filter')?.value || 'all';
+        const filterVal = window.activeClubPostsFilter || 'all';
         const filteredPosts = clubPosts.filter(p => {
             if (filterVal === 'all') return true;
             return (p.discipline || 'gait') === filterVal;
         });
 
-        filteredPosts.forEach(p => {
+        const sortedPosts = (window.sortClassesByDifficulty ? window.sortClassesByDifficulty(filteredPosts) : filteredPosts);
+
+        if (sortedPosts.length === 0) {
+            list.innerHTML = '<div style="grid-column: 1/-1; padding: 2rem; text-align: center; color: var(--text-secondary);">Ingen klasser/poster fundet for dette filter. Opret en ny under fanebladet "Opret mine egne klasser/poster".</div>';
+            return;
+        }
+
+        sortedPosts.forEach(p => {
             const locStr = p.location ? ` | <i class="fas fa-map-marker-alt"></i> ${p.location}` : '';
             const descStr = p.description ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">${p.description}</div>` : '';
-            const discName = p.discipline === 'gait' ? 'Islandske Heste' : p.discipline === 'dressage' ? 'Dressur' : 'Spring';
-            const discColor = p.discipline === 'gait' ? '#fbbf24' : p.discipline === 'dressage' ? '#60a5fa' : '#f87171';
-            const textColor = p.discipline === 'gait' ? '#0f172a' : '#ffffff';
-            const methodStr = p.scoring_method ? ` | Metode: ${p.scoring_method}` : '';
-            const coefStr = ` <span style="color: #fbbf24; font-size: 0.8rem;">(Koefficient: ${p.coefficient || 1.0}, Max: ${p.max_value || 10.0})</span>`;
-            list.innerHTML += `
-                <div class="list-item" style="border-left: 4px solid ${discColor};">
-                    <div>
-                        <strong>${p.name}</strong> <span class="badge" style="background: ${discColor}; color: ${textColor}; font-size: 0.7rem; padding: 0.1rem 0.4rem; vertical-align: middle;">${discName}</span>${coefStr}${locStr}${methodStr}
-                        ${descStr}
+            const isActive = p.is_active !== false;
+            
+            let discName = '🐎 Dressur';
+            let discColor = '#10b981';
+            let textColor = '#ffffff';
+            if (p.discipline === 'jumping') {
+                discName = '🚧 Spring';
+                discColor = '#3b82f6';
+            } else if (p.discipline === 'gait') {
+                discName = '🇮🇸 Islænder';
+                discColor = '#fbbf24';
+                textColor = '#0f172a';
+            }
+            
+            const activeBadge = isActive 
+                ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-weight: 700; font-size: 0.7rem; padding: 0.15rem 0.4rem;">AKTIV I KLUBBEN</span>'
+                : '<span class="badge" style="background: rgba(148, 163, 184, 0.2); color: #94a3b8; font-weight: 700; font-size: 0.7rem; padding: 0.15rem 0.4rem;">INAKTIV</span>';
+            
+            const card = document.createElement('div');
+            card.className = 'glass-panel';
+            card.style.padding = '1.2rem';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.justifyContent = 'space-between';
+            card.style.gap = '1rem';
+            card.style.border = isActive ? `1px solid var(--glass-border)` : `1px dashed rgba(255,255,255,0.15)`;
+            card.style.opacity = isActive ? '1' : '0.65';
+            card.style.borderRadius = '12px';
+            card.style.borderLeft = `4px solid ${discColor}`;
+            
+            card.innerHTML = `
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 0.5rem;">
+                        <strong style="color: white; font-size: 1.05rem;">${p.name}</strong>
+                        <div style="display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap;">
+                            <span class="badge" style="background: ${discColor}; color: ${textColor}; font-size: 0.7rem; padding: 0.1rem 0.4rem; font-weight: 700;">${discName}</span>
+                            ${activeBadge}
+                        </div>
                     </div>
-                    <button class="btn btn-danger btn-sm" onclick="deleteClubPost(${p.id})"><i class="fas fa-trash"></i></button>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                        <span>Metode: <strong>${p.scoring_method === 'percentage' ? 'Procent' : p.scoring_method === 'standard' ? 'Standard (sum/gns)' : p.scoring_method}</strong></span>${locStr}
+                    </div>
+                    ${descStr}
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; border-top: 1px solid var(--glass-border); padding-top: 0.75rem;">
+                    <button class="btn btn-secondary btn-sm" style="font-weight: 700; font-size: 0.75rem;" onclick="window.toggleClubPostActive(${p.id}, ${!isActive})">
+                        ${isActive ? '<i class="fas fa-eye-slash"></i> Sæt Inaktiv' : '<i class="fas fa-eye"></i> Sæt Aktiv'}
+                    </button>
+                    <button class="btn btn-danger btn-sm" style="font-size: 0.75rem;" onclick="deleteClubPost(${p.id})" title="Fjern eller sæt inaktiv">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             `;
+            list.appendChild(card);
         });
     }
     window.renderClubPosts = renderClubPosts;
+
+    window.toggleClubPostActive = async function(postId, newStatus) {
+        if (!window.activeClubId) return;
+        const token = getToken();
+        try {
+            const res = await fetch(`${API_BASE}/clubs/${window.activeClubId}/club_posts/${postId}/toggle?is_active=${newStatus}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                const idx = clubPosts.findIndex(p => p.id === postId);
+                if (idx !== -1) clubPosts[idx] = updated;
+                renderClubPosts();
+                updateCompetitionJudgePostsCheckboxes();
+            }
+        } catch(err) {
+            console.error('Error toggling club post active:', err);
+        }
+    };
 
     document.getElementById('club-post-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1483,7 +1715,8 @@ document.addEventListener('DOMContentLoaded', () => {
             location: document.getElementById('club-post-location').value || null,
             description: document.getElementById('club-post-description').value || null,
             discipline: document.getElementById('club-post-discipline').value,
-            scoring_method: document.getElementById('club-post-scoring-method').value
+            scoring_method: document.getElementById('club-post-scoring-method').value,
+            is_active: true
         };
         try {
             const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/club_posts`, {
@@ -1503,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.deleteClubPost = async function(postId) {
         if(!window.activeClubId) return;
-        if(!confirm("Slet post/klasse?")) return;
+        if(!confirm("Vil du fjerne/sætte denne klasse inaktiv for klubben?")) return;
         const token = getToken();
         try {
             const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/club_posts/${postId}`, {
@@ -1522,16 +1755,19 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
         
         const activePosts = (window.activeCompetition && window.activeCompetition.club_posts) || [];
+        const sortedActive = (window.sortClassesByDifficulty ? window.sortClassesByDifficulty(activePosts) : activePosts);
         
-        if(activePosts.length === 0) {
+        if(sortedActive.length === 0) {
             container.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-secondary);">Ingen aktive stævneklasser endnu.</span>';
         } else {
-            activePosts.forEach(p => {
-                const discName = p.discipline === 'gait' ? 'Gangart' : p.discipline === 'dressage' ? 'Dressur' : 'Spring';
+            sortedActive.forEach(p => {
+                let discBadge = '🐎 [Dressur]';
+                if (p.discipline === 'jumping') discBadge = '🚧 [Spring]';
+                else if (p.discipline === 'gait') discBadge = '🇮🇸 [Islænder]';
                 container.innerHTML += `
                     <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
                         <input type="checkbox" class="post-checkbox" value="${p.id}" style="width: auto; margin: 0;">
-                        <span>${p.name} <small style="color: var(--text-secondary);">(${discName} x${p.coefficient || 1.0})</small></span>
+                        <span><strong style="color: white;">${discBadge}</strong> ${p.name} <small style="color: var(--text-secondary);">(x${p.coefficient || 1.0})</small></span>
                     </label>
                 `;
             });
@@ -1567,7 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const container = document.getElementById('comp-classes-checkboxes');
         if (!container) return;
-        container.innerHTML = '<span style="color: var(--text-secondary);">Henter klasser...</span>';
+        container.innerHTML = '<span style="color: var(--text-secondary);">Henter klubbens aktive klasser...</span>';
         
         try {
             const token = getToken();
@@ -1581,21 +1817,35 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadClubPosts();
             
             container.innerHTML = '';
-            if (clubPosts.length === 0) {
-                container.innerHTML = '<span style="font-size: 0.9rem; color: var(--text-secondary); grid-column: 1/-1;">Ingen poster/klasser oprettet i klubben endnu. Opret poster under "Poster / Klasser"-fanen først.</span>';
+            
+            // Only show active posts in the competition setup (deduplicated by name & discipline)
+            const seenKeys = new Set();
+            const activeClubPostsOnly = [];
+            (clubPosts || []).forEach(p => {
+                if (p.is_active !== false) {
+                    const key = `${(p.discipline || 'gait').toLowerCase()}_${(p.name || '').trim().toLowerCase()}`;
+                    if (!seenKeys.has(key)) {
+                        seenKeys.add(key);
+                        activeClubPostsOnly.push(p);
+                    }
+                }
+            });
+            
+            if (activeClubPostsOnly.length === 0) {
+                container.innerHTML = '<span style="font-size: 0.9rem; color: var(--text-secondary);">Ingen aktive poster/klasser oprettet i klubben. Opret eller aktivér klasser under "Poster / Klasser"-fanen.</span>';
                 return;
             }
             
-            const activePostIds = new Set(window.activeCompetition.club_posts.map(p => p.id));
+            const activePostIds = new Set((window.activeCompetition.club_posts || []).map(p => p.id));
             
             const disciplines = {
-                gait: { name: 'Gangart (Islandske Heste)', color: '#fbbf24', posts: [] },
-                dressage: { name: 'Dressur', color: '#60a5fa', posts: [] },
-                jumping: { name: 'Springning', color: '#f87171', posts: [] }
+                dressage: { key: 'dressage', name: '🐎 Dressurklasser', color: '#10b981', posts: [] },
+                jumping: { key: 'jumping', name: '🚧 Springklasser', color: '#60a5fa', posts: [] },
+                gait: { key: 'gait', name: '🇮🇸 Islænderklasser (Gangart / Post)', color: '#fbbf24', posts: [] }
             };
             
-            clubPosts.forEach(p => {
-                const disc = p.discipline || 'gait';
+            activeClubPostsOnly.forEach(p => {
+                const disc = (p.discipline || 'gait').toLowerCase();
                 if (disciplines[disc]) {
                     disciplines[disc].posts.push(p);
                 } else {
@@ -1606,39 +1856,68 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(disciplines).forEach(key => {
                 const group = disciplines[key];
                 if (group.posts.length > 0) {
-                    const groupTitle = document.createElement('h5');
-                    groupTitle.style.gridColumn = '1 / -1';
-                    groupTitle.style.color = group.color;
-                    groupTitle.style.marginTop = '0.5rem';
-                    groupTitle.style.borderBottom = '1px solid var(--glass-border)';
-                    groupTitle.style.paddingBottom = '0.25rem';
-                    groupTitle.innerText = group.name;
-                    container.appendChild(groupTitle);
+                    const sortedGroupPosts = window.sortClassesByDifficulty ? window.sortClassesByDifficulty(group.posts) : group.posts;
+                    const checkedCount = sortedGroupPosts.filter(p => activePostIds.has(p.id)).length;
                     
-                    group.posts.forEach(p => {
+                    const details = document.createElement('details');
+                    details.open = true;
+                    details.style.background = 'rgba(0,0,0,0.25)';
+                    details.style.border = `1px solid var(--glass-border)`;
+                    details.style.borderRadius = '10px';
+                    details.style.padding = '0.6rem 1rem';
+                    details.style.marginBottom = '0.5rem';
+                    
+                    const summary = document.createElement('summary');
+                    summary.style.cursor = 'pointer';
+                    summary.style.fontWeight = '700';
+                    summary.style.color = group.color;
+                    summary.style.fontSize = '0.95rem';
+                    summary.style.display = 'flex';
+                    summary.style.justifyContent = 'space-between';
+                    summary.style.alignItems = 'center';
+                    summary.innerHTML = `
+                        <span>${group.name} (${sortedGroupPosts.length})</span>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">${checkedCount} valgt til stævnet</span>
+                    `;
+                    details.appendChild(summary);
+                    
+                    const grid = document.createElement('div');
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
+                    grid.style.gap = '0.75rem';
+                    grid.style.marginTop = '0.8rem';
+                    grid.style.paddingTop = '0.8rem';
+                    grid.style.borderTop = '1px solid rgba(255,255,255,0.08)';
+                    
+                    sortedGroupPosts.forEach(p => {
                         const isChecked = activePostIds.has(p.id) ? 'checked' : '';
                         const label = document.createElement('label');
                         label.className = 'glass-card';
                         label.style.display = 'flex';
                         label.style.alignItems = 'center';
                         label.style.gap = '0.75rem';
-                        label.style.padding = '0.75rem';
+                        label.style.padding = '0.65rem 0.8rem';
                         label.style.cursor = 'pointer';
                         label.style.margin = '0';
+                        label.style.background = 'rgba(15,23,42,0.5)';
+                        label.style.borderRadius = '8px';
                         label.innerHTML = `
-                            <input type="checkbox" class="comp-class-cb" value="${p.id}" ${isChecked} style="width: auto; margin: 0;">
+                            <input type="checkbox" class="comp-class-cb" value="${p.id}" ${isChecked} style="width: auto; margin: 0; cursor: pointer;">
                             <div>
-                                <span style="font-weight: bold; color: white; display: block; font-size: 0.9rem;">${p.name}</span>
-                                <span style="font-size: 0.75rem; color: var(--text-secondary);">${p.scoring_method === 'percentage' ? 'Procent' : p.scoring_method === 'standard' ? 'Standard' : 'Spring (' + p.scoring_method + ')'}</span>
+                                <span style="font-weight: 700; color: white; display: block; font-size: 0.85rem;">${p.name}</span>
+                                <span style="font-size: 0.72rem; color: var(--text-secondary);">${p.scoring_method === 'percentage' ? 'Procent' : p.scoring_method === 'standard' ? 'Standard' : 'Spring (' + p.scoring_method + ')'}</span>
                             </div>
                         `;
-                        container.appendChild(label);
+                        grid.appendChild(label);
                     });
+                    
+                    details.appendChild(grid);
+                    container.appendChild(details);
                 }
             });
             
             if (container.children.length === 0) {
-                container.innerHTML = '<span style="font-size: 0.9rem; color: var(--text-secondary); grid-column: 1/-1;">Ingen poster/klasser i systemet.</span>';
+                container.innerHTML = '<span style="font-size: 0.9rem; color: var(--text-secondary);">Ingen aktive klasser tilgængelige for din klub.</span>';
             }
             
         } catch(err) {
@@ -1904,15 +2183,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.classList.remove('active');
             }
         });
+        document.getElementById('sa-stats-section').style.display = 'none';
+        document.getElementById('sa-discount-section').style.display = 'none';
+        document.getElementById('sa-global-templates-section').style.display = 'none';
         
         if (saTab === 'stats') {
             document.getElementById('sa-stats-section').style.display = 'block';
-            document.getElementById('sa-discount-section').style.display = 'none';
             fetchSaStats();
-        } else {
-            document.getElementById('sa-stats-section').style.display = 'none';
+        } else if (saTab === 'discount') {
             document.getElementById('sa-discount-section').style.display = 'block';
             fetchSaDiscounts();
+        } else if (saTab === 'global-templates') {
+            document.getElementById('sa-global-templates-section').style.display = 'block';
+            if (window.loadSaGlobalTemplates) window.loadSaGlobalTemplates();
         }
     };
 
@@ -1926,18 +2209,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 document.getElementById('sa-stat-clubs').innerText = data.total_clubs;
                 document.getElementById('sa-stat-active-comps').innerText = data.active_competitions;
+                const completedElem = document.getElementById('sa-stat-completed-comps');
+                if (completedElem) completedElem.innerText = data.completed_competitions || 0;
                 document.getElementById('sa-stat-inactive-comps').innerText = data.inactive_competitions;
                 document.getElementById('sa-stat-outdated-comps').innerText = data.outdated_inactive_competitions;
                 
                 const clubList = document.getElementById('sa-club-stats-list');
                 clubList.innerHTML = '';
                 data.club_stats.forEach(c => {
+                    const activeBadge = c.active_count > 0 
+                        ? `<span style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.82rem;">${c.active_count}</span>`
+                        : `<span style="color: var(--text-secondary); font-size: 0.85rem;">0</span>`;
+                    
+                    const completedBadge = c.completed_count > 0 
+                        ? `<span style="background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.82rem;">${c.completed_count}</span>`
+                        : `<span style="color: var(--text-secondary); font-size: 0.85rem;">0</span>`;
+
+                    const inactiveBadge = c.inactive_count > 0 
+                        ? `<span style="background: rgba(244,63,94,0.12); color: #fb7185; border: 1px solid rgba(244,63,94,0.25); padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.82rem;">${c.inactive_count}</span>`
+                        : `<span style="color: var(--text-secondary); font-size: 0.85rem;">0</span>`;
+
                     clubList.innerHTML += `
                         <tr style="border-bottom: 1px solid var(--glass-border);">
-                            <td style="padding: 0.75rem;"><strong>${c.club_name}</strong></td>
-                            <td style="padding: 0.75rem; color: var(--text-secondary);">${c.owner_email}</td>
-                            <td style="padding: 0.75rem;">${c.created_count} stævner</td>
-                            <td style="padding: 0.75rem; color: #10b981;">${c.active_count} aktive</td>
+                            <td style="padding: 0.85rem 0.75rem;"><strong>${c.club_name}</strong></td>
+                            <td style="padding: 0.85rem 0.75rem; color: var(--text-secondary);">${c.owner_email}</td>
+                            <td style="padding: 0.85rem 0.75rem; text-align: center; font-weight: 700; font-size: 0.95rem; color: #ffffff;">${c.created_count}</td>
+                            <td style="padding: 0.85rem 0.75rem; text-align: center;">${activeBadge}</td>
+                            <td style="padding: 0.85rem 0.75rem; text-align: center;">${completedBadge}</td>
+                            <td style="padding: 0.85rem 0.75rem; text-align: center;">${inactiveBadge}</td>
                         </tr>
                     `;
                 });
@@ -1981,12 +2280,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const list = document.getElementById('sa-discount-list');
                 list.innerHTML = '';
                 codes.forEach(d => {
+                    const maxPerClubStr = d.max_uses_per_club ? `<span style="color: #fbbf24; font-weight: 600;">Maks. ${d.max_uses_per_club}x pr. klub</span>` : `<span style="color: var(--text-secondary);">Ubegrænset</span>`;
+                    const usedCountStr = `<span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.2rem 0.5rem; border-radius: 999px; font-weight: 700; font-size: 0.8rem;">${d.total_used_count || 0}x</span>`;
+                    
                     list.innerHTML += `
                         <tr style="border-bottom: 1px solid var(--glass-border);">
-                            <td style="padding: 0.75rem;"><strong style="letter-spacing: 1px;">${d.code}</strong></td>
+                            <td style="padding: 0.75rem;"><strong style="letter-spacing: 1px; color: #ffffff; font-size: 0.95rem;">${d.code}</strong></td>
                             <td style="padding: 0.75rem; color: #10b981; font-weight: bold;">${d.discount_amount}% rabat</td>
-                            <td style="padding: 0.75rem;">
-                                ${d.is_active ? '<span style="color: #10b981;">Aktiv</span>' : '<span style="color: var(--text-secondary);">Inaktiv</span>'}
+                            <td style="padding: 0.75rem; text-align: center;">${maxPerClubStr}</td>
+                            <td style="padding: 0.75rem; text-align: center;">${usedCountStr}</td>
+                            <td style="padding: 0.75rem; text-align: center;">
+                                ${d.is_active ? '<span style="color: #10b981; background: rgba(16,185,129,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(16,185,129,0.2); font-size: 0.8rem;">Aktiv</span>' : '<span style="color: var(--text-secondary);">Inaktiv</span>'}
                             </td>
                             <td style="padding: 0.75rem; text-align: right;">
                                 <button class="btn btn-danger btn-sm" onclick="deleteDiscountCode(${d.id})" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class="fas fa-trash"></i> Slet</button>
@@ -1994,6 +2298,53 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>
                     `;
                 });
+            }
+
+            // Hent og vis forbrug pr. klub
+            const usageRes = await fetch(`${API_BASE}/admin/discount-codes/usages`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (usageRes.ok) {
+                const usagesData = await usageRes.json();
+                const usageTable = document.getElementById('sa-discount-usages-list');
+                if (usageTable) {
+                    usageTable.innerHTML = '';
+                    if (usagesData.length === 0) {
+                        usageTable.innerHTML = `
+                            <tr>
+                                <td colspan="6" style="padding: 1.5rem; text-align: center; color: var(--text-secondary);">
+                                    <i class="fas fa-info-circle" style="margin-right: 6px;"></i> Ingen klubber har anvendt en rabatkode endnu.
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        usagesData.forEach(club => {
+                            club.discounts.forEach(disc => {
+                                const maxStr = disc.max_uses_per_club ? `${disc.max_uses_per_club}x` : 'Ubegrænset';
+                                const ratioBadge = disc.max_uses_per_club && disc.used_count >= disc.max_uses_per_club
+                                    ? `<span style="background: rgba(244,63,94,0.15); color: #f43f5e; border: 1px solid rgba(244,63,94,0.3); padding: 0.2rem 0.5rem; border-radius: 999px; font-weight: 700; font-size: 0.8rem;">${disc.used_count} / ${maxStr} (Maks nået)</span>`
+                                    : `<span style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.2rem 0.5rem; border-radius: 999px; font-weight: 700; font-size: 0.8rem;">${disc.used_count} / ${maxStr}</span>`;
+                                
+                                const compsStr = disc.competitions && disc.competitions.length > 0
+                                    ? disc.competitions.map(cn => `<span style="display: inline-block; background: rgba(255,255,255,0.06); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem;">${cn}</span>`).join(' ')
+                                    : '<span style="color: var(--text-secondary); font-size: 0.8rem;">Ikke navngivet</span>';
+                                
+                                const dateStr = disc.last_used_at ? new Date(disc.last_used_at).toLocaleDateString('da-DK', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+                                usageTable.innerHTML += `
+                                    <tr style="border-bottom: 1px solid var(--glass-border);">
+                                        <td style="padding: 0.75rem;"><strong>${club.club_name}</strong></td>
+                                        <td style="padding: 0.75rem; color: var(--text-secondary);">${club.owner_email}</td>
+                                        <td style="padding: 0.75rem;"><strong style="color: #fbbf24; letter-spacing: 0.5px;">${disc.code}</strong> <span style="font-size: 0.8rem; color: var(--text-secondary);">(${disc.discount_amount}%)</span></td>
+                                        <td style="padding: 0.75rem; text-align: center;">${ratioBadge}</td>
+                                        <td style="padding: 0.75rem;">${compsStr}</td>
+                                        <td style="padding: 0.75rem; text-align: right; color: var(--text-secondary); font-size: 0.85rem;">${dateStr}</td>
+                                    </tr>
+                                `;
+                            });
+                        });
+                    }
+                }
             }
         } catch(err) {
             console.error(err);
@@ -2004,6 +2355,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const code = document.getElementById('sa-discount-code').value.trim().toUpperCase();
         const pct = parseFloat(document.getElementById('sa-discount-pct').value);
+        const maxInput = document.getElementById('sa-discount-max-per-club').value.trim();
+        const maxPerClub = maxInput ? parseInt(maxInput, 10) : null;
         
         try {
             const response = await fetch(`${API_BASE}/admin/discount-codes`, {
@@ -2015,11 +2368,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     code: code,
                     discount_amount: pct,
+                    max_uses_per_club: maxPerClub && maxPerClub > 0 ? maxPerClub : null,
                     is_active: true
                 })
             });
             if (response.ok) {
                 document.getElementById('sa-discount-code').value = '';
+                document.getElementById('sa-discount-max-per-club').value = '';
                 fetchSaDiscounts();
             } else {
                 const errData = await response.json();

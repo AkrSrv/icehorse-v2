@@ -272,6 +272,25 @@ def delete_competition_judge(db: Session, comp_judge_id: int):
 
 # --- CLUB POSTS ---
 def create_club_post(db: Session, post: schemas.ClubPostCreate, club_id: int):
+    existing = db.query(models.ClubPost).filter(
+        models.ClubPost.club_id == club_id,
+        models.ClubPost.name == post.name
+    ).first()
+    
+    if existing:
+        existing.description = post.description
+        existing.location = post.location
+        existing.coefficient = post.coefficient
+        existing.max_value = post.max_value
+        existing.discipline = post.discipline
+        existing.scoring_method = post.scoring_method
+        existing.is_active = post.is_active
+        if post.configuration:
+            existing.configuration = post.configuration
+        db.commit()
+        db.refresh(existing)
+        return existing
+        
     db_post = models.ClubPost(**post.model_dump(), club_id=club_id)
     db.add(db_post)
     db.commit()
@@ -279,11 +298,60 @@ def create_club_post(db: Session, post: schemas.ClubPostCreate, club_id: int):
     return db_post
 
 def get_club_posts(db: Session, club_id: int):
+    # Ensure any custom ClassDefinition for this club has a corresponding ClubPost
+    custom_defs = db.query(models.ClassDefinition).filter(models.ClassDefinition.club_id == club_id).all()
+    if custom_defs:
+        existing_posts = db.query(models.ClubPost).filter(models.ClubPost.club_id == club_id).all()
+        existing_names = {p.name.strip().lower() for p in existing_posts}
+        
+        has_new = False
+        for c_def in custom_defs:
+            if c_def.name and c_def.name.strip().lower() not in existing_names:
+                scoring_method = 'percentage' if c_def.discipline == 'dressage' else ('faults_time' if c_def.discipline == 'jumping' else 'standard')
+                new_post = models.ClubPost(
+                    club_id=club_id,
+                    name=c_def.name,
+                    discipline=c_def.discipline or 'gait',
+                    scoring_method=scoring_method,
+                    coefficient=1.0,
+                    max_value=10.0,
+                    is_active=True,
+                    configuration=c_def.configuration
+                )
+                db.add(new_post)
+                existing_names.add(c_def.name.strip().lower())
+                has_new = True
+        if has_new:
+            db.commit()
+
     return db.query(models.ClubPost).filter(models.ClubPost.club_id == club_id).all()
+
+def update_club_post(db: Session, post_id: int, post_update: schemas.ClubPostCreate, club_id: int):
+    post = db.query(models.ClubPost).filter(models.ClubPost.id == post_id, models.ClubPost.club_id == club_id).first()
+    if post:
+        for k, v in post_update.model_dump(exclude_unset=True).items():
+            setattr(post, k, v)
+        db.commit()
+        db.refresh(post)
+    return post
+
+def toggle_club_post_active(db: Session, post_id: int, club_id: int, is_active: bool):
+    post = db.query(models.ClubPost).filter(models.ClubPost.id == post_id, models.ClubPost.club_id == club_id).first()
+    if post:
+        post.is_active = is_active
+        db.commit()
+        db.refresh(post)
+    return post
 
 def delete_club_post(db: Session, post_id: int, club_id: int):
     post = db.query(models.ClubPost).filter(models.ClubPost.id == post_id, models.ClubPost.club_id == club_id).first()
     if post:
+        # Check if post has scores or is attached to competitions - if so soft-delete
+        has_scores = db.query(models.Score).filter(models.Score.club_post_id == post_id).first()
+        if has_scores:
+            post.is_active = False
+            db.commit()
+            return True
         db.delete(post)
         db.commit()
         return True

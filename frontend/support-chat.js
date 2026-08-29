@@ -37,7 +37,7 @@
             background: #f43f5e;
             color: #ffffff;
             border: none;
-            box-shadow: 0 4px 16px rgba(244, 63, 94, 0.4);
+            box-shadow: 0 4px 20px rgba(244, 63, 94, 0.45);
             cursor: pointer;
             z-index: 9999;
             display: flex;
@@ -59,14 +59,14 @@
             position: fixed;
             bottom: 96px;
             right: 24px;
-            width: 380px;
-            height: 520px;
+            width: 410px;
+            height: 570px;
             border-radius: 20px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
             z-index: 9998;
             display: flex;
             flex-direction: column;
@@ -84,8 +84,8 @@
 
         /* Chat Header */
         .eq-support-header {
-            padding: 1.2rem 1.5rem;
-            background: rgba(30, 41, 59, 0.7);
+            padding: 1.1rem 1.4rem;
+            background: rgba(30, 41, 59, 0.75);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             justify-content: space-between;
@@ -98,7 +98,7 @@
         }
         .eq-support-header-info i {
             color: #f43f5e;
-            font-size: 1.25rem;
+            font-size: 1.3rem;
         }
         .eq-support-header-info h4 {
             margin: 0;
@@ -112,6 +112,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            font-weight: 600;
         }
         .eq-support-header-info span::before {
             content: '';
@@ -136,27 +137,65 @@
         /* Meddelelsesliste */
         .eq-support-messages {
             flex: 1;
-            padding: 1.5rem;
+            padding: 1.2rem;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
 
+        /* Quick Action Chips */
+        .eq-quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .eq-chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .eq-chip:hover {
+            background: rgba(244, 63, 94, 0.2);
+            border-color: #f43f5e;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
         /* Beskeder */
         .eq-msg {
-            max-width: 80%;
+            max-width: 85%;
             padding: 10px 14px;
             border-radius: 14px;
-            font-size: 0.9rem;
-            line-height: 1.45;
+            font-size: 0.88rem;
+            line-height: 1.5;
             word-wrap: break-word;
         }
         .eq-msg-bot {
             align-self: flex-start;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.07);
             color: #f1f5f9;
             border-top-left-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .eq-msg-bot strong {
+            color: #ffffff;
+        }
+        .eq-msg-bot ul, .eq-msg-bot ol {
+            margin: 6px 0 6px 18px;
+            padding: 0;
+        }
+        .eq-msg-bot li {
+            margin-bottom: 4px;
         }
         .eq-msg-user {
             align-self: flex-end;
@@ -167,16 +206,16 @@
 
         /* Indtastningsfelt */
         .eq-support-input-area {
-            padding: 1rem;
-            background: rgba(15, 23, 42, 0.6);
+            padding: 0.9rem 1.1rem;
+            background: rgba(15, 23, 42, 0.7);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             gap: 8px;
         }
         .eq-support-input {
             flex: 1;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 10px;
             padding: 10px 14px;
             color: #ffffff;
@@ -188,8 +227,8 @@
             border-color: #f43f5e;
         }
         .eq-support-send {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 10px;
             background: #f43f5e;
             color: #ffffff;
@@ -199,10 +238,11 @@
             justify-content: center;
             align-items: center;
             font-size: 1rem;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.1s;
         }
         .eq-support-send:hover {
             background: #e11d48;
+            transform: translateY(-1px);
         }
 
         /* Typing indicator */
@@ -235,7 +275,7 @@
         @media (max-width: 480px) {
             .eq-support-window {
                 width: calc(100% - 32px);
-                height: 480px;
+                height: 500px;
                 bottom: 84px;
                 right: 16px;
             }
@@ -250,7 +290,7 @@
     // 3. Opret og indsæt DOM-elementer i body
     const trigger = document.createElement('button');
     trigger.className = 'eq-support-trigger';
-    trigger.setAttribute('title', 'Kontakt Support');
+    trigger.setAttribute('title', 'Kontakt AI Support');
     trigger.innerHTML = '<i class="fas fa-comments"></i>';
 
     const windowContainer = document.createElement('div');
@@ -261,19 +301,30 @@
                 <i class="fas fa-horse-head"></i>
                 <div>
                     <h4>EquiEvent Support</h4>
-                    <span>AI Assistent</span>
+                    <span>AI Assistent Online</span>
                 </div>
             </div>
-            <button class="eq-support-close"><i class="fas fa-times"></i></button>
+            <button class="eq-support-close" title="Luk"><i class="fas fa-times"></i></button>
         </div>
         <div class="eq-support-messages" id="eq-chat-messages">
             <div class="eq-msg eq-msg-bot">
-                Hej! Jeg er din EquiEvent Support AI-assistent. Hvordan kan jeg hjælpe dig i dag? (fx med opsætning af stævne, dommere eller personkartotek).
+                Hej! Jeg er din <strong>EquiEvent AI-assistent</strong>. Jeg kan besvare spørgsmål om alle funktioner i systemet — fra oprettelse af egne klasser og stævneaktivering til dommerbedømmelse, leaderboards og diplomer.
+                <div class="eq-quick-chips" style="margin-top: 10px;">
+                    <button class="eq-chip" data-q="Hvordan opretter jeg en dressurklasse med koefficienter?">🐎 Opret Dressurklasse</button>
+                    <button class="eq-chip" data-q="Hvorfor er Gem-knappen låst hos dommeren før betaling?">🔒 Låst Gem-knap</button>
+                    <button class="eq-chip" data-q="Hvordan vises procent og point på scorelisten for dressur?">📊 % og Point på Scoreliste</button>
+                    <button class="eq-chip" data-q="Hvordan sletter jeg flere øvelser på én gang i en skabelon?">✅ Bulk-sletning af øvelser</button>
+                    <button class="eq-chip" data-q="Hvordan printer jeg et diplom til en rytter?">📜 Print Diplom</button>
+                    <button class="eq-chip" data-q="Hvordan sender jeg et Magic Link til en dommer?">📱 Send Dommerlink</button>
+                </div>
             </div>
         </div>
+        <div style="padding: 6px 14px; background: rgba(15, 23, 42, 0.9); font-size: 0.72rem; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
+            Yderligere support: <a href="mailto:equievent_support@alkdata.dk" style="color: #f43f5e; text-decoration: underline;">equievent_support@alkdata.dk</a> (besvares inden for max 3 arbejdsdage).
+        </div>
         <div class="eq-support-input-area">
-            <input type="text" class="eq-support-input" id="eq-chat-input" placeholder="Skriv et spørgsmål...">
-            <button class="eq-support-send" id="eq-chat-send"><i class="fas fa-paper-plane"></i></button>
+            <input type="text" class="eq-support-input" id="eq-chat-input" placeholder="Stil et spørgsmål om EquiEvent...">
+            <button class="eq-support-send" id="eq-chat-send" title="Send"><i class="fas fa-paper-plane"></i></button>
         </div>
     `;
 
@@ -286,7 +337,7 @@
     const msgContainer = document.getElementById('eq-chat-messages');
     const closeBtn = windowContainer.querySelector('.eq-support-close');
 
-    let chatHistory = []; // Gemmer samtalehistorik [{role: 'user'|'model', content: '...'}]
+    let chatHistory = [];
 
     // Toggle vindue åben/lukket
     trigger.addEventListener('click', () => {
@@ -304,21 +355,27 @@
         trigger.innerHTML = '<i class="fas fa-comments"></i>';
     });
 
+    // Quick chip click handlers
+    document.addEventListener('click', (e) => {
+        const chip = e.target.closest('.eq-chip');
+        if (chip && chip.dataset.q) {
+            chatInput.value = chip.dataset.q;
+            sendMessage();
+        }
+    });
+
     // Send besked funktion
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
 
-        // Tilføj brugerens besked til chatten og historik
         appendMessage(text, 'user');
         chatHistory.push({ role: 'user', content: text });
         chatInput.value = '';
 
-        // Tilføj typing indicator
         const typingIndicator = showTypingIndicator();
 
         try {
-            // Kald din FastAPI backend support endepunkt
             const response = await fetch(`${API_BASE}/support/chat`, {
                 method: 'POST',
                 headers: {
@@ -329,7 +386,6 @@
                 })
             });
 
-            // Fjern typing indicator
             typingIndicator.remove();
 
             if (response.ok) {
@@ -346,13 +402,31 @@
         }
     }
 
+    // Simpel markdown formatering for bot-svar
+    function formatMarkdown(text) {
+        if (!text) return '';
+        let formatted = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/^### (.*$)/gim, '<h4 style="margin: 8px 0 4px 0; color: #fff;">$1</h4>')
+            .replace(/^## (.*$)/gim, '<h3 style="margin: 10px 0 6px 0; color: #fff;">$1</h3>')
+            .replace(/^\s*[-•*]\s+(.*$)/gim, '<li style="margin-left: 16px;">$1</li>')
+            .replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li style="margin-left: 16px;"><strong>$1.</strong> $2</li>');
+
+        return formatted.replace(/\n/g, '<br>');
+    }
+
     // Tilføj besked til DOM og scroll til bunden
     function appendMessage(text, sender) {
         const msg = document.createElement('div');
         msg.className = `eq-msg eq-msg-${sender}`;
         
-        // Konverter simple linjeskift til <br> og bevar formatering
-        msg.innerHTML = text.replace(/\n/g, '<br>');
+        if (sender === 'bot') {
+            msg.innerHTML = formatMarkdown(text);
+        } else {
+            msg.textContent = text;
+        }
+        
         msgContainer.appendChild(msg);
         msgContainer.scrollTop = msgContainer.scrollHeight;
     }

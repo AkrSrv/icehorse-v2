@@ -58,6 +58,7 @@ class Competition(Base):
 
     discipline = Column(String, default="gait")
     scoring_method = Column(String, default="standard")
+    ruleVersion = Column(String, default="2026.1")
 
     club = relationship("Club", back_populates="competitions")
     competition_judges = relationship("CompetitionJudge", back_populates="competition", cascade="all, delete-orphan")
@@ -207,6 +208,9 @@ class ClassDefinition(Base):
     name = Column(String)
     scoring_model = Column(String)  # e.g., dressage_percentage, jumping_a, etc.
     configuration = Column(Text, nullable=True)  # JSON configuration for exercises/sections/parameters
+    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=True)
+    
+    club = relationship("Club")
 
 
 class Entry(Base):

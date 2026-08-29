@@ -106,34 +106,55 @@ def get_public_leaderboard(comp_id: int, db: Session = Depends(database.get_db))
             
             if discipline == "dressage":
                 judge_percentages = []
+                judge_points = []
                 for s in scores:
-                    max_val = class_obj.max_value or 10.0
-                    points = s.points or 0.0
+                    pts = s.points or 0.0
                     deductions = s.deductions or 0.0
-                    pct = ((points - deductions) / max_val * 100.0) if max_val > 0 else 0.0
+                    raw_pts = s.style_points if (s.style_points is not None and s.style_points > 0) else None
+                    
+                    # Determine percentage and raw points
+                    if pts > 100.0:  # pts was stored as raw points directly
+                        raw_pts = pts - deductions
+                        max_val = class_obj.max_value if (class_obj.max_value and class_obj.max_value > 100) else 200.0
+                        pct = (raw_pts / max_val * 100.0) if max_val > 0 else 0.0
+                    else:  # pts is percentage
+                        pct = pts
+                        if raw_pts is None:
+                            max_val = class_obj.max_value if (class_obj.max_value and class_obj.max_value > 100) else 200.0
+                            raw_pts = (pct / 100.0) * max_val
+                    
                     judge_percentages.append(pct)
+                    if raw_pts is not None:
+                        judge_points.append(raw_pts)
                     
                     post_details.append({
                         "score_id": s.id,
-                        "points": points,
+                        "points": round(raw_pts, 1) if raw_pts is not None else round(pts, 1),
+                        "percentage": round(pct, 2),
                         "deductions": deductions,
                         "comment": s.comment,
                         "post_name": class_obj.name,
                         "post_id": class_obj.id,
                         "judge_name": s.competition_judge.club_judge.name if s.competition_judge and s.competition_judge.club_judge else "Ukendt Dommer",
-                        "judge_id": s.competition_judge_id,
-                        "percentage": round(pct, 2)
+                        "judge_id": s.competition_judge_id
                     })
                 
-                total_score = sum(judge_percentages) / len(judge_percentages) if judge_percentages else 0.0
-                display_score = f"{round(total_score, 2)}%"
+                total_pct = sum(judge_percentages) / len(judge_percentages) if judge_percentages else 0.0
+                total_raw_pts = sum(judge_points) / len(judge_points) if judge_points else 0.0
+                
+                if total_raw_pts > 0:
+                    display_score = f"{round(total_pct, 2)}% ({round(total_raw_pts, 1)} p)"
+                else:
+                    display_score = f"{round(total_pct, 2)}%"
                 
                 class_leaderboard.append({
                     "rider_id": rider.id,
                     "start_number": rp.start_number,
                     "rider_name": rider.club_rider.name,
                     "horse_name": rider.horse.name,
-                    "total_score": round(total_score, 3),
+                    "total_score": round(total_pct, 3),
+                    "raw_points": round(total_raw_pts, 1) if total_raw_pts > 0 else None,
+                    "percentage": round(total_pct, 2),
                     "posts_completed": len(scores),
                     "details": post_details,
                     "is_eliminated": False,

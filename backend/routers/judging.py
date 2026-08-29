@@ -126,11 +126,29 @@ def create_entry(entry: schemas.EntryCreate, db: Session = Depends(database.get_
 
 @router.get("/competitions/{compId}/entries", response_model=List[schemas.EntryOut])
 def list_competition_entries(compId: int, db: Session = Depends(database.get_db)):
-    return db.query(models.Entry).filter(models.Entry.competition_id == compId).all()
+    entries = db.query(models.Entry).filter(models.Entry.competition_id == compId).all()
+    for entry in entries:
+        if entry.class_def:
+            custom_def = db.query(models.ClassDefinition).filter(
+                models.ClassDefinition.club_id == entry.competition.club_id,
+                models.ClassDefinition.code == entry.class_def.code
+            ).first()
+            if custom_def:
+                entry.class_def = custom_def
+    return entries
 
 @router.get("/classes/{classId}/entries", response_model=List[schemas.EntryOut])
 def list_class_entries(classId: int, db: Session = Depends(database.get_db)):
-    return db.query(models.Entry).filter(models.Entry.class_id == classId).all()
+    entries = db.query(models.Entry).filter(models.Entry.class_id == classId).all()
+    for entry in entries:
+        if entry.class_def:
+            custom_def = db.query(models.ClassDefinition).filter(
+                models.ClassDefinition.club_id == entry.competition.club_id,
+                models.ClassDefinition.code == entry.class_def.code
+            ).first()
+            if custom_def:
+                entry.class_def = custom_def
+    return entries
 
 
 # --- SCORE SHEETS ---
@@ -170,6 +188,12 @@ def get_or_create_score_sheet(
 
     # Initialize ScoreItems based on class configuration
     class_def = entry.class_def
+    custom_def = db.query(models.ClassDefinition).filter(
+        models.ClassDefinition.club_id == entry.competition.club_id,
+        models.ClassDefinition.code == class_def.code
+    ).first()
+    if custom_def:
+        class_def = custom_def
     class_config = json.loads(class_def.configuration or '{}')
 
     if class_def.discipline == 'dressage':
@@ -332,6 +356,12 @@ def run_calculations(
         raise HTTPException(status_code=404, detail="Entry ikke fundet.")
 
     class_def = entry.class_def
+    custom_def = db.query(models.ClassDefinition).filter(
+        models.ClassDefinition.club_id == entry.competition.club_id,
+        models.ClassDefinition.code == class_def.code
+    ).first()
+    if custom_def:
+        class_def = custom_def
     
     # Retrieve RuleSet
     ruleset = db.query(models.RuleSet).filter(models.RuleSet.version == entry.competition.ruleVersion).first()
@@ -418,6 +448,12 @@ def get_competition_results(compId: int, db: Session = Depends(database.get_db))
     classes_dict = {}
     for entry in entries:
         class_def = entry.class_def
+        custom_def = db.query(models.ClassDefinition).filter(
+            models.ClassDefinition.club_id == entry.competition.club_id,
+            models.ClassDefinition.code == class_def.code
+        ).first()
+        if custom_def:
+            class_def = custom_def
         if class_def.id not in classes_dict:
             classes_dict[class_def.id] = {
                 "class_id": class_def.id,
@@ -452,8 +488,13 @@ def get_competition_results(compId: int, db: Session = Depends(database.get_db))
         sort_val = 999999.0
         if res:
             if class_def.discipline == 'dressage':
-                display_score = f"{res.primary_score}%"
-                sort_val = -res.primary_score  # higher is better
+                pct = res.primary_score or 0.0
+                raw_pts = res.secondary_score if (res.secondary_score and res.secondary_score > 0) else None
+                if raw_pts:
+                    display_score = f"{round(pct, 2)}% ({round(raw_pts, 1)} p)"
+                else:
+                    display_score = f"{round(pct, 2)}%"
+                sort_val = -pct  # higher is better
             elif class_def.discipline == 'jumping':
                 if res.status == 'ELIMINATED':
                     display_score = "ELI"
@@ -489,3 +530,105 @@ def get_competition_results(compId: int, db: Session = Depends(database.get_db))
         "competition_name": comp.name,
         "classes": list(classes_dict.values())
     }
+
+
+@router.get("/clubs/{clubId}/class-definitions", response_model=List[schemas.ClassDefinitionOut])
+def get_club_class_definitions(clubId: int, db: Session = Depends(database.get_db)):
+    # Fetch all definitions visible to the club (global + custom for this club)
+    defs = db.query(models.ClassDefinition).filter(
+        (models.ClassDefinition.club_id == clubId) | (models.ClassDefinition.club_id == None)
+    ).all()
+    
+    # Merge prioritizing club-specific templates
+    merged = {}
+    for d in defs:
+        # If the code already exists, we only override if this one is club-specific
+        if d.code in merged:
+            if d.club_id is not None:
+                merged[d.code] = d
+        else:
+            merged[d.code] = d
+            
+    return list(merged.values())
+
+
+@router.post("/clubs/{clubId}/class-definitions", response_model=schemas.ClassDefinitionOut)
+def save_club_class_definition(
+    clubId: int,
+    payload: schemas.ClassDefinitionCreate,
+    db: Session = Depends(database.get_db)
+):
+    # Check if a custom template with this code already exists for the club
+    db_def = db.query(models.ClassDefinition).filter(
+        models.ClassDefinition.club_id == clubId,
+        models.ClassDefinition.code == payload.code
+    ).first()
+    
+    if db_def:
+        db_def.name = payload.name
+        db_def.discipline = payload.discipline
+        db_def.scoring_model = payload.scoring_model
+        db_def.configuration = payload.configuration
+    else:
+        db_def = models.ClassDefinition(
+            club_id=clubId,
+            code=payload.code,
+            name=payload.name,
+            discipline=payload.discipline,
+            scoring_model=payload.scoring_model,
+            configuration=payload.configuration
+        )
+        db.add(db_def)
+        
+    db.commit()
+    db.refresh(db_def)
+    
+    # Sync to ClubPost for the club
+    existing_post = db.query(models.ClubPost).filter(
+        models.ClubPost.club_id == clubId,
+        (models.ClubPost.name == payload.name) | (models.ClubPost.name == payload.code)
+    ).first()
+    
+    scoring_method = 'percentage' if payload.discipline == 'dressage' else ('faults_time' if payload.discipline == 'jumping' else 'standard')
+    
+    if existing_post:
+        existing_post.name = payload.name
+        existing_post.discipline = payload.discipline
+        existing_post.scoring_method = scoring_method
+        existing_post.configuration = payload.configuration
+        existing_post.is_active = True
+    else:
+        new_post = models.ClubPost(
+            club_id=clubId,
+            name=payload.name,
+            discipline=payload.discipline or 'gait',
+            scoring_method=scoring_method,
+            coefficient=1.0,
+            max_value=10.0,
+            is_active=True,
+            configuration=payload.configuration
+        )
+        db.add(new_post)
+        
+    db.commit()
+    return db_def
+
+
+@router.delete("/clubs/{clubId}/class-definitions/{classId}/reset")
+def reset_club_class_definition(
+    clubId: int,
+    classId: int,
+    db: Session = Depends(database.get_db)
+):
+    db_def = db.query(models.ClassDefinition).filter(
+        models.ClassDefinition.id == classId,
+        models.ClassDefinition.club_id == clubId
+    ).first()
+    
+    if not db_def:
+        raise HTTPException(status_code=404, detail="Tilpasset klasse ikke fundet for denne klub.")
+        
+    db.delete(db_def)
+    db.commit()
+    return {"message": "Klasseskabelon nulstillet til standard."}
+

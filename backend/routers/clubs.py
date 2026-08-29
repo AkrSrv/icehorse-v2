@@ -560,7 +560,6 @@ def send_magic_link_email(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- CLUB POSTS ---
 @router.post("/{club_id}/club_posts", response_model=schemas.ClubPostOut)
 def create_post_for_club(
     club_id: int,
@@ -569,7 +568,33 @@ def create_post_for_club(
     current_user: models.User = Depends(get_current_user)
 ):
     get_club_if_owner(club_id, db, current_user)
-    return crud.create_club_post(db=db, post=post, club_id=club_id)
+    db_post = crud.create_club_post(db=db, post=post, club_id=club_id)
+    
+    # Sync to ClassDefinition for the club
+    code = (post.name or 'CUSTOM').upper().replace(' ', '_')[:15]
+    scoring_model = 'dressage_percentage' if post.discipline == 'dressage' else ('faults_time' if post.discipline == 'jumping' else 'gait_standard')
+    
+    db_def = db.query(models.ClassDefinition).filter(
+        models.ClassDefinition.club_id == club_id,
+        models.ClassDefinition.name == post.name
+    ).first()
+    
+    if not db_def:
+        new_def = models.ClassDefinition(
+            club_id=club_id,
+            code=code,
+            name=post.name,
+            discipline=post.discipline or 'gait',
+            scoring_model=scoring_model,
+            configuration=post.configuration
+        )
+        db.add(new_def)
+        db.commit()
+    elif post.configuration:
+        db_def.configuration = post.configuration
+        db.commit()
+        
+    return db_post
 
 @router.get("/{club_id}/club_posts", response_model=List[schemas.ClubPostOut])
 def read_posts_for_club(
@@ -579,6 +604,34 @@ def read_posts_for_club(
 ):
     get_club_if_owner(club_id, db, current_user)
     return crud.get_club_posts(db=db, club_id=club_id)
+
+@router.put("/{club_id}/club_posts/{post_id}", response_model=schemas.ClubPostOut)
+def update_post_for_club(
+    club_id: int,
+    post_id: int,
+    post: schemas.ClubPostCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    get_club_if_owner(club_id, db, current_user)
+    updated = crud.update_club_post(db=db, post_id=post_id, post_update=post, club_id=club_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="ClubPost not found")
+    return updated
+
+@router.patch("/{club_id}/club_posts/{post_id}/toggle", response_model=schemas.ClubPostOut)
+def toggle_post_active_for_club(
+    club_id: int,
+    post_id: int,
+    is_active: bool,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    get_club_if_owner(club_id, db, current_user)
+    updated = crud.toggle_club_post_active(db=db, post_id=post_id, club_id=club_id, is_active=is_active)
+    if not updated:
+        raise HTTPException(status_code=404, detail="ClubPost not found")
+    return updated
 
 @router.delete("/{club_id}/club_posts/{post_id}")
 def delete_post_from_club(
@@ -601,15 +654,41 @@ def check_discount_code(
     current_user: models.User = Depends(get_current_user)
 ):
     get_club_if_owner(club_id, db, current_user)
+    clean_code = code.strip().upper()
     discount = db.query(models.DiscountCode).filter(
-        models.DiscountCode.code == code,
+        models.DiscountCode.code.ilike(clean_code),
         models.DiscountCode.is_active == True
     ).first()
     if not discount:
         raise HTTPException(status_code=400, detail="Ugyldig eller deaktiveret rabatkode.")
+    
+    # Tjek maks antal anvendelser for denne klub
+    if discount.max_uses_per_club is not None and discount.max_uses_per_club > 0:
+        club_uses = db.query(models.DiscountUsage).filter(
+            models.DiscountUsage.discount_code_id == discount.id,
+            models.DiscountUsage.club_id == club_id
+        ).count()
+        if club_uses >= discount.max_uses_per_club:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Rabatkoden '{discount.code}' er allerede anvendt det maksimale antal gange ({discount.max_uses_per_club} gange) for denne klub."
+            )
+
+    # Tjek samlet maks antal anvendelser
+    if discount.max_total_uses is not None and discount.max_total_uses > 0:
+        total_uses = db.query(models.DiscountUsage).filter(
+            models.DiscountUsage.discount_code_id == discount.id
+        ).count()
+        if total_uses >= discount.max_total_uses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Rabatkoden '{discount.code}' er udløbet (maksimalt samlet antal anvendelser nået)."
+            )
+
     return {
         "code": discount.code,
-        "discount_amount": discount.discount_amount
+        "discount_amount": discount.discount_amount,
+        "max_uses_per_club": discount.max_uses_per_club
     }
 
 @router.post("/{club_id}/competitions/{comp_id}/activate", response_model=schemas.CompetitionOut)
@@ -633,20 +712,47 @@ def activate_competition(
         raise HTTPException(status_code=400, detail="Dette stævne er allerede aktiveret.")
         
     price = 299.0
+    discount_to_record = None
     
     if payload.discount_code:
+        clean_code = payload.discount_code.strip().upper()
         discount = db.query(models.DiscountCode).filter(
-            models.DiscountCode.code == payload.discount_code,
+            models.DiscountCode.code.ilike(clean_code),
             models.DiscountCode.is_active == True
         ).first()
         if not discount:
             raise HTTPException(status_code=400, detail="Ugyldig eller deaktiveret rabatkode.")
         
+        # Tjek maks anvendelser for denne klub
+        if discount.max_uses_per_club is not None and discount.max_uses_per_club > 0:
+            club_uses = db.query(models.DiscountUsage).filter(
+                models.DiscountUsage.discount_code_id == discount.id,
+                models.DiscountUsage.club_id == club_id
+            ).count()
+            if club_uses >= discount.max_uses_per_club:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Rabatkoden '{discount.code}' er allerede anvendt det maksimale antal gange ({discount.max_uses_per_club} gange) for denne klub."
+                )
+                
+        # Tjek samlet maks anvendelser
+        if discount.max_total_uses is not None and discount.max_total_uses > 0:
+            total_uses = db.query(models.DiscountUsage).filter(
+                models.DiscountUsage.discount_code_id == discount.id
+            ).count()
+            if total_uses >= discount.max_total_uses:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Rabatkoden '{discount.code}' er udløbet (maksimalt samlet antal anvendelser nået)."
+                )
+
         discount_pct = discount.discount_amount
         if discount_pct >= 100.0:
             price = 0.0
         elif discount_pct > 0.0:
             price = 299.0 * (1.0 - (discount_pct / 100.0))
+            
+        discount_to_record = discount
             
     comp.is_active = True
     comp.price_paid = price
@@ -655,6 +761,16 @@ def activate_competition(
     if start_point < datetime.utcnow():
         start_point = datetime.utcnow()
     comp.active_until = start_point + timedelta(days=14)
+
+    # Gem DiscountUsage registrering hvis rabatkode blev brugt
+    if discount_to_record:
+        usage = models.DiscountUsage(
+            discount_code_id=discount_to_record.id,
+            club_id=club_id,
+            competition_id=comp_id,
+            user_id=current_user.id
+        )
+        db.add(usage)
     
     db.commit()
     db.refresh(comp)

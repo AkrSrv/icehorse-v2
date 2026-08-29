@@ -276,6 +276,7 @@ class ClassDefinitionBase(BaseModel):
     name: str
     scoring_model: str
     configuration: Optional[str] = None
+    club_id: Optional[int] = None
 
 class ClassDefinitionCreate(ClassDefinitionBase):
     pass
@@ -362,6 +363,7 @@ class EntryOut(EntryBase):
     class_def: ClassDefinitionOut
     rider: ClubRiderOut
     horse: HorseOut
+    competition: Optional[CompetitionOut] = None
     score_sheets: List[ScoreSheetOut] = []
     result: Optional[ResultOut] = None
     class Config:

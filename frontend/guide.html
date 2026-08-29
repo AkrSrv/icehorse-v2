@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EquiEvent — Omfattende Brugervejledning</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <title>EquiEvent — Komplet Brugervejledning & Dokumentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #f43f5e;
             --primary-hover: #e11d48;
+            --emerald: #10b981;
+            --emerald-hover: #059669;
+            --blue: #38bdf8;
+            --amber: #fbbf24;
             --bg-color: #0f172a;
             --surface: rgba(30, 41, 59, 0.7);
+            --surface-card: rgba(15, 23, 42, 0.6);
             --text-main: #f8fafc;
             --text-secondary: #94a3b8;
             --glass-border: rgba(255, 255, 255, 0.1);
@@ -31,16 +36,16 @@
         header {
             border-bottom: 1px solid var(--glass-border);
             padding: 1rem 2rem;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
         .header-container {
-            max-width: 1400px;
+            max-width: 1440px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -62,7 +67,7 @@
         }
 
         .btn-back {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             color: var(--text-main);
             text-decoration: none;
             padding: 0.6rem 1.25rem;
@@ -70,20 +75,20 @@
             font-weight: 600;
             font-size: 0.9rem;
             border: 1px solid var(--glass-border);
-            transition: background 0.2s, transform 0.2s;
+            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
         }
 
         .btn-back:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.18);
             transform: translateY(-1px);
         }
 
         .layout-container {
             display: flex;
-            max-width: 1400px;
+            max-width: 1440px;
             width: 100%;
             margin: 0 auto;
             flex: 1;
@@ -93,7 +98,7 @@
         .guide-sidebar {
             width: 320px;
             border-right: 1px solid var(--glass-border);
-            padding: 2.5rem 2rem 2.5rem 0;
+            padding: 2rem 1.5rem 2rem 0;
             position: sticky;
             top: 75px;
             height: calc(100vh - 75px);
@@ -103,115 +108,129 @@
             gap: 1.5rem;
         }
 
+        .sidebar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
         .sidebar-title {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 1.2px;
             color: var(--primary);
-            margin-bottom: 0.5rem;
-            padding-left: 1rem;
+            margin-bottom: 0.4rem;
+            padding-left: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .nav-list {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 0.25rem;
         }
 
         .nav-item a {
-            display: block;
-            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.8rem;
             color: var(--text-secondary);
             text-decoration: none;
             border-radius: 8px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             transition: all 0.2s ease;
             border-left: 3px solid transparent;
         }
 
         .nav-item a:hover, .nav-item.active a {
             color: #ffffff;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.06);
             border-left-color: var(--primary);
-            padding-left: 1.25rem;
+            padding-left: 1.1rem;
         }
 
         /* MAIN CONTENT AREA */
         .guide-content {
             flex: 1;
-            padding: 2.5rem 0 2.5rem 3rem;
+            padding: 2.5rem 0 4rem 3rem;
             overflow-y: auto;
         }
 
         .section-intro {
-            margin-bottom: 4rem;
+            margin-bottom: 3.5rem;
             border-bottom: 1px solid var(--glass-border);
             padding-bottom: 2rem;
         }
 
         .section-intro h1 {
-            font-size: 3rem;
+            font-size: 2.8rem;
             font-weight: 800;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
             letter-spacing: -1px;
-            background: linear-gradient(to right, #ffffff, #f43f5e);
+            background: linear-gradient(to right, #ffffff, #f43f5e 60%, #fbbf24);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .section-intro p {
             color: var(--text-secondary);
-            font-size: 1.2rem;
-            max-width: 800px;
+            font-size: 1.15rem;
+            max-width: 850px;
+            line-height: 1.7;
         }
 
         .guide-section {
-            margin-bottom: 6rem;
-            scroll-margin-top: 100px;
+            margin-bottom: 5.5rem;
+            scroll-margin-top: 95px;
         }
 
         .guide-section h2 {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 800;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
             letter-spacing: -0.5px;
+            color: #ffffff;
         }
 
         .guide-section h2 i {
             color: var(--primary);
-            font-size: 1.8rem;
+            font-size: 1.6rem;
         }
 
         .section-description {
             color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-            max-width: 900px;
+            font-size: 1.05rem;
+            margin-bottom: 2rem;
+            max-width: 920px;
+            line-height: 1.6;
         }
 
-        /* STEP CARD (IMAGE + TEXT GRID) */
+        /* STEP CARDS */
         .step-card {
             background: var(--surface);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2.5rem;
-            margin-bottom: 2.5rem;
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+            border-radius: 18px;
+            padding: 2.2rem;
+            margin-bottom: 2.2rem;
+            box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.45);
             display: grid;
-            grid-template-columns: 1.1fr 1fr;
-            gap: 3rem;
+            grid-template-columns: 1.15fr 1fr;
+            gap: 2.5rem;
             align-items: flex-start;
         }
 
         .step-card.reverse {
-            grid-template-columns: 1fr 1.1fr;
+            grid-template-columns: 1fr 1.15fr;
         }
 
         .step-visual {
@@ -219,8 +238,8 @@
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--glass-border);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+            background: rgba(0, 0, 0, 0.3);
         }
 
         .step-visual img {
@@ -229,98 +248,161 @@
             display: block;
         }
 
-        .step-details-content h3 {
-            font-size: 1.4rem;
-            font-weight: 700;
+        /* STYLISH PLACEHOLDER BOXES FOR SCREENSHOTS */
+        .placeholder-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2rem;
+            min-height: 280px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+            border: 2px dashed rgba(244, 63, 94, 0.35);
+            text-align: center;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .placeholder-visual i.main-icon {
+            font-size: 3.5rem;
+            color: var(--primary);
             margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .placeholder-visual .ph-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.4rem;
+        }
+
+        .placeholder-visual .ph-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            max-width: 320px;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        .placeholder-visual .ph-tag {
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid rgba(244, 63, 94, 0.4);
+            color: #fb7185;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.7rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .step-details-content h3 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
             color: #ffffff;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
+            flex-wrap: wrap;
         }
 
-        .step-details-content h3 span {
-            background: rgba(244, 63, 94, 0.15);
-            color: var(--primary);
-            font-size: 0.8rem;
-            padding: 0.2rem 0.6rem;
+        .step-details-content h3 span.badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
             border-radius: 6px;
             font-weight: 800;
             text-transform: uppercase;
         }
 
+        .badge-rose { background: rgba(244, 63, 94, 0.15); color: var(--primary); border: 1px solid rgba(244, 63, 94, 0.3); }
+        .badge-emerald { background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-sky { background: rgba(56, 189, 248, 0.15); color: var(--blue); border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-amber { background: rgba(251, 191, 36, 0.15); color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.3); }
+
         .step-details-content p {
             color: var(--text-secondary);
-            font-size: 1rem;
-            margin-bottom: 1.5rem;
+            font-size: 0.98rem;
+            margin-bottom: 1.2rem;
+            line-height: 1.6;
         }
 
         .instruction-list {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.85rem;
         }
 
         .instruction-list li {
             position: relative;
-            padding-left: 2rem;
-            font-size: 0.95rem;
+            padding-left: 1.9rem;
+            font-size: 0.94rem;
             color: var(--text-main);
+            line-height: 1.5;
         }
 
         .instruction-list li i {
             position: absolute;
             left: 0;
-            top: 0.2rem;
+            top: 0.25rem;
             color: var(--primary);
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
 
         .instruction-list li strong {
             color: #ffffff;
         }
 
-        .badge-info {
-            background: rgba(59, 130, 246, 0.15);
-            color: #3b82f6;
-            font-size: 0.8rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            margin-top: 1rem;
-        }
-
-        /* INFO BOX */
         .info-box {
-            background: rgba(244, 63, 94, 0.08);
+            background: rgba(244, 63, 94, 0.07);
             border-left: 4px solid var(--primary);
-            padding: 1.5rem;
-            border-radius: 8px;
+            padding: 1.4rem 1.6rem;
+            border-radius: 10px;
             margin-top: 2rem;
             display: flex;
             gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .info-box.emerald {
+            background: rgba(16, 185, 129, 0.07);
+            border-left-color: var(--emerald);
+        }
+
+        .info-box.sky {
+            background: rgba(56, 189, 248, 0.07);
+            border-left-color: var(--blue);
+        }
+
+        .info-box.amber {
+            background: rgba(251, 191, 36, 0.07);
+            border-left-color: var(--amber);
         }
 
         .info-box i {
             color: var(--primary);
-            font-size: 1.5rem;
-            margin-top: 0.1rem;
+            font-size: 1.4rem;
+            margin-top: 0.15rem;
         }
+
+        .info-box.emerald i { color: var(--emerald); }
+        .info-box.sky i { color: var(--blue); }
+        .info-box.amber i { color: var(--amber); }
 
         .info-box div h4 {
             color: #ffffff;
             font-size: 1.05rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.35rem;
+            font-weight: 700;
         }
 
         .info-box div p {
             color: var(--text-secondary);
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             margin: 0;
+            line-height: 1.5;
         }
 
         footer {
@@ -328,7 +410,7 @@
             padding: 2.5rem;
             text-align: center;
             color: var(--text-secondary);
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(15, 23, 42, 0.6);
             margin-top: 6rem;
             font-size: 0.9rem;
         }
@@ -345,15 +427,15 @@
                 position: static;
                 border-right: none;
                 border-bottom: 1px solid var(--glass-border);
-                padding: 2rem 0;
+                padding: 1.5rem 0;
             }
             .guide-content {
                 padding: 2rem 0;
             }
             .step-card, .step-card.reverse {
                 grid-template-columns: 1fr;
-                gap: 2rem;
-                padding: 1.75rem;
+                gap: 1.8rem;
+                padding: 1.6rem;
             }
             .step-visual {
                 order: 1;
@@ -379,293 +461,647 @@
     </header>
 
     <div class="layout-container">
-        <!-- SIDEBAR NAV -->
+        <!-- SIDEBAR NAVIGATION -->
         <aside class="guide-sidebar">
-            <div>
-                <div class="sidebar-title">1. Profil & Klub</div>
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-user-shield"></i> 1. Profil & Klub</div>
                 <ul class="nav-list">
-                    <li class="nav-item"><a href="#opret-profil"><i class="fas fa-user-plus fa-fw"></i> Opret profil / ny klub</a></li>
-                    <li class="nav-item"><a href="#administrer-profil"><i class="fas fa-id-card fa-fw"></i> Administrer klubprofil</a></li>
+                    <li class="nav-item"><a href="#opret-profil"><i class="fas fa-user-plus fa-fw"></i> Opret profil & klub</a></li>
+                    <li class="nav-item"><a href="#login-og-glemt-kode"><i class="fas fa-key fa-fw"></i> Login & Glemt adgangskode</a></li>
+                    <li class="nav-item"><a href="#administrer-profil"><i class="fas fa-id-card fa-fw"></i> Klubprofil & Flere klubber</a></li>
                 </ul>
             </div>
-            <div>
-                <div class="sidebar-title">2. Personkartotek</div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-address-book"></i> 2. Personkartotek</div>
                 <ul class="nav-list">
-                    <li class="nav-item"><a href="#opret-rytter"><i class="fas fa-user-tag fa-fw"></i> Opret rytter & heste</a></li>
-                    <li class="nav-item"><a href="#opret-dommer"><i class="fas fa-gavel fa-fw"></i> Opret dommer</a></li>
+                    <li class="nav-item"><a href="#opret-rytter"><i class="fas fa-user-tag fa-fw"></i> Ryttere & flere heste</a></li>
+                    <li class="nav-item"><a href="#opret-dommer"><i class="fas fa-gavel fa-fw"></i> Opret dommerprofiler</a></li>
+                    <li class="nav-item"><a href="#kartotek-administration"><i class="fas fa-search fa-fw"></i> Søg, rediger & slet</a></li>
                 </ul>
             </div>
-            <div>
-                <div class="sidebar-title">3. Poster & Klasser</div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-flag"></i> 3. Poster & Klasser</div>
                 <ul class="nav-list">
-                    <li class="nav-item"><a href="#opret-klubklasser"><i class="fas fa-flag fa-fw"></i> Opret faste klubklasser</a></li>
+                    <li class="nav-item"><a href="#klasser-overblik"><i class="fas fa-th-large fa-fw"></i> De 3 fanblade overblik</a></li>
+                    <li class="nav-item"><a href="#opret-egne-klasser"><i class="fas fa-plus-circle fa-fw"></i> Opret egne klasser</a></li>
+                    <li class="nav-item"><a href="#klubbens-aktive-klasser"><i class="fas fa-check-circle fa-fw"></i> Klubbens aktive klasser</a></li>
+                    <li class="nav-item"><a href="#tilpas-skabeloner-bulk"><i class="fas fa-tasks fa-fw"></i> Skabeloner & Massehandlinger</a></li>
                 </ul>
             </div>
-            <div>
-                <div class="sidebar-title">4. Stævneafvikling</div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-calendar-alt"></i> 4. Stævneopsætning</div>
                 <ul class="nav-list">
                     <li class="nav-item"><a href="#opret-staevne"><i class="fas fa-calendar-plus fa-fw"></i> Opret nyt stævne</a></li>
-                    <li class="nav-item"><a href="#knyt-klasser"><i class="fas fa-check-double fa-fw"></i> Knyt klasser til stævne</a></li>
-                    <li class="nav-item"><a href="#knyt-deltagere"><i class="fas fa-horse fa-fw"></i> Tilknyt ryttere & heste</a></li>
-                    <li class="nav-item"><a href="#knyt-dommere"><i class="fas fa-users-cog fa-fw"></i> Tilknyt dommere & roller</a></li>
+                    <li class="nav-item"><a href="#knyt-klasser"><i class="fas fa-check-double fa-fw"></i> Knyt klasser til stævnet</a></li>
+                    <li class="nav-item"><a href="#knyt-deltagere"><i class="fas fa-horse fa-fw"></i> Tilmeld ekvipager & startnr</a></li>
+                    <li class="nav-item"><a href="#knyt-dommere"><i class="fas fa-users-cog fa-fw"></i> Tildel dommere & Magic Links</a></li>
                 </ul>
             </div>
-            <div>
-                <div class="sidebar-title">5. Bedømmelse & Resultater</div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-credit-card"></i> 5. Betaling & Aktivering</div>
                 <ul class="nav-list">
-                    <li class="nav-item"><a href="#magic-link"><i class="fas fa-magic fa-fw"></i> Hvordan dømmer dommeren?</a></li>
-                    <li class="nav-item"><a href="#leaderboard-resultater"><i class="fas fa-list-ol"></i> Live Leaderboard</a></li>
+                    <li class="nav-item"><a href="#dommer-inaktivitetslaas"><i class="fas fa-lock fa-fw"></i> Dommerlås FØR betaling</a></li>
+                    <li class="nav-item"><a href="#betaling-og-aktivering"><i class="fas fa-check-circle fa-fw"></i> Betaling, rabat & live oplåsning</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-gavel"></i> 6. Dommerafvikling (Live)</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#dommer-mobil-interface"><i class="fas fa-mobile-alt fa-fw"></i> Dommerens mobiladgang</a></li>
+                    <li class="nav-item"><a href="#dommer-dressur"><i class="fas fa-award fa-fw"></i> Dressurbedømmelse (% og point)</a></li>
+                    <li class="nav-item"><a href="#dommer-spring"><i class="fas fa-stopwatch fa-fw"></i> Springbedømmelse (fejl & tid)</a></li>
+                    <li class="nav-item"><a href="#dommer-islaender"><i class="fas fa-horse-head fa-fw"></i> Islænder gangartsbedømmelse</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-trophy"></i> 7. Resultater, Diplom & Eksport</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#live-leaderboard"><i class="fas fa-list-ol fa-fw"></i> Public Live Leaderboard</a></li>
+                    <li class="nav-item"><a href="#print-diplom"><i class="fas fa-certificate fa-fw"></i> Print Diplom & Certifikater</a></li>
+                    <li class="nav-item"><a href="#csv-eksport"><i class="fas fa-file-excel fa-fw"></i> CSV Eksport & Klubresultater</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-title"><i class="fas fa-comments"></i> 8. AI Support</div>
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="#ai-support-chat"><i class="fas fa-robot fa-fw"></i> AI Assistent & Hurtighjælp</a></li>
                 </ul>
             </div>
         </aside>
 
         <!-- MAIN CONTENT -->
         <main class="guide-content">
+            
+            <!-- INTRO -->
             <section class="section-intro">
                 <h1>Trin-for-trin guide til EquiEvent</h1>
-                <p>Velkommen til den komplette vejledning. Nedenfor finder du en detaljeret beskrivelse af hver enkelt funktion i systemet, illustreret med skærmbilleder fra din egen klubadgang, så du let kan følge stævne-flowet fra start til slut.</p>
+                <p>Velkommen til den komplette vejledning for EquiEvent. Denne guide dækker samtlige arbejdsprocesser og brugerscenarier fra kluboprettelse, kartoteker og specialtilpassede klasser til stævneaktivering, digital dommerbedømmelse, live leaderboards og diplomer.</p>
             </section>
 
-            <!-- SECTION 1 -->
+            <!-- ========================================================================= -->
+            <!-- 1. PROFIL & KLUB -->
+            <!-- ========================================================================= -->
             <section id="opret-profil" class="guide-section">
-                <h2><i class="fas fa-user-plus"></i> 1. Profil & Kluboprettelse</h2>
-                <p class="section-description">Her beskrives det, hvordan du opretter din profil, logger ind og tilknytter flere klubber.</p>
+                <h2><i class="fas fa-user-plus"></i> 1. Profil, Registrering & Klub</h2>
+                <p class="section-description">Her beskrives det, hvordan du opretter din klub, logger ind, nulstiller adgangskode og administrerer flere klubber under samme bruger.</p>
                 
                 <div class="step-card">
                     <div class="step-visual">
                         <img src="/images/login_screen.png" alt="Login og registrering skærmbillede">
                     </div>
                     <div class="step-details-content">
-                        <h3>Hvordan opretter jeg en profil? <span>Klub Login</span></h3>
-                        <p>Første gang du besøger EquiEvent, skal du registrere din klub for at komme i gang.</p>
+                        <h3>Hvordan opretter jeg en klub? <span class="badge badge-rose">TC-01</span></h3>
+                        <p>Første gang du besøger EquiEvent, opretter du en gratis klubkonto for at få adgang til administrationspanelet.</p>
                         <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Klik på knappen <strong>"Opret ny klub"</strong> nederst i login-feltet.</li>
-                            <li><i class="fas fa-arrow-right"></i> Indtast dit <strong>Klubnavn</strong>, din <strong>E-mail</strong> og opret en stærk <strong>Adgangskode</strong>.</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret Klub"</strong>. Systemet opretter dig nu som administrator og logger dig ind automatisk.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret ny klub"</strong> nederst i loginboksen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast <strong>Klubbens Navn</strong>, din <strong>E-mail</strong> og opret en sikker <strong>Adgangskode</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret Konto"</strong>. Systemet logger dig automatisk ind og opretter et tomt kartotek klar til brug.</li>
                         </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="login-og-glemt-kode" class="guide-section">
+                <h2><i class="fas fa-key"></i> Login & Glemt Adgangskode</h2>
+                <p class="section-description">Sikker adgangskontrol og nem genoprettelse, hvis du glemmer dit kodeord.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Log ind & Nulstil Adgangskode <span class="badge badge-sky">TC-02 & TC-03</span></h3>
+                        <p>Dine data gemmes sikkert i skyen, så du kan logge ind fra enhver PC, Mac, tablet eller smartphone.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Log ind:</strong> Indtast din e-mail og adgangskode på forsiden, og tryk <strong>"Log ind"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Glemt kodeord:</strong> Klik på <strong>"Glemt adgangskode?"</strong>, indtast din registrerede e-mailadresse og tryk <em>Send nulstillingslink</em>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Log ud:</strong> Klik på <strong>"Log ud"</strong> i menuen øverst til højre, når du er færdig for at sikre klubbens adgang.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-lock-open main-icon"></i>
+                        <div class="ph-title">Glemt Adgangskode & Sikkerhed</div>
+                        <div class="ph-desc">Skærmbillede af nulstillings-flowet og login-bekræftelsen.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
                     </div>
                 </div>
             </section>
 
             <section id="administrer-profil" class="guide-section">
-                <h2><i class="fas fa-id-card"></i> Administrer klubprofil</h2>
-                <p class="section-description">Lær at styre din klubs kontaktoplysninger og oprette flere klubber under samme login.</p>
+                <h2><i class="fas fa-id-card"></i> Administrer Klubprofil & Flere Klubber</h2>
+                <p class="section-description">Opdater klubbens kontaktoplysninger og administrer flere rideklubber under samme administratorlogin.</p>
                 
-                <div class="step-card reverse">
-                    <div class="step-details-content">
-                        <h3>Udfyld og opret ekstra klubber <span>Klubprofil</span></h3>
-                        <p>Under fanen <strong>Profil</strong> styrer du de informationer, der vises på deltagernes live-sider.</p>
-                        <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Indtast <strong>Klubbens Navn</strong>, <strong>Kontaktperson</strong>, <strong>Telefon</strong>, <strong>E-mail</strong> og <strong>Adresse</strong>, og klik derefter på <strong>"Gem Profil"</strong>.</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Tilknyt endnu en klub:</strong> Skal du administrere mere end én klub? Indtast navnet på den nye klub under "Tilknyt endnu en klub" og klik på den grå knap.</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Skift mellem klubber:</strong> Klik på <strong>"Skift Klub"</strong> øverst til højre. Her kan du lynhurtigt skifte mellem dine oprettede klubber.</li>
-                        </ul>
-                    </div>
+                <div class="step-card">
                     <div class="step-visual">
                         <img src="/images/profile_screen.png" alt="Klubprofil redigering og tilføjelse">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Kluboplysninger & Multiklub-styring <span class="badge badge-emerald">TC-04, TC-05 & TC-06</span></h3>
+                        <p>Under fanen <strong>Profil</strong> styrer du informationer, der fremgår på deltagernes officielle diplomer og live-sider.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Ret kontaktoplysninger:</strong> Indtast Klubbens Navn, Kontaktperson, Telefon, E-mail og Adresse, og klik <strong>"Gem Profil"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Opret ekstra klub:</strong> Skal du administrere mere end én klub? Indtast navnet på den nye klub under "Tilknyt endnu en klub" og klik <strong>"Opret"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Skift aktiv klub:</strong> Klik på <strong>"Skift Klub"</strong> øverst til højre. Systemet skifter straks data til den valgte klub uden page reload.</li>
+                        </ul>
                     </div>
                 </div>
             </section>
 
-            <!-- SECTION 2 -->
+            <!-- ========================================================================= -->
+            <!-- 2. PERSONKARTOTEK -->
+            <!-- ========================================================================= -->
             <section id="opret-rytter" class="guide-section">
-                <h2><i class="fas fa-user-tag"></i> 2. Personkartoteket</h2>
-                <p class="section-description">Her samles dine deltagere og heste, så du let kan vælge dem til fremtidige stævner uden dobbeltarbejde.</p>
+                <h2><i class="fas fa-user-tag"></i> 2. Personkartotek (Ryttere, Heste & Dommere)</h2>
+                <p class="section-description">Et samlet kartotek over klubbens ekvipager og dommere, så du slipper for at genindtaste oplysninger for hvert stævne.</p>
                 
-                <div class="step-card">
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Opret Rytter & Tilknyt Flere Heste <span class="badge badge-rose">TC-07 & TC-08</span></h3>
+                        <p>Ryttere og heste kobles relationelt sammen, så du let kan vælge den rigtige hest ved stævnetilmelding.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Gå til <strong>Kartoteker</strong> i venstremenuen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"+ Opret Ny"</strong> ud for *Ryttere & Heste*.</li>
+                            <li><i class="fas fa-arrow-right"></i> Udfyld Rytterens Navn, E-mail og Telefon. Klik på <strong>"Gem Stamdata"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Tilknyt heste:</strong> I bunden af rytterkortet kan du tilføje en eller flere heste (fx <em>"Odin fra Bakken"</em> og <em>"Freja"</em>). Hestene er nu knyttet direkte til denne rytter.</li>
+                        </ul>
+                    </div>
                     <div class="step-visual">
                         <img src="/images/directory_screen.png" alt="Det Globale Personkartotek">
-                    </div>
-                    <div class="step-details-content">
-                        <h3>Hvordan opretter jeg en rytter og heste? <span>Ryttere & Heste</span></h3>
-                        <p>Det er nemt at knytte heste til den enkelte rytter, så de hænger sammen som ekvipager.</p>
-                        <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>Personkartotek</strong> i venstremenuen.</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"+ Opret Ny"</strong> ud for *Ryttere & Heste*.</li>
-                            <li><i class="fas fa-arrow-right"></i> Udfyld rytterens <strong>Navn</strong>, <strong>E-mail</strong> (vigtigt til magic link) og <strong>Telefon</strong>. Klik på **Gem Stamdata**.</li>
-                            <li><i class="fas fa-arrow-right"></i> **Knyt heste til rytteren:** I bunden af den gemte rytter kan du indtaste hestens navn og klikke på **"+"**. Hesten er nu knyttet direkte til denne rytter.</li>
-                        </ul>
                     </div>
                 </div>
             </section>
 
             <section id="opret-dommer" class="guide-section">
-                <h2><i class="fas fa-gavel"></i> Opret dommer</h2>
-                <p class="section-description">Opret dommerprofiler, så de kan modtage personlige links til karakterafgivelse.</p>
+                <h2><i class="fas fa-gavel"></i> Opret & Administrer Dommere</h2>
+                <p class="section-description">Opret dommerprofiler med direkte e-mail og telefonnummer til udsendelse af sikre Magic Links.</p>
                 
-                <div class="step-card reverse">
-                    <div class="step-details-content">
-                        <h3>Hvordan opretter jeg en dommer? <span>Dommere</span></h3>
-                        <p>Dommerne tilføjes separat i kartoteket og har ikke brug for hestetilknytning.</p>
-                        <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Gå til <strong>Personkartotek</strong>.</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på den grønne knap <strong>"+ Opret Ny"</strong> ud for *Dommere*.</li>
-                            <li><i class="fas fa-arrow-right"></i> Indtast dommerens <strong>Navn</strong>, <strong>E-mail</strong> og <strong>Telefon</strong>. Klik på <strong>"Gem Dommer"</strong>.</li>
-                        </ul>
+                <div class="step-card">
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-user-tie main-icon"></i>
+                        <div class="ph-title">Dommerkartotek & Kontaktinfo</div>
+                        <div class="ph-desc">Skærmbillede af dommerlisten med e-mail og tildelte stævner.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
                     </div>
-                    <div class="step-visual">
-                        <img src="/images/directory_screen.png" alt="Opret dommer i kartoteket">
+                    <div class="step-details-content">
+                        <h3>Opret Dommerprofil <span class="badge badge-sky">TC-11 & TC-12</span></h3>
+                        <p>Dommerne oprettes uafhængigt af heste og kan genbruges på tværs af alle dine stævner.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> I <strong>Kartoteker</strong>, klik på den grønne knap <strong>"+ Opret Ny"</strong> ud for *Dommere*.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast dommerens <strong>Navn</strong>, <strong>E-mail</strong> (vigtigt til magic link) og <strong>Telefon</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Tryk <strong>"Gem Dommer"</strong>. Dommeren fremgår nu på listen og er klar til stævnetildeling.</li>
+                        </ul>
                     </div>
                 </div>
             </section>
 
-            <!-- SECTION 3 -->
-            <section id="opret-klubklasser" class="guide-section">
-                <h2><i class="fas fa-flag"></i> 3. Poster & Klasser</h2>
-                <p class="section-description">Her opretter du de klasser eller discipliner, som din klub afholder. Disse fungerer som skabeloner til stævnerne.</p>
+            <section id="kartotek-administration" class="guide-section">
+                <h2><i class="fas fa-search"></i> Søgning, Redigering & Sletning</h2>
+                <p class="section-description">Hurtig filtrering i realtid og vedligeholdelse af dine stamdata.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Realtidssøgning & Vedligehold <span class="badge badge-emerald">TC-09, TC-10, TC-13 & TC-14</span></h3>
+                        <p>Find ekvipager lynhurtigt og hold kartoteket opdateret.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Søgning:</strong> Indtast en del af rytter- eller hestenavnet i søgefeltet. Listen filtreres prompte for hvert tastetryk.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Redigering:</strong> Klik på blyant-ikonet for at rette telefonnummer, stavefejl eller hestenavn.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Sletning:</strong> Klik på skraldespanden for at fjerne en rytter eller hest permanent (kræver bekræftelse).</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual">
+                        <img src="/images/riders.png" alt="Rytterliste med søgning og redigering">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================================= -->
+            <!-- 3. POSTER & KLASSER -->
+            <!-- ========================================================================= -->
+            <section id="klasser-overblik" class="guide-section">
+                <h2><i class="fas fa-flag"></i> 3. Poster & Klasser (De 3 Fanblade)</h2>
+                <p class="section-description">Alt hvad du behøver for at styre stævneklasser for Dressur, Spring og Islandske Heste — opdelt i 3 specialiserede fanblade.</p>
                 
                 <div class="step-card">
                     <div class="step-visual">
                         <img src="/images/posts_screen.png" alt="Poster og klasser skabelon-formular">
                     </div>
                     <div class="step-details-content">
-                        <h3>Hvordan opretter jeg poster og klasser? <span>Opret Ny Post / Klasse</span></h3>
-                        <p>Definer reglerne for bedømmelsen af hver enkelt klasse én gang for alle.</p>
+                        <h3>Oversigt over de 3 fanblade <span class="badge badge-rose">TC-15</span></h3>
+                        <p>Gå til <strong>Poster / Klasser</strong> i hovedmenuen. Siden er opdelt i tre funktioner:</p>
                         <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Gå til fanen <strong>Poster / Klasser</strong> i menuen.</li>
-                            <li><i class="fas fa-arrow-right"></i> Indtast klassens <strong>Navn</strong> (fx *T8 Tølt* eller *4.1 Firgang*).</li>
-                            <li><i class="fas fa-arrow-right"></i> Vælg **Disciplin** (fx *Gangart*). Dette tilpasser input-skærmen til dommeren.</li>
-                            <li><i class="fas fa-arrow-right"></i> Vælg **Bedømmelsesmetode** (fx *Standard*) samt **Koefficient** (typisk 1,0) og **Max karakter** (fx 10,0).</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret Post"</strong>. Klassen gemmes og vises i listen til højre.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>1. Opret mine egne klasser / poster:</strong> Skræddersy dine egne klasser med specifikke deløvelser, forhindringer eller gangartssektioner.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>2. Klasser/Poster som anvendes i min klub:</strong> Se alle klubbens aktive klasser, filtrer efter disciplin, og aktivér/deaktivér klasser.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>3. Tilpasning af standard klasseskabeloner:</strong> Ret i officielle DRF- eller DI-skabeloner (koefficienter, anvisninger) samt udfør massehandlinger.</li>
                         </ul>
                     </div>
                 </div>
             </section>
 
-            <!-- SECTION 4 -->
-            <section id="opret-staevne" class="guide-section">
-                <h2><i class="fas fa-calendar-plus"></i> 4. Stævneafvikling</h2>
-                <p class="section-description">Når dit kartotek er klar, kan du oprette dit stævne og sammensætte de forskellige elementer.</p>
+            <section id="opret-egne-klasser" class="guide-section">
+                <h2><i class="fas fa-plus-circle"></i> Opret Egne Klasser (Dressur, Spring & Islænder)</h2>
+                <p class="section-description">Byg dine egne klubklasser fra bunden med præcise delopgaver, spring eller øvelser.</p>
                 
                 <div class="step-card reverse">
                     <div class="step-details-content">
-                        <h3>Hvordan opretter jeg et stævne? <span>Stævner</span></h3>
-                        <p>Opret stævnets overordnede ramme på få sekunder.</p>
+                        <h3>Opret Specialklasser <span class="badge badge-sky">TC-16, TC-17 & TC-18</span></h3>
+                        <p>Vælg disciplin under fanblad 1 for at åbne den rette opbygger:</p>
                         <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Gå til <strong>Stævner</strong> i menuen og klik på den røde knap <strong>"+ Nyt Stævne"</strong>.</li>
-                            <li><i class="fas fa-arrow-right"></i> Udfyld stævnets **Navn** (fx *Klub mesterskab 2026*), discipliner, dato, tid og sted.</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Opret"</strong>. Klik på det nye stævne på listen for at gå til stævnets administrationsside.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>🐎 Dressur:</strong> Tilføj øvelser med bogstaver (f.eks. A-C), instruktioner, anvisninger og koefficienter (f.eks. x2). Systemet regner automatisk procent og point ud.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>🚧 Spring:</strong> Tilføj forhindringer/spring og vælg bedømmelsesmetode (Fejl & Tid, Stilspringning eller Omspringning).</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>🇮🇸 Islænder:</strong> Tilføj opgavedele/sektioner (f.eks. Arbejdstølt, Hurtigtølt, Skridt) med vægtning (1-3).</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik <strong>"Opret Klasse"</strong>. Klassen oprettes automatisk én gang og tilføjes til dine aktive klasser uden dubletter.</li>
                         </ul>
                     </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-layer-group main-icon"></i>
+                        <div class="ph-title">Opret Egne Klasser Builder</div>
+                        <div class="ph-desc">Skærmbillede af øvelsesopbyggeren med koefficienter, forhindringer og gangarter.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="klubbens-aktive-klasser" class="guide-section">
+                <h2><i class="fas fa-check-circle"></i> Klubbens Aktive Klasser & Disciplin-filtre</h2>
+                <p class="section-description">Styr hvilke klasser der er aktive i din klub, og hold listen overskuelig med disciplin-filtre.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-filter main-icon"></i>
+                        <div class="ph-title">Aktive Klasser & Disciplin-filtrering</div>
+                        <div class="ph-desc">Skærmbillede af fanblad 2 med filterknapper for Dressur, Spring og Islænder.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Aktivér / Deaktivér Klasser <span class="badge badge-emerald">TC-19, TC-20 & TC-21</span></h3>
+                        <p>Under fanblad 2 kan du styre klassernes tilgængelighed uden at miste historik:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Disciplin-filtre:</strong> Klik på <em>🐎 Dressur</em>, <em>🚧 Spring</em> eller <em>🇮🇸 Islænder</em> for at isolere listen.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Deaktivér klasse:</strong> Klik på <strong>"Deaktivér"</strong> ud for en klasse, klubben ikke benytter for tiden. Klassen gråes ud og skjules fra nye stævner.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Genaktiver:</strong> Klik på <strong>"Aktivér"</strong> for øjeblikkeligt at gøre klassen valgbar igen.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tilpas-skabeloner-bulk" class="guide-section">
+                <h2><i class="fas fa-tasks"></i> Tilpasning af Skabeloner & Massehandlinger (Bulk Actions)</h2>
+                <p class="section-description">Tilpas officielle standardskabeloner og slet eller aktivér flere øvelser/spring på én gang med tjekbokse.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Massehandlinger i Skabeloner <span class="badge badge-amber">TC-22, TC-23 & TC-24</span></h3>
+                        <p>Under fanblad 3 <em>"Tilpasning af standard klasseskabeloner"</em> kan du tilpasse alle øvelser for din klub:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Vælg skabelon:</strong> Vælg f.eks. <em>LD1 Dressur</em> eller <em>LB1 Spring</em>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Masseret/Bulk Actions:</strong> Sæt tjekmærke i tjekboksene ud for de øvelser eller spring, du ønsker at ændre.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Bulk Slet / Deaktivér:</strong> Klik på knappen <strong>"Slet valgte (X)"</strong> eller <strong>"Deaktivér valgte (X)"</strong> for at udføre handlingen for alle markerede rækker på én gang.</li>
+                            <li><i class="fas fa-arrow-right"></i> Tryk <strong>"Gem Ændringer"</strong> for at opdatere klubbens version af skabelonen.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-check-square main-icon"></i>
+                        <div class="ph-title">Bulk Actions & Tjekbokse</div>
+                        <div class="ph-desc">Skærmbillede af massehandlinger med tjekbokse og samlet slet/aktivér-knap.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================================= -->
+            <!-- 4. STÆVNEOPSÆTNING -->
+            <!-- ========================================================================= -->
+            <section id="opret-staevne" class="guide-section">
+                <h2><i class="fas fa-calendar-plus"></i> 4. Stævneopsætning & Startlister</h2>
+                <p class="section-description">Opret stævnets ramme, udvælg klasser, tilmeld ekvipager med startnumre og fordel dommere.</p>
+                
+                <div class="step-card">
                     <div class="step-visual">
                         <img src="/images/competitions_screen.png" alt="Opret stævne knap og liste">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Opret Nyt Stævne <span class="badge badge-rose">TC-25</span></h3>
+                        <p>Opret stævnet på få sekunder med dato, sted og disciplin.</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Gå til <strong>Stævner</strong> i menuen og klik på <strong>"+ Nyt Stævne"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Indtast stævnets Navn (f.eks. <em>"Klubmesterskab Efterår 2026"</em>), Dato, Starttidspunkt og Sted/Lokation.</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg disciplin og tryk <strong>"Opret Stævne"</strong>. Du lander direkte i stævneadministrationspanelet.</li>
+                        </ul>
                     </div>
                 </div>
             </section>
 
             <section id="knyt-klasser" class="guide-section">
-                <h2><i class="fas fa-check-double"></i> Knyt klasser til et stævne</h2>
-                <p class="section-description">Vælg hvilke af din klubs oprettede klasser/poster der skal rides under dette stævne.</p>
+                <h2><i class="fas fa-check-double"></i> Knyt Klasser til Stævnet</h2>
+                <p class="section-description">Vælg præcis hvilke standardklasser og egne klubklasser der skal afholdes til stævnet.</p>
                 
-                <div class="step-card">
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Klassevalg Uden Dubletter <span class="badge badge-sky">TC-26</span></h3>
+                        <p>I stævneadgangen vælger du klasserne under fanen <strong>Klasser / Poster</strong>:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Gruppering efter disciplin:</strong> Klasserne er opdelt i overskuelige fold-ud paneler (Dressur, Spring, Islænder).</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Sæt flueben:</strong> Vælg de klasser, der skal afvikles til stævnet. Hver klasse vises kun 1 gang i listen.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Gem Valgte Klasser"</strong>. Klasserne oprettes øjeblikkeligt i stævnets resultatmodul.</li>
+                        </ul>
+                    </div>
                     <div class="step-visual">
                         <img src="/images/comp_details_screen.png" alt="Knytte klasser til stævne skærmbillede">
-                    </div>
-                    <div class="step-details-content">
-                        <h3>Klassevalg <span>Klasser / Poster</span></h3>
-                        <p>Du kan enten vælge dine egne klasser manuelt eller hente standardklasser lynhurtigt.</p>
-                        <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Klik på fanen <strong>Klasser / Poster</strong> inde i stævnets detaljevisning.</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Hurtig import:</strong> Klik på <strong>"Importer standardklasser"</strong> for automatisk at hente standardklasser ind (fx T8, T1, 4.1 for islandske heste).</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Manuelt valg:</strong> Sæt flueben i de klasser, du ønsker at afvikle til netop dette stævne.</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Gem Klassevalg"</strong>.</li>
-                        </ul>
                     </div>
                 </div>
             </section>
 
             <section id="knyt-deltagere" class="guide-section">
-                <h2><i class="fas fa-horse"></i> Tilknyt ryttere & heste til stævne</h2>
-                <p class="section-description">Tilmeld ekvipagerne til de valgte stævneklasser og tildel startnumre.</p>
+                <h2><i class="fas fa-horse"></i> Tilmeld Ekvipager & Tildel Startnumre</h2>
+                <p class="section-description">Sammensæt startlisterne hurtigt og tildel startnumre til hver klasse.</p>
                 
-                <div class="step-card reverse">
-                    <div class="step-details-content">
-                        <h3>Ekvipagetilmelding <span>Tilknyttede Ryttere</span></h3>
-                        <p>Her sammensætter du startlisterne til de enkelte klasser.</p>
-                        <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Klik på fanen <strong>Tilknyttede Ryttere</strong> i stævneadgangen.</li>
-                            <li><i class="fas fa-arrow-right"></i> Vælg en **Rytter** og derefter den **Hest**, rytteren skal ride på.</li>
-                            <li><i class="fas fa-arrow-right"></i> Sæt flueben i de klasser, ekvipagen skal deltage i til dette stævne.</li>
-                            <li><i class="fas fa-arrow-right"></i> Indtast et **Startnummer** for hver klasse (fx 1, 2, 3...) og klik på <strong>"Tilknyt Rytter"</strong>.</li>
-                        </ul>
-                    </div>
+                <div class="step-card">
                     <div class="step-visual">
                         <img src="/images/comp_riders_screen.png" alt="Tilknyt ryttere og heste til klasser under stævnet">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Startlister & Ekvipager <span class="badge badge-emerald">TC-27, TC-31 & TC-32</span></h3>
+                        <p>Under fanen <strong>Tilknyttede Ryttere</strong> sammensættes stævnets startrækkefølge:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Vælg en <strong>Rytter</strong> fra dropdownen og derefter den ønskede <strong>Hest</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg hvilken klasse ekvipagen skal ride i, og indtast et <strong>Startnummer</strong> (f.eks. 101, 102...).</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Tilmeld Ekvipage"</strong>. Ekvipagen tilføjes straks til startlisten.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Fjernelse:</strong> Skulle en rytter melde fra, klikker du <em>Fjern</em>. Dette fjerner kun rytteren fra stævnet, ikke fra kartoteket.</li>
+                        </ul>
                     </div>
                 </div>
             </section>
 
             <section id="knyt-dommere" class="guide-section">
-                <h2><i class="fas fa-users-cog"></i> Tilknyt dommere og poster</h2>
-                <p class="section-description">Tildel dommere til stævnet og vælg, hvilke klasser og poster de skal dømme.</p>
-                
-                <div class="step-card">
-                    <div class="step-visual">
-                        <img src="/images/comp_judges_screen.png" alt="Tilknyt dommere og tildel stævneklasser">
-                    </div>
-                    <div class="step-details-content">
-                        <h3>Tildeling af dommerroller <span>Tilknyttede Dommere & Poster</span></h3>
-                        <p>Sørg for, at dommerne har adgang til de rigtige startlister.</p>
-                        <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> Gå til fanen <strong>Tilknyttede Dommere & Poster</strong>.</li>
-                            <li><i class="fas fa-arrow-right"></i> Vælg dommeren i dropdown-menuen (fx *Vibeke*).</li>
-                            <li><i class="fas fa-arrow-right"></i> Indtast dommerens **Rolle** (fx *Dommer A* eller *Hoveddommer*).</li>
-                            <li><i class="fas fa-arrow-right"></i> Sæt flueben i de klasser/poster, dommeren skal give karakterer i på stævnedagen.</li>
-                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Tilknyt"</strong> for at bekræfte.</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECTION 5 -->
-            <section id="magic-link" class="guide-section">
-                <h2><i class="fas fa-magic"></i> 5. Bedømmelse & Dommerens opgave</h2>
-                <p class="section-description">Her beskrives det, hvordan selve bedømmelsen foregår, og hvad dommeren skal gøre på banekanten.</p>
+                <h2><i class="fas fa-users-cog"></i> Tildel Dommere & Magic Links</h2>
+                <p class="section-description">Tildel dommere til specifikke klasser og send sikre, adgangskodefri Magic Links direkte til deres telefon.</p>
                 
                 <div class="step-card reverse">
                     <div class="step-details-content">
-                        <h3>Hvordan fungerer Magic Link, og hvordan dømmer dommeren? <span>Dommerens opgave</span></h3>
-                        <p>Systemet er papir- og kodeordsfrit, hvilket gør det utrolig nemt for dommerne under stævnet.</p>
+                        <h3>Dommertildeling & Linkdistribution <span class="badge badge-amber">TC-28, TC-29, TC-30 & TC-33</span></h3>
+                        <p>Under fanen <strong>Tilknyttede Dommere & Poster</strong> styrer du dommernes adgang:</p>
                         <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> <strong>Send Magic Link:</strong> Som administrator går du til fanen *Tilknyttede Dommere*. Klik på knappen **"Send Magic Link"** ud for dommeren. Dette sender en e-mail til dommeren med en sikker, direkte genvej.</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Åbn link på telefon:</strong> Dommeren modtager mailen på sin telefon eller tablet, trykker på linket og kommer direkte ind på sin personlige bedømmelsesskærm uden at skulle huske koder.</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Afgiv karakterer:</strong> Dommeren ser listen over deltagere i den aktive klasse. De trykker på den ekvipage, der rider, vælger karakteren på skærmen (fx 6.0, 6.5, 7.0) og trykker **"Submit"**.</li>
-                            <li><i class="fas fa-arrow-right"></i> Karaktererne indsendes øjeblikkeligt til serveren og gemmes sikkert.</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg en dommer og tildel en rolle (f.eks. <em>Hoveddommer</em> eller <em>Dommer ved C</em>).</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg hvilke klasser dommeren skal dømme, og klik <strong>"Tilknyt Dommer"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Send via E-mail:</strong> Klik på <strong>"Send Magic Link"</strong> for automatisk at maile det direkte link til dommeren.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Kopiér Link:</strong> Klik på <strong>"Kopiér Link"</strong> for at sende linket via SMS eller WhatsApp.</li>
                         </ul>
                     </div>
-                    <div class="step-visual" style="padding: 3rem; background: rgba(15, 23, 42, 0.4); text-align: center; border-radius: 12px;">
-                        <i class="fas fa-mobile-alt" style="font-size: 6rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
-                        <h4 style="font-size: 1.3rem; color: white; margin-bottom: 0.5rem;">Dommerens bedømmelsesskærm</h4>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Det touch-venlige mobilinterface gør det muligt at afgive bedømmelser på få sekunder direkte fra banen.</p>
+                    <div class="step-visual">
+                        <img src="/images/comp_judges_screen.png" alt="Tilknyt dommere og tildel stævneklasser">
                     </div>
                 </div>
             </section>
 
-            <section id="leaderboard-resultater" class="guide-section">
-                <h2><i class="fas fa-list-ol"></i> Live Leaderboard & Resultater</h2>
-                <p class="section-description">Udregningen af gennemsnit og placeringer sker øjeblikkeligt og kan følges live af tilskuere.</p>
+            <!-- ========================================================================= -->
+            <!-- 5. BETALING & AKTIVERING -->
+            <!-- ========================================================================= -->
+            <section id="dommer-inaktivitetslaas" class="guide-section">
+                <h2><i class="fas fa-lock"></i> 5. Betaling, Aktivering & Dommerlås</h2>
+                <p class="section-description">Tryg og fleksibel model: Opsæt alt gratis, og betal først når stævnet skal afvikles.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-shield-alt main-icon"></i>
+                        <div class="ph-title">Inaktivitetslås i Dommerpanelet</div>
+                        <div class="ph-desc">Skærmbillede af dommerens visning med rød advarselsbadge og låst Gem-knap før betaling.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Dommerlås FØR Betaling <span class="badge badge-rose">TC-34 & TC-35</span></h3>
+                        <p>Du kan teste og opsætte dit stævne 100% kvit og frit. Før stævnet er aktiveret, gælder følgende i dommerpanelet:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Dommeren ser en tydelig rød badge øverst: <strong>"⚠️ Stævne ikke aktiveret"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> En infobjælke informerer om, at stævnet afventer klubbens aktivering.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>"Gem Resultat"-knappen er grået ud og låst</strong>, så der ikke kan gemmes ugyldige point før tid.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="betaling-og-aktivering" class="guide-section">
+                <h2><i class="fas fa-check-circle"></i> Betalingsflow, Rabat & Live Oplåsning</h2>
+                <p class="section-description">Aktivér stævnet med ét klik — 299 kr inkl. 14 dages adgang efter stævnedagen.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Aktivering & Live Oplåsning <span class="badge badge-emerald">TC-36, TC-37, TC-38 & TC-39</span></h3>
+                        <p>Når stævnet skal starte, aktiverer klubben stævnet:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Aktivér stævne:</strong> Klik på <strong>"Aktivér & Betal Stævne"</strong> i stævneoversigten.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Betaling eller rabatkode:</strong> Indtast betalingskort (299 kr) eller anvend en rabatkode/kupon.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Live Oplåsning uden genindlæsning:</strong> I samme sekund betalingen godkendes, <strong>fjernes den røde advarselsbadge automatisk</strong> hos dommeren, og Gem-knappen bliver grøn og aktiv med det samme!</li>
+                            <li><i class="fas fa-arrow-right"></i> Stævnet forbliver aktivt i 14 dage efter stævnedatoen til diplomudskrift og efterbehandling.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-receipt main-icon"></i>
+                        <div class="ph-title">Betalingsmodal & Rabatkode</div>
+                        <div class="ph-desc">Skærmbillede af betalingsvinduet med rabatkodefelt og bekræftelse.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================================= -->
+            <!-- 6. DOMMERAFVIKLING (LIVE) -->
+            <!-- ========================================================================= -->
+            <section id="dommer-mobil-interface" class="guide-section">
+                <h2><i class="fas fa-mobile-alt"></i> 6. Live Dommerafvikling (Alle Discipliner)</h2>
+                <p class="section-description">Det intuitive, touch-venlige dommerinterface fungerer direkte i browseren på telefon, iPad eller tablet uden app-installation.</p>
                 
                 <div class="step-card">
                     <div class="step-visual">
-                        <img src="/images/comp_results_screen.png" alt="Live leaderboard tab i stævneadgangen">
+                        <img src="/images/scoring.png" alt="Dommerens bedømmelsesskærm">
                     </div>
                     <div class="step-details-content">
-                        <h3>Hvordan fungerer resultater/leaderboard? <span>Live Leaderboard</span></h3>
-                        <p>Ingen ventetid på sekretariatet. Ranglisten er opdateret i samme sekund, som rytteren rider ud af banen.</p>
+                        <h3>Dommerens Mobilinterface <span class="badge badge-rose">TC-40</span></h3>
+                        <p>Dommeren klikker blot på sit Magic Link for at komme i gang:</p>
                         <ul class="instruction-list">
-                            <li><i class="fas fa-arrow-right"></i> <strong>Del linket:</strong> Klik på den gule knap **"Kopiér Offentligt Link"** øverst i dine stævnedetaljer. Dette link kan deles med ryttere og tilskuere eller laves til en QR-kode.</li>
-                            <li><i class="fas fa-arrow-right"></i> <strong>Følg stillingen live:</strong> Når dommerne indtaster karakterer på banen, genberegner systemet automatisk gennemsnittet for hver ekvipage i realtid.</li>
-                            <li><i class="fas fa-arrow-right"></i> Tabellen opdateres automatisk hos alle tilskuere. Førende ekvipager og deres karakterer fremhæves øverst på listen!</li>
+                            <li><i class="fas fa-arrow-right"></i> Vælg den klasse/post, der skal bedømmes, og tryk <strong>"Start Bedømmelse"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Søg rytter:</strong> Indtast startnummer eller rytternavn for at hente ekvipagen frem.</li>
+                            <li><i class="fas fa-arrow-right"></i> Skærmen tilpasser sig automatisk den valgte disciplin (Dressur, Spring eller Islænder).</li>
                         </ul>
                     </div>
                 </div>
             </section>
 
-            <div class="info-box">
+            <section id="dommer-dressur" class="guide-section">
+                <h2><i class="fas fa-award"></i> Dressurbedømmelse (Både % og Point)</h2>
+                <p class="section-description">Fuld DRF-kompatibel bedømmelse med deløvelser, koefficienter, fejlridningsfradrag og delnoter.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Dressurskema med Live Procent & Point <span class="badge badge-sky">TC-41, TC-42, TC-43, TC-44 & TC-45</span></h3>
+                        <p>Dommeren giver karakterer for hver øvelse på banen:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Karakterer 0-10:</strong> Vælg karakter med 0.5 intervaller (f.eks. 6.5, 7.0, 7.5). Koefficienter (x2) ganges automatisk i højre kolonne.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Fejlridningsfradrag:</strong> Vælg 1. gang (-2 p) eller 2. gang (-6 p). Fradraget trækkes automatisk fra pointsummen.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Delkommentarer pr. øvelse:</strong> Skriv kommentarer til den enkelte øvelse (f.eks. <em>"God takt, men mangler bøjning"</em>).</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Live Procent & Point:</strong> Bunden af skemaet viser øjeblikkeligt både procent og opnåede point: <strong>72.50 % (145.0 p)</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Tryk <strong>"Gem Resultat"</strong> for at indsende bedømmelsen.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-clipboard-check main-icon"></i>
+                        <div class="ph-title">Dressur Bedømmelsesskema</div>
+                        <div class="ph-desc">Skærmbillede af live beregningen med % og opnåede point ud af maksimum.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dommer-spring" class="guide-section">
+                <h2><i class="fas fa-stopwatch"></i> Springbedømmelse (Fejl, Tid & Omspringning)</h2>
+                <p class="section-description">Nem registrering af nedrivninger, refuseringer, ridetid, stilpoint og omspringningsrunder.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-horse main-icon"></i>
+                        <div class="ph-title">Spring Bedømmelsesskema</div>
+                        <div class="ph-desc">Skærmbillede af fejl- og tidsindtastning med omspringning og statusvalg (ELI/Clear).</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Fejl & Tid i Springning <span class="badge badge-emerald">TC-46, TC-47 & TC-48</span></h3>
+                        <p>Springskemaet optimerer banedommerens arbejde:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Nedrivninger & Refuseringer:</strong> Indtast antal nedslag (hver 4 fejl) og refuseringer. Systemet summerer fejlene automatisk.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Ridetid:</strong> Indtast ekvipagens tid i sekunder (f.eks. <em>64.20s</em>).</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Omspringning:</strong> Ved omspringningsklasser registreres omspringningsfejl og omspringningstid i separate felter.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Status:</strong> Skift status til <em>Fejlfri (Clear)</em>, <em>Elimineret (ELI)</em> eller <em>Udgået (RET)</em> efter behov.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dommer-islaender" class="guide-section">
+                <h2><i class="fas fa-horse-head"></i> Islænder Gangartsbedømmelse</h2>
+                <p class="section-description">Bedømmelse af opgavedele med vægtning, delnoter og samlet gennemsnit.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Gangartsbedømmelse for Islænderklasser <span class="badge badge-amber">TC-49 & TC-50</span></h3>
+                        <p>Tilpasset islandshestekonkurrencer (Tølt, Firgang, Femgang eller egne stævneopgaver):</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Karakterer for hver opgavedel:</strong> Vælg delkarakter 0.0 - 10.0 for hver gangart/opgave.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Vægtet gennemsnit:</strong> Gennemsnittet udregnes automatisk ud fra opgavedelenes koefficienter.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Rette en bedømmelse:</strong> Skulle en dommer taste forkert, vælges rytteren igen fra <em>"Seneste bedømmelser"</em> for at rette og gemme på ny.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-star-half-alt main-icon"></i>
+                        <div class="ph-title">Islænder Gangartsskema</div>
+                        <div class="ph-desc">Skærmbillede af delopgaverne med vægtede gennemsnit og kommentarfelter.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================================= -->
+            <!-- 7. RESULTATER, LEADERBOARD & DIPLOM -->
+            <!-- ========================================================================= -->
+            <section id="live-leaderboard" class="guide-section">
+                <h2><i class="fas fa-trophy"></i> 7. Resultater, Live Leaderboard & Diplomer</h2>
+                <p class="section-description">Øjeblikkelig stilling til ryttere og tilskuere — inklusiv dual visning af % og point for dressur.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/leaderboard.png" alt="Live leaderboard tab i stævneadgangen">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Public Live Leaderboard <span class="badge badge-rose">TC-51, TC-52 & TC-53</span></h3>
+                        <p>Ingen ventetid på sekretariatet. Ranglisten opdateres i realtid:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Deling:</strong> Kopiér det offentlige link til deling på sociale medier eller som QR-kode på stævnepladsen.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Dressur: Både % og Point:</strong> På scorelisten vises dressurresultater altid med både procent og opnåede point: <strong>85.91% (171.8 p)</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Medaljer & Placering:</strong> Førende ekvipager fremhæves automatisk med 🥇 Guld, 🥈 Sølv og 🥉 Bronze.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Fold-ud detaljer:</strong> Klik på et rytterkort for at se dommernavne, delkarakterer og fulde kommentarer.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="print-diplom" class="guide-section">
+                <h2><i class="fas fa-certificate"></i> Print Diplom & Certifikater</h2>
+                <p class="section-description">Generer flotte, print-klare A4-diplomer med klubbens logo, placering og dommerens kommentarer.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Print-klart Diplomlayout <span class="badge badge-emerald">TC-54</span></h3>
+                        <p>Giv rytterne et professionelt minde med hjem fra stævnet:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Fold rytterens resultat ud på leaderboardet eller i klubbens resultatoversigt.</li>
+                            <li><i class="fas fa-arrow-right"></i> Klik på knappen <strong>"Print Diplom"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Der åbnes et stilrent A4-printlayout med stævnenavn, dato, rytternavn, hest, klasse, officiel placering, samlet resultat (% og point) samt dommerens rosende ord.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-award main-icon"></i>
+                        <div class="ph-title">EquiEvent Diplomcertifikat</div>
+                        <div class="ph-desc">Skærmbillede af det færdige print-diplom i A4 guldramme-layout.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="csv-eksport" class="guide-section">
+                <h2><i class="fas fa-file-excel"></i> CSV Eksport & Stævneafslutning</h2>
+                <p class="section-description">Eksporter samtlige resultater til Excel med ét klik til klubbens arkiv eller forbundsindberetning.</p>
+                
+                <div class="step-card">
+                    <div class="step-visual">
+                        <img src="/images/comp_results_screen.png" alt="Resultatoversigt med CSV eksport">
+                    </div>
+                    <div class="step-details-content">
+                        <h3>Eksportér Resultater til Excel <span class="badge badge-sky">TC-55, TC-56 & TC-57</span></h3>
+                        <p>Under fanen <strong>Resultater / Leaderboard</strong> i stævneadgangen:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> Klik på <strong>"Eksporter CSV"</strong>.</li>
+                            <li><i class="fas fa-arrow-right"></i> Systemet genererer en semikolon-separeret CSV-fil med Placering, Startnr, Rytter, Hest, Klasse og Slutresultat.</li>
+                            <li><i class="fas fa-arrow-right"></i> Filen kan åbnes direkte i Microsoft Excel, Google Sheets eller Apple Numbers.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================================= -->
+            <!-- 8. AI SUPPORT -->
+            <!-- ========================================================================= -->
+            <section id="ai-support-chat" class="guide-section">
+                <h2><i class="fas fa-robot"></i> 8. AI Support & Hjælpefunktioner</h2>
+                <p class="section-description">Få øjeblikkelig hjælp direkte på skærmen under stævneplanlægning og afvikling.</p>
+                
+                <div class="step-card reverse">
+                    <div class="step-details-content">
+                        <h3>Indbygget AI-Assistent <span class="badge badge-rose">TC-58, TC-59, TC-60 & TC-61</span></h3>
+                        <p>Har du spørgsmål undervejs, sidder AI-supporten klar 24/7:</p>
+                        <ul class="instruction-list">
+                            <li><i class="fas fa-arrow-right"></i> <strong>Åbn chat:</strong> Klik på det lyserøde taleboble-ikon i nederste højre hjørne.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Spørg på dansk:</strong> Stil ethvert spørgsmål om stævneoprettelse, koefficienter, dommerlinks eller betaling.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Hurtigknapper:</strong> Benyt de foreslåede emneknapper til hurtigt at få svar på ofte stillede spørgsmål.</li>
+                            <li><i class="fas fa-arrow-right"></i> <strong>Minimer:</strong> Minimer chatten når som helst uden at miste samtalen.</li>
+                        </ul>
+                    </div>
+                    <div class="step-visual placeholder-visual">
+                        <i class="fas fa-comments main-icon"></i>
+                        <div class="ph-title">EquiEvent AI Support Chat</div>
+                        <div class="ph-desc">Skærmbillede af support-chatten med hurtigvalg og interaktive vejledninger.</div>
+                        <span class="ph-tag">Billede Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TIPS BOX -->
+            <div class="info-box amber">
                 <i class="fas fa-lightbulb"></i>
                 <div>
-                    <h4>Tip til afviklingen</h4>
-                    <p>Du kan med fordel printe det offentlige stævnelink ud som en **QR-kode** og hænge op i rytterstuen og ved banen, så tilskuere og ryttere hurtigt kan scanne sig ind på live-leaderboardet med deres mobiltelefoner under arrangementet.</p>
+                    <h4>Ekspertråd til stævnedagen</h4>
+                    <p>Husk at printe det offentlige Leaderboard-link ud som en <strong>QR-kode</strong> og placere det i rytterstuen og ved banekanten. Så kan tilskuere og ryttere følge stillingen og de enkelte dommerkarakterer direkte på deres smartphones under stævnet!</p>
                 </div>
             </div>
 
@@ -673,11 +1109,14 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 EquiEvent. Alle rettigheder forbeholdes.</p>
+        <p>&copy; 2026 EquiEvent. Alle rettigheder forbeholdes. | Udviklet til moderne hestesport.</p>
+        <p style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.5rem; line-height: 1.5;">
+            Der gives døgnsupport via den indbyggede <strong style="color: #cbd5e1;">AI-assistent</strong> (klik på support-ikonet nederst til højre). Yderligere support kan fås ved at kontakte <a href="mailto:equievent_support@alkdata.dk" style="color: #f43f5e; text-decoration: underline; font-weight: 600;">equievent_support@alkdata.dk</a>. Henvendelser via e-mail besvares inden for max 3 arbejdsdage.
+        </p>
     </footer>
 
     <script>
-        // Simple sidebar navigation active state highlight on scroll
+        // Sidebar active link tracker on scroll
         document.addEventListener('DOMContentLoaded', () => {
             const sections = document.querySelectorAll('.guide-section');
             const navItems = document.querySelectorAll('.nav-item');
@@ -686,15 +1125,14 @@
                 let current = '';
                 sections.forEach(section => {
                     const sectionTop = section.offsetTop;
-                    const sectionHeight = section.clientHeight;
-                    if (pageYOffset >= (sectionTop - 150)) {
+                    if (window.pageYOffset >= (sectionTop - 150)) {
                         current = section.getAttribute('id');
                     }
                 });
 
                 navItems.forEach(item => {
                     item.classList.remove('active');
-                    const link = item.querySelector('a').getAttribute('href').substring(1);
+                    const link = item.querySelector('a')?.getAttribute('href')?.substring(1);
                     if (link === current) {
                         item.classList.add('active');
                     }
@@ -702,6 +1140,6 @@
             });
         });
     </script>
-    <script type="module" src="/support-chat.js"></script>
+    <script type="module" src="/support-chat.js?v=4.3"></script>
 </body>
 </html>

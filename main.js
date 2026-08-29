@@ -1,11 +1,15 @@
 window.activeClubId = null;
-let API_BASE = 'http://localhost:8082';
+let API_BASE = 'https://api.equievent.dk';
 try {
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('192.168.1.66')) {
-        API_BASE = import.meta.env.VITE_API_URL;
-    } else {
-        const host = window.location.hostname;
-        if (host) {
+    const host = window.location.hostname;
+    if (host) {
+        if (host.includes('equievent.online')) {
+            API_BASE = 'https://api.equievent.online';
+        } else if (host.includes('equievent.dk')) {
+            API_BASE = 'https://api.equievent.dk';
+        } else if (host.includes('alkdata.dk')) {
+            API_BASE = 'https://api.alkdata.dk';
+        } else {
             API_BASE = `http://${host}:8082`;
         }
     }
@@ -15,6 +19,7 @@ try {
         API_BASE = `http://${host}:8082`;
     }
 }
+
 
 
 window.toggleSidebar = function() {
@@ -304,10 +309,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Helper til at afkode JWT payload
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch(e) {
+            return null;
+        }
+    }
+
     // MULTI-KLUB LOGIK
     async function checkUserClubs() {
         const token = getToken();
         if(!token) return;
+
+        const payload = parseJwt(token);
+        const email = payload ? payload.sub : null;
+        const saBtn = document.getElementById('superadmin-tab-btn');
+        if (saBtn) {
+            if (email === 'arno@alkdata.dk' || email === 'arnolkristiansen@outlook.com') {
+                saBtn.style.display = 'block';
+            } else {
+                saBtn.style.display = 'none';
+            }
+        }
 
         try {
             const response = await fetch(`${API_BASE}/clubs/me`, {
@@ -432,6 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         if (tabName === 'directory') fetchGlobalDirectory();
+        if (tabName === 'posts' && window.loadV1ClassTemplates) window.loadV1ClassTemplates();
         window.closeSidebar();
     };
 
@@ -840,9 +871,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const importStandards = document.getElementById('comp-import-standards-cb').checked;
         const selectedPosts = Array.from(document.querySelectorAll('.new-comp-custom-class-cb:checked')).map(cb => parseInt(cb.value));
 
+        const dateVal = document.getElementById('comp-date').value;
+        let parsedDate = null;
+        if (dateVal) {
+            // Check if Danish format DD.MM.YYYY
+            const parts = dateVal.split('.');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const year = parseInt(parts[2]);
+                parsedDate = new Date(year, month, day);
+            } else {
+                parsedDate = new Date(dateVal);
+            }
+        }
+        
+        if (!parsedDate || isNaN(parsedDate.getTime())) {
+            alert('Vælg eller indtast venligst en gyldig dato (f.eks. DD.MM.YYYY).');
+            return;
+        }
+
         const payload = {
             name: document.getElementById('comp-name').value,
-            date: new Date(document.getElementById('comp-date').value).toISOString(),
+            date: parsedDate.toISOString(),
             start_time: document.getElementById('comp-start-time')?.value || null,
             end_time: document.getElementById('comp-end-time')?.value || null,
             location: document.getElementById('comp-location').value,
@@ -859,8 +910,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 window.showCompetitionsList();
+            } else {
+                const data = await response.json();
+                alert('Fejl ved oprettelse af stævne: ' + (data.detail || 'Ukendt fejl'));
             }
-        } catch(err) { console.error(err); }
+        } catch(err) { 
+            console.error(err); 
+            alert('Kunne ikke oprette forbindelse til serveren.');
+        }
     });
 
     // Event listener to update custom classes when disciplines toggle
@@ -940,6 +997,76 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 window.activeCompetition = await response.json();
+                
+                const banner = document.getElementById('comp-payment-banner');
+                if (banner) {
+                    const now = new Date();
+                    const compDate = window.activeCompetition.date ? new Date(window.activeCompetition.date) : null;
+                    const activeUntil = window.activeCompetition.active_until ? new Date(window.activeCompetition.active_until) : null;
+                    
+                    const isArchived = compDate && (now - compDate) > (365 * 24 * 60 * 60 * 1000);
+                    const isExpired = window.activeCompetition.is_active && activeUntil && activeUntil < now;
+                    
+                    if (isArchived) {
+                        banner.style.background = 'rgba(148, 163, 184, 0.08)';
+                        banner.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+                        banner.style.borderLeft = '4px solid #94a3b8';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-archive" style="color: #94a3b8; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er arkiveret (Ældre end 1 år)</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Stævnet er låst. Du kan se alle resultater, ryttere og klasser, men yderligere pointafgivelse er deaktiveret.</p>
+                                </div>
+                            </div>
+                        `;
+                        banner.style.display = 'flex';
+                    } else if (isExpired) {
+                        banner.style.background = 'rgba(239, 68, 68, 0.08)';
+                        banner.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                        banner.style.borderLeft = '4px solid #ef4444';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-lock" style="color: #ef4444; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er lukket (Aktivering udløbet)</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Perioden på 14 dage efter stævnets afholdelse er udløbet. Pointafgivelse er deaktiveret, men alle data kan stadig læses.</p>
+                                </div>
+                            </div>
+                        `;
+                        banner.style.display = 'flex';
+                    } else if (window.activeCompetition.is_active) {
+                        const validUntilStr = activeUntil ? activeUntil.toLocaleDateString('da-DK') : 'Ubegrænset';
+                        banner.style.background = 'rgba(16, 185, 129, 0.08)';
+                        banner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+                        banner.style.borderLeft = '4px solid #10b981';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er Aktivt & Betalt</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Dommere kan frit afgive karakterer. Aktiveringen gælder indtil: <strong>${validUntilStr}</strong> (14 dage efter stævnets afholdelse).</p>
+                                </div>
+                            </div>
+                        `;
+                        banner.style.display = 'flex';
+                    } else {
+                        banner.style.background = 'rgba(251, 191, 36, 0.08)';
+                        banner.style.borderColor = 'rgba(251, 191, 36, 0.25)';
+                        banner.style.borderLeft = '4px solid #fbbf24';
+                        banner.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-triangle" style="color: #fbbf24; font-size: 1.5rem;"></i>
+                                <div>
+                                    <h4 style="color: #ffffff; margin: 0 0 0.25rem 0;">Dette stævne er inaktivt (Ikke betalt)</h4>
+                                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Dommere vil ikke kunne afgive karakterer, før stævnet aktiveres. Pris: 299 DKK. Gælder indtil 14 dage efter afholdelse.</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="openPaymentModal()" style="background: #fbbf24; color: #0f172a; border: none; font-weight: bold; width: auto; white-space: nowrap; padding: 0.5rem 1rem;"><i class="fas fa-credit-card"></i> Aktiver Stævne</button>
+                        `;
+                        banner.style.display = 'flex';
+                    }
+                }
             }
         } catch(err) {
             console.error('Error fetching competition:', err);
@@ -1659,6 +1786,314 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
+    };
+
+    // --- BETALING & AKTIVERING HANDLERS ---
+    window.openPaymentModal = function() {
+        if (!window.activeCompetition) return;
+        
+        document.getElementById('pay-discount-code-input').value = '';
+        document.getElementById('pay-discount-error').style.display = 'none';
+        document.getElementById('pay-discount-success').style.display = 'none';
+        document.getElementById('pay-discount-row').style.display = 'none';
+        
+        document.getElementById('pay-card-number').value = '';
+        document.getElementById('pay-card-expiry').value = '';
+        document.getElementById('pay-card-cvc').value = '';
+        
+        document.getElementById('pay-comp-name').innerText = window.activeCompetition.name;
+        document.getElementById('pay-total-amount-label').innerText = '299,00';
+        
+        const cardSec = document.getElementById('pay-card-details-section');
+        cardSec.style.display = 'block';
+        document.getElementById('pay-card-number').setAttribute('required', 'required');
+        document.getElementById('pay-card-expiry').setAttribute('required', 'required');
+        document.getElementById('pay-card-cvc').setAttribute('required', 'required');
+        
+        document.getElementById('payment-modal').style.display = 'flex';
+    };
+
+    window.closePaymentModal = function() {
+        document.getElementById('payment-modal').style.display = 'none';
+    };
+
+    window.applyDiscountCode = async function() {
+        const codeInput = document.getElementById('pay-discount-code-input');
+        const code = codeInput.value.trim().toUpperCase();
+        const errLabel = document.getElementById('pay-discount-error');
+        const succLabel = document.getElementById('pay-discount-success');
+        const discountRow = document.getElementById('pay-discount-row');
+        
+        errLabel.style.display = 'none';
+        succLabel.style.display = 'none';
+        discountRow.style.display = 'none';
+        
+        if (!code) {
+            errLabel.innerText = "Indtast venligst en rabatkode.";
+            errLabel.style.display = 'block';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/check-discount?code=${code}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const discountPct = data.discount_amount;
+                
+                document.getElementById('pay-discount-pct-label').innerText = discountPct;
+                
+                const savings = 299.0 * (discountPct / 100.0);
+                const total = 299.0 - savings;
+                
+                document.getElementById('pay-discount-amount-label').innerText = savings.toFixed(2).replace('.', ',');
+                document.getElementById('pay-total-amount-label').innerText = total.toFixed(2).replace('.', ',');
+                
+                discountRow.style.display = 'flex';
+                succLabel.style.display = 'block';
+                
+                const cardSec = document.getElementById('pay-card-details-section');
+                if (discountPct >= 100) {
+                    cardSec.style.display = 'none';
+                    document.getElementById('pay-card-number').removeAttribute('required');
+                    document.getElementById('pay-card-expiry').removeAttribute('required');
+                    document.getElementById('pay-card-cvc').removeAttribute('required');
+                } else {
+                    cardSec.style.display = 'block';
+                    document.getElementById('pay-card-number').setAttribute('required', 'required');
+                    document.getElementById('pay-card-expiry').setAttribute('required', 'required');
+                    document.getElementById('pay-card-cvc').setAttribute('required', 'required');
+                }
+            } else {
+                const errorData = await response.json();
+                errLabel.innerText = errorData.detail || "Rabatkoden er ugyldig.";
+                errLabel.style.display = 'block';
+            }
+        } catch(err) {
+            console.error(err);
+            errLabel.innerText = "Der opstod en fejl under verifikation af koden.";
+            errLabel.style.display = 'block';
+        }
+    };
+
+    window.submitPayment = async function(event) {
+        event.preventDefault();
+        
+        const codeInput = document.getElementById('pay-discount-code-input');
+        const discountCode = codeInput.value.trim().toUpperCase() || null;
+        const submitBtn = document.getElementById('pay-submit-btn');
+        
+        const oldHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Behandler...';
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/activate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({
+                    discount_code: discountCode
+                })
+            });
+            
+            if (response.ok) {
+                alert('Stævnet blev aktiveret med succes! Karakterafgivelse er nu låst op.');
+                window.closePaymentModal();
+                if (window.activeCompetition) {
+                    window.openCompetition(window.currentCompId, window.activeCompetition.name);
+                }
+            } else {
+                const errData = await response.json();
+                alert('Aktivering fejlede: ' + (errData.detail || 'Ukendt fejl'));
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = oldHtml;
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Netværksfejl under aktivering.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = oldHtml;
+        }
+    };
+
+    // --- SUPER ADMIN LOGIK ---
+    window.showSaTab = function(saTab) {
+        document.querySelectorAll('.sa-tab-btn').forEach(btn => {
+            if (btn.id === `sa-tab-${saTab}-btn`) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        document.getElementById('sa-stats-section').style.display = 'none';
+        document.getElementById('sa-discount-section').style.display = 'none';
+        document.getElementById('sa-global-templates-section').style.display = 'none';
+        
+        if (saTab === 'stats') {
+            document.getElementById('sa-stats-section').style.display = 'block';
+            fetchSaStats();
+        } else if (saTab === 'discount') {
+            document.getElementById('sa-discount-section').style.display = 'block';
+            fetchSaDiscounts();
+        } else if (saTab === 'global-templates') {
+            document.getElementById('sa-global-templates-section').style.display = 'block';
+            if (window.loadSaGlobalTemplates) window.loadSaGlobalTemplates();
+        }
+    };
+
+    async function fetchSaStats() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/stats`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                
+                document.getElementById('sa-stat-clubs').innerText = data.total_clubs;
+                document.getElementById('sa-stat-active-comps').innerText = data.active_competitions;
+                document.getElementById('sa-stat-inactive-comps').innerText = data.inactive_competitions;
+                document.getElementById('sa-stat-outdated-comps').innerText = data.outdated_inactive_competitions;
+                
+                const clubList = document.getElementById('sa-club-stats-list');
+                clubList.innerHTML = '';
+                data.club_stats.forEach(c => {
+                    clubList.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 0.75rem;"><strong>${c.club_name}</strong></td>
+                            <td style="padding: 0.75rem; color: var(--text-secondary);">${c.owner_email}</td>
+                            <td style="padding: 0.75rem;">${c.created_count} stævner</td>
+                            <td style="padding: 0.75rem; color: #10b981;">${c.active_count} aktive</td>
+                        </tr>
+                    `;
+                });
+                
+                const compList = document.getElementById('sa-comp-stats-list');
+                compList.innerHTML = '';
+                data.competitions.forEach(c => {
+                    const dateStr = c.date ? new Date(c.date).toLocaleDateString('da-DK') : 'Ingen dato';
+                    const statusHtml = c.is_active 
+                        ? '<span style="color: #10b981; background: rgba(16,185,129,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(16,185,129,0.2); font-size: 0.8rem;">Aktiv / Betalt</span>' 
+                        : '<span style="color: #f43f5e; background: rgba(244,63,94,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(244,63,94,0.2); font-size: 0.8rem;">Inaktiv</span>';
+                    
+                    const pricePaidStr = c.price_paid !== null ? `${c.price_paid.toFixed(2).replace('.', ',')} DKK` : '-';
+                    
+                    compList.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 0.75rem;"><strong>${c.name}</strong></td>
+                            <td style="padding: 0.75rem;">${c.club_name}</td>
+                            <td style="padding: 0.75rem; color: var(--text-secondary);">${dateStr}</td>
+                            <td style="padding: 0.75rem;">${statusHtml}</td>
+                            <td style="padding: 0.75rem; font-weight: bold;">${pricePaidStr}</td>
+                            <td style="padding: 0.75rem; text-align: right;">
+                                <button class="btn btn-danger btn-sm" onclick="deleteCompAsAdmin(${c.id})" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class="fas fa-trash"></i> Slet</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch(err) {
+            console.error('Error fetching admin stats:', err);
+        }
+    }
+
+    async function fetchSaDiscounts() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/discount-codes`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                const codes = await response.json();
+                const list = document.getElementById('sa-discount-list');
+                list.innerHTML = '';
+                codes.forEach(d => {
+                    list.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 0.75rem;"><strong style="letter-spacing: 1px;">${d.code}</strong></td>
+                            <td style="padding: 0.75rem; color: #10b981; font-weight: bold;">${d.discount_amount}% rabat</td>
+                            <td style="padding: 0.75rem;">
+                                ${d.is_active ? '<span style="color: #10b981;">Aktiv</span>' : '<span style="color: var(--text-secondary);">Inaktiv</span>'}
+                            </td>
+                            <td style="padding: 0.75rem; text-align: right;">
+                                <button class="btn btn-danger btn-sm" onclick="deleteDiscountCode(${d.id})" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class="fas fa-trash"></i> Slet</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
+    document.getElementById('sa-discount-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = document.getElementById('sa-discount-code').value.trim().toUpperCase();
+        const pct = parseFloat(document.getElementById('sa-discount-pct').value);
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/discount-codes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({
+                    code: code,
+                    discount_amount: pct,
+                    is_active: true
+                })
+            });
+            if (response.ok) {
+                document.getElementById('sa-discount-code').value = '';
+                fetchSaDiscounts();
+            } else {
+                const errData = await response.json();
+                alert('Kunne ikke oprette rabatkode: ' + (errData.detail || 'Fejl'));
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Netværksfejl.');
+        }
+    });
+
+    window.deleteDiscountCode = async function(id) {
+        if (!confirm('Vil du slette denne rabatkode?')) return;
+        try {
+            const response = await fetch(`${API_BASE}/admin/discount-codes/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                fetchSaDiscounts();
+            } else {
+                alert('Kunne ikke slette koden.');
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    };
+
+    window.deleteCompAsAdmin = async function(id) {
+        if (!confirm('Er du sikker på, at du vil slette dette stævne som Super Admin? Dette vil permanent slette alt stævnets data og kan ikke fortrydes!')) return;
+        try {
+            const response = await fetch(`${API_BASE}/admin/competitions/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (response.ok) {
+                fetchSaStats();
+            } else {
+                alert('Kunne ikke slette stævnet.');
+            }
+        } catch(err) {
+            console.error(err);
+        }
     };
 
     // Initialize dropdown options on load

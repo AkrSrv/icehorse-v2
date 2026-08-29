@@ -76,6 +76,7 @@ async function initV1JudgeSession(uuid) {
     window.startJudging = startV1ClassJudging;
     window.changePost = changeV1Class;
     window.searchRider = searchV1Rider;
+    window.selectV1EntryToScore = selectV1EntryToScore;
 }
 
 async function loadV1JudgeClasses() {
@@ -491,8 +492,8 @@ function renderJumpingForm(cls, container) {
             <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.4rem; text-align: center;">
                 <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.3rem; color: var(--text-secondary);">H${f}</div>
                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.2rem; font-size: 0.7rem; width: 100%; border: 1px solid rgba(239, 68, 68, 0.2);" onclick="logV1JumpingEvent('${f}', 'KNOCKDOWN')">Nedslag</button>
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.2rem; font-size: 0.7rem; width: 100%; border: 1px solid rgba(251, 191, 36, 0.2);" onclick="logV1JumpingEvent('${f}', 'DISOBEDIENCE')">Ulydighed</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-knockdown-${f}" style="padding: 0.2rem; font-size: 0.7rem; width: 100%; border: 1px solid rgba(239, 68, 68, 0.2);" onclick="logV1JumpingEvent('${f}', 'KNOCKDOWN')">Nedslag</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-disobedience-${f}" style="padding: 0.2rem; font-size: 0.7rem; width: 100%; border: 1px solid rgba(251, 191, 36, 0.2);" onclick="logV1JumpingEvent('${f}', 'DISOBEDIENCE')">Ulydighed</button>
                 </div>
             </div>
         `;
@@ -636,13 +637,69 @@ function updateV1JumpingEventsList() {
     list.innerHTML = '';
     
     const events = v1ActiveScoreSheet.items.filter(it => it.type === 'event');
+    
+    // Reset all button labels first
+    for (let f = 1; f <= 12; f++) {
+        const btnKnock = document.getElementById(`btn-knockdown-${f}`);
+        if (btnKnock) {
+            btnKnock.innerText = "Nedslag";
+            btnKnock.style.background = "";
+        }
+        const btnDisob = document.getElementById(`btn-disobedience-${f}`);
+        if (btnDisob) {
+            btnDisob.innerText = "Ulydighed";
+            btnDisob.style.background = "";
+        }
+    }
+    
+    // Count events per fence
+    const counts = {};
+    events.forEach(ev => {
+        let val = {};
+        try {
+            val = typeof ev.value === 'string' ? JSON.parse(ev.value) : ev.value;
+        } catch(e) {
+            val = ev.value || {};
+        }
+        
+        const obs = val.obstacle;
+        if (obs) {
+            if (!counts[obs]) counts[obs] = { KNOCKDOWN: 0, DISOBEDIENCE: 0 };
+            counts[obs][val.eventType] = (counts[obs][val.eventType] || 0) + 1;
+        }
+    });
+    
+    // Update button labels with counts
+    Object.keys(counts).forEach(obs => {
+        const knockCount = counts[obs].KNOCKDOWN || 0;
+        const btnKnock = document.getElementById(`btn-knockdown-${obs}`);
+        if (btnKnock && knockCount > 0) {
+            btnKnock.innerText = `Nedslag (${knockCount})`;
+            btnKnock.style.background = "#ef4444";
+            btnKnock.style.color = "white";
+        }
+        
+        const disobCount = counts[obs].DISOBEDIENCE || 0;
+        const btnDisob = document.getElementById(`btn-disobedience-${obs}`);
+        if (btnDisob && disobCount > 0) {
+            btnDisob.innerText = `Ulydighed (${disobCount})`;
+            btnDisob.style.background = "#fbbf24";
+            btnDisob.style.color = "#0f172a";
+        }
+    });
+
     if (events.length === 0) {
         list.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-secondary);">Ingen hændelser logget.</span>';
         return;
     }
     
     events.forEach(ev => {
-        const val = JSON.parse(ev.value || '{}');
+        let val = {};
+        try {
+            val = typeof ev.value === 'string' ? JSON.parse(ev.value) : ev.value;
+        } catch(e) {
+            val = ev.value || {};
+        }
         list.innerHTML += `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); padding: 0.5rem; border-radius: 6px; font-size: 0.85rem;">
                 <span>Forhindring <strong>${val.obstacle}</strong>: ${val.eventType} (${val.penalty} fejl)</span>
@@ -898,3 +955,443 @@ window.showV1AuditHistory = async function(entryId) {
     });
     alert(msg);
 };
+
+
+// ==========================================
+// V1 CLASS TEMPLATES ADMINISTRATOR PANEL
+// ==========================================
+
+window.loadV1ClassTemplates = async function() {
+    const listContainer = document.getElementById('v1-class-templates-list');
+    if (!listContainer) return;
+    
+    if (!window.activeClubId) {
+        listContainer.innerHTML = '<span style="color: var(--text-secondary);">Log venligst ind i en klub først.</span>';
+        return;
+    }
+    
+    listContainer.innerHTML = '<span style="color: var(--text-secondary);">Indlæser skabeloner...</span>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/clubs/${window.activeClubId}/class-definitions`);
+        if (!res.ok) throw new Error("Fejl ved hentning af skabeloner.");
+        const templates = await res.json();
+        
+        listContainer.innerHTML = '';
+        if (templates.length === 0) {
+            listContainer.innerHTML = '<span style="color: var(--text-secondary);">Ingen skabeloner fundet.</span>';
+            return;
+        }
+        
+        templates.forEach(tpl => {
+            const isCustom = tpl.club_id !== null;
+            const badgeBg = isCustom ? 'rgba(251, 191, 36, 0.15)' : 'rgba(96, 165, 250, 0.15)';
+            const badgeColor = isCustom ? '#fbbf24' : '#60a5fa';
+            const badgeText = isCustom ? 'Klub-tilpasset' : 'Standard (FEIF/DRF)';
+            
+            const card = document.createElement('div');
+            card.className = 'glass-panel';
+            card.style.padding = '1.25rem';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.justifyContent = 'space-between';
+            card.style.gap = '1rem';
+            card.style.border = '1px solid var(--glass-border)';
+            card.style.borderRadius = '12px';
+            
+            card.innerHTML = `
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <strong style="color: white; font-size: 1.1rem;">${tpl.name}</strong>
+                        <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 600; font-size: 0.7rem; text-transform: uppercase;">${badgeText}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Kode: <strong>${tpl.code}</strong></div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Disciplin: <strong>${tpl.discipline === 'gait' ? 'Islandsk' : tpl.discipline === 'dressage' ? 'Dressur' : 'Spring'}</strong></div>
+                </div>
+                <div>
+                    <button class="btn btn-secondary btn-sm" style="width: 100%; border: 1px solid rgba(251, 191, 36, 0.3);" onclick='window.editV1ClassTemplate(${JSON.stringify(tpl).replace(/'/g, "&apos;")})'>
+                        <i class="fas fa-edit"></i> Tilpas øvelser / Rediger
+                    </button>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+    } catch(err) {
+        console.error(err);
+        listContainer.innerHTML = '<span style="color: #ef4444;">Kunne ikke hente klasseskabeloner.</span>';
+    }
+};
+
+window.editV1ClassTemplate = function(tpl, isSa = false) {
+    window.saEditingGlobalTemplate = isSa;
+    
+    document.getElementById('v1-template-class-id').value = tpl.id;
+    document.getElementById('v1-template-class-code').value = tpl.code;
+    document.getElementById('v1-template-class-discipline').value = tpl.discipline;
+    document.getElementById('v1-template-class-scoring').value = tpl.scoring_model;
+    document.getElementById('v1-template-class-name').value = tpl.name;
+    
+    if (isSa) {
+        document.getElementById('v1-template-modal-title').innerText = `System: Rediger Global Standardskabelon (${tpl.code})`;
+    } else {
+        document.getElementById('v1-template-modal-title').innerText = `Tilpas Skabelon: ${tpl.code}`;
+    }
+    
+    // Reset button visibility
+    const resetBtn = document.getElementById('v1-template-reset-btn');
+    if (!isSa && tpl.club_id !== null) {
+        resetBtn.style.display = 'block';
+    } else {
+        resetBtn.style.display = 'none';
+    }
+    
+    const container = document.getElementById('v1-template-exercises-container');
+    container.innerHTML = '';
+    
+    const config = JSON.parse(tpl.configuration || '{}');
+    
+    if (tpl.discipline === 'dressage') {
+        const exercises = config.exercises || [];
+        exercises.forEach((ex, idx) => {
+            window.addV1TemplateExerciseRow(ex.sequence, ex.code, ex.name, ex.coefficient, ex.directiveIdeas ? ex.directiveIdeas.join(', ') : '');
+        });
+    } else if (tpl.discipline === 'gait') {
+        const sections = config.sections || [];
+        sections.forEach((sec, idx) => {
+            window.addV1TemplateExerciseRow(sec.sequence, '', sec.name, sec.weight, '');
+        });
+    } else if (tpl.discipline === 'jumping') {
+        // Render jumping allowed/maximum time fields directly
+        container.innerHTML = `
+            <div style="display: flex; gap: 1rem; width: 100%;">
+                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Fejlfri tid (Sekunder)</label>
+                    <input type="number" step="1" id="v1-tpl-allowed-time" value="${config.allowedTime || 75}" required style="width: 100%;">
+                </div>
+                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Maksimumtid (Sekunder)</label>
+                    <input type="number" step="1" id="v1-tpl-max-time" value="${config.maximumTime || 150}" required style="width: 100%;">
+                </div>
+            </div>
+        `;
+    }
+    
+    document.getElementById('v1-edit-template-modal').style.display = 'flex';
+};
+
+window.addV1TemplateExerciseRow = function(seq = '', code = '', name = '', coeff = 1, directives = '') {
+    const container = document.getElementById('v1-template-exercises-container');
+    const discipline = document.getElementById('v1-template-class-discipline').value;
+    
+    if (discipline === 'jumping') return; // Not using rows for jumping
+    
+    const rowCount = container.children.length;
+    const finalSeq = seq || (rowCount + 1);
+    const rowId = `tpl-row-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.className = 'v1-template-exercise-row';
+    row.style.background = 'rgba(255,255,255,0.02)';
+    row.style.border = '1px solid var(--glass-border)';
+    row.style.borderRadius = '8px';
+    row.style.padding = '0.8rem';
+    row.style.display = 'flex';
+    row.style.flexDirection = 'column';
+    row.style.gap = '0.5rem';
+    row.style.position = 'relative';
+    
+    if (discipline === 'dressage') {
+        row.innerHTML = `
+            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+                <div style="font-weight: bold; color: #fbbf24; font-size: 0.85rem;">Øvelse #${finalSeq}</div>
+                <button type="button" class="btn btn-danger btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.7rem;" onclick="document.getElementById('${rowId}').remove(); window.resequenceV1TemplateRows();">Slet</button>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="hidden" class="tpl-ex-seq" value="${finalSeq}">
+                <div style="flex: 1;">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Øvelsesnavn</label>
+                    <input type="text" class="tpl-ex-name" value="${name}" required style="width: 100%; padding: 0.4rem; font-size: 0.85rem;">
+                </div>
+                <div style="width: 70px;">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Koefficient</label>
+                    <input type="number" class="tpl-ex-coeff" value="${coeff}" step="0.5" min="0.5" required style="width: 100%; padding: 0.4rem; font-size: 0.85rem; text-align: center;">
+                </div>
+                <div style="width: 80px;">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Kode (Valgfri)</label>
+                    <input type="text" class="tpl-ex-code" value="${code || 'EX_' + finalSeq}" style="width: 100%; padding: 0.4rem; font-size: 0.85rem; text-align: center; text-transform: uppercase;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Retningslinjer / Fokuspunkter (Adskil med komma)</label>
+                <input type="text" class="tpl-ex-directives" value="${directives}" placeholder="lige linje, takt, ro..." style="width: 100%; padding: 0.4rem; font-size: 0.85rem;">
+            </div>
+        `;
+    } else if (discipline === 'gait') {
+        row.innerHTML = `
+            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+                <div style="font-weight: bold; color: #fbbf24; font-size: 0.85rem;">Opgavedel #${finalSeq}</div>
+                <button type="button" class="btn btn-danger btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.7rem;" onclick="document.getElementById('${rowId}').remove(); window.resequenceV1TemplateRows();">Slet</button>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="hidden" class="tpl-ex-seq" value="${finalSeq}">
+                <div style="flex: 1;">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Beskrivelse (F.eks. Tølt i langsomt tempo)</label>
+                    <input type="text" class="tpl-ex-name" value="${name}" required style="width: 100%; padding: 0.4rem; font-size: 0.85rem;">
+                </div>
+                <div style="width: 70px;">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Vægt</label>
+                    <input type="number" class="tpl-ex-coeff" value="${coeff}" step="1" min="1" required style="width: 100%; padding: 0.4rem; font-size: 0.85rem; text-align: center;">
+                </div>
+            </div>
+        `;
+    }
+    
+    container.appendChild(row);
+};
+
+window.resequenceV1TemplateRows = function() {
+    const container = document.getElementById('v1-template-exercises-container');
+    Array.from(container.children).forEach((row, idx) => {
+        const seqVal = idx + 1;
+        const seqInput = row.querySelector('.tpl-ex-seq');
+        if (seqInput) seqInput.value = seqVal;
+        
+        const titleDiv = row.querySelector('div div');
+        if (titleDiv) {
+            const discipline = document.getElementById('v1-template-class-discipline').value;
+            const label = discipline === 'dressage' ? 'Øvelse' : 'Opgavedel';
+            titleDiv.innerText = `${label} #${seqVal}`;
+        }
+    });
+};
+
+window.resetV1TemplateToStandard = async function() {
+    const classId = document.getElementById('v1-template-class-id').value;
+    if (!classId || !window.activeClubId) return;
+    
+    if (!confirm("Er du sikker på, at du vil nulstille denne klasseskabelon til landsorganisationens standard?")) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/clubs/${window.activeClubId}/class-definitions/${classId}/reset`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            document.getElementById('v1-edit-template-modal').style.display = 'none';
+            window.loadV1ClassTemplates();
+        } else {
+            const data = await res.json();
+            alert("Fejl: " + (data.detail || "Kunne ikke nulstille skabelon."));
+        }
+    } catch(err) {
+        console.error(err);
+        alert("Kunne ikke kontakte serveren.");
+    }
+};
+
+// Bind form submit for class template edit
+document.getElementById('v1-template-edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const code = document.getElementById('v1-template-class-code').value;
+    const discipline = document.getElementById('v1-template-class-discipline').value;
+    const scoring = document.getElementById('v1-template-class-scoring').value;
+    const name = document.getElementById('v1-template-class-name').value;
+    
+    let config = {};
+    
+    if (discipline === 'dressage') {
+        const rows = document.querySelectorAll('.v1-template-exercise-row');
+        config.exercises = Array.from(rows).map(row => {
+            const seq = parseInt(row.querySelector('.tpl-ex-seq').value);
+            const exName = row.querySelector('.tpl-ex-name').value;
+            const coeff = parseFloat(row.querySelector('.tpl-ex-coeff').value);
+            const exCode = row.querySelector('.tpl-ex-code').value || `EX_${seq}`;
+            const directives = row.querySelector('.tpl-ex-directives').value;
+            return {
+                sequence: seq,
+                code: exCode.toUpperCase(),
+                name: exName,
+                coefficient: coeff,
+                maxMark: 10,
+                allowedIncrement: 0.5,
+                directiveIdeas: directives ? directives.split(',').map(s => s.trim()).filter(Boolean) : []
+            };
+        });
+        config.officialResultDecimals = 2;
+    } else if (discipline === 'gait') {
+        const rows = document.querySelectorAll('.v1-template-exercise-row');
+        config.sections = Array.from(rows).map(row => {
+            const seq = parseInt(row.querySelector('.tpl-ex-seq').value);
+            const secName = row.querySelector('.tpl-ex-name').value;
+            const weight = parseInt(row.querySelector('.tpl-ex-coeff').value);
+            return {
+                sequence: seq,
+                name: secName,
+                weight: weight
+            };
+        });
+        config.discardHighestAndLowest = true;
+        config.judgeMarkDecimals = 1;
+        config.officialResultDecimals = 2;
+        config.markIncrement = 0.5;
+    } else if (discipline === 'jumping') {
+        const allowedTime = parseFloat(document.getElementById('v1-tpl-allowed-time').value || 75);
+        const maxTime = parseFloat(document.getElementById('v1-tpl-max-time').value || 150);
+        config.allowedTime = allowedTime;
+        config.maximumTime = maxTime;
+        config.officialResultDecimals = 2;
+    }
+    
+    const isSa = window.saEditingGlobalTemplate;
+    const url = isSa 
+        ? `${API_BASE}/admin/class-definitions`
+        : `${API_BASE}/api/v1/clubs/${window.activeClubId}/class-definitions`;
+    
+    const headers = { 'Content-Type': 'application/json' };
+    if (isSa) {
+        const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+                code: code,
+                name: name,
+                discipline: discipline,
+                scoring_model: scoring,
+                configuration: JSON.stringify(config)
+            })
+        });
+        
+        if (res.ok) {
+            document.getElementById('v1-edit-template-modal').style.display = 'none';
+            if (isSa) {
+                window.loadSaGlobalTemplates();
+            } else {
+                window.loadV1ClassTemplates();
+            }
+        } else {
+            const data = await res.json();
+            alert("Fejl: " + (data.detail || "Kunne ikke gemme skabelon."));
+        }
+    } catch(err) {
+        console.error(err);
+        alert("Kunne ikke kontakte serveren.");
+    }
+});
+
+
+window.loadSaGlobalTemplates = async function() {
+    const listContainer = document.getElementById('sa-global-templates-list');
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = '<span style="color: var(--text-secondary);">Indlæser standardskabeloner...</span>';
+    
+    try {
+        const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
+        if (!token) {
+            listContainer.innerHTML = '<span style="color: #ef4444;">Du er ikke logged ind. Log venligst ud og ind igen.</span>';
+            return;
+        }
+        
+        const res = await fetch(`${API_BASE}/admin/class-definitions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.status === 401 || res.status === 403) {
+            listContainer.innerHTML = '<span style="color: #ef4444;">Din login-session er udløbet, eller du har ikke adgang. Log venligst ud og ind igen for at forny din adgang.</span>';
+            return;
+        }
+        
+        if (!res.ok) throw new Error("Fejl ved hentning af globale skabeloner.");
+        const templates = await res.json();
+        
+        // Sort templates by code
+        templates.sort((a, b) => a.code.localeCompare(b.code, 'da'));
+        window.saGlobalTemplatesList = templates;
+        
+        renderSaTemplatesFiltered('all');
+    } catch(err) {
+        console.error(err);
+        listContainer.innerHTML = '<span style="color: #ef4444;">Kunne ikke hente globale skabeloner.</span>';
+    }
+};
+
+window.filterSaTemplates = function(discipline) {
+    document.querySelectorAll('.sa-templates-filter').forEach(btn => {
+        const text = btn.innerText.toLowerCase();
+        const matches = (discipline === 'all' && text.includes('alle')) ||
+                        (discipline === 'dressage' && text.includes('dressur')) ||
+                        (discipline === 'jumping' && text.includes('spring')) ||
+                        (discipline === 'gait' && text.includes('islandsk'));
+        if (matches) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    renderSaTemplatesFiltered(discipline);
+};
+
+function renderSaTemplatesFiltered(discipline) {
+    const listContainer = document.getElementById('sa-global-templates-list');
+    if (!listContainer || !window.saGlobalTemplatesList) return;
+    
+    listContainer.innerHTML = '';
+    
+    const filtered = window.saGlobalTemplatesList.filter(tpl => {
+        if (discipline === 'all') return true;
+        return tpl.discipline === discipline;
+    });
+    
+    if (filtered.length === 0) {
+        listContainer.innerHTML = '<span style="color: var(--text-secondary);">Ingen skabeloner fundet for denne disciplin.</span>';
+        return;
+    }
+    
+    filtered.forEach(tpl => {
+        const item = document.createElement('div');
+        item.className = 'glass-panel';
+        item.style.padding = '1rem';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'space-between';
+        item.style.cursor = 'pointer';
+        item.style.border = '1px solid var(--glass-border)';
+        item.style.borderRadius = '8px';
+        item.style.transition = 'all 0.2s ease';
+        
+        item.onclick = () => {
+            window.editV1ClassTemplate(tpl, true);
+        };
+        
+        let disciplineIcon = 'fa-horse';
+        let disciplineColor = '#10b981';
+        if (tpl.discipline === 'jumping') {
+            disciplineIcon = 'fa-check-double';
+            disciplineColor = '#3b82f6';
+        } else if (tpl.discipline === 'gait') {
+            disciplineIcon = 'fa-paw';
+            disciplineColor = '#fbbf24';
+        }
+        
+        item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; color: ${disciplineColor}; border: 1px solid var(--glass-border);">
+                    <i class="fas ${disciplineIcon}"></i>
+                </div>
+                <div>
+                    <strong style="color: white; font-size: 0.95rem; display: block;">${tpl.code}</strong>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">${tpl.name}</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--text-secondary);"></i>
+        `;
+        listContainer.appendChild(item);
+    });
+}
+
