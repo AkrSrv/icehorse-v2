@@ -766,9 +766,34 @@
                 <div id="dtlMessage" class="detail-message-box"></div>
             </div>
 
+            <!-- DIREKTE SVAR FRA SYSTEMET -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 14px; padding: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                    <label style="font-size: 0.9rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                        <i class="fas fa-paper-plane"></i> Besvar direkte fra systemet:
+                    </label>
+                    <span style="font-size: 0.75rem; color: #94a3b8;"><i class="fas fa-envelope"></i> Sendes via SMTP (arno@alkdata.dk)</span>
+                </div>
+                
+                <textarea id="dtlReplyText" rows="4" placeholder="Skriv dit svar til kunden her... Systemet sender automatisk en professionel e-mail med dit svar og citerer kundens henvendelse nedenunder." style="width: 100%; background: rgba(30, 41, 59, 0.7); border: 1px solid var(--glass-border); border-radius: 10px; color: #ffffff; padding: 0.85rem; font-family: inherit; font-size: 0.9rem; line-height: 1.5; resize: vertical; outline: none; margin-bottom: 0.75rem;"></textarea>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: #cbd5e1; cursor: pointer;">
+                        <input type="checkbox" id="dtlAutoResolve" checked style="accent-color: #10b981; width: 16px; height: 16px;">
+                        <span>Markér automatisk opgaven som <strong>Løst ✅</strong></span>
+                    </label>
+
+                    <button type="button" class="btn-hub btn-hub-primary" id="btnSendDirectReply" onclick="sendDirectReply()">
+                        <i class="fas fa-paper-plane"></i> Send Svar til Kunde
+                    </button>
+                </div>
+
+                <div id="replyFeedback" style="display: none; margin-top: 0.75rem; font-size: 0.85rem; padding: 0.6rem 0.85rem; border-radius: 8px;"></div>
+            </div>
+
             <!-- Status Styring -->
             <div>
-                <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">Skift opgavens status:</label>
+                <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">Skift opgavens status manuelt:</label>
                 <div class="status-btn-group">
                     <button class="btn-status-toggle" id="btnSetNy" onclick="changeTicketStatus('Ny')"><i class="fas fa-circle" style="color: #10b981;"></i> Sæt til Ny</button>
                     <button class="btn-status-toggle" id="btnSetIgang" onclick="changeTicketStatus('I gang')"><i class="fas fa-spinner" style="color: #f59e0b;"></i> Sæt til I gang</button>
@@ -1101,6 +1126,11 @@
             // Besked
             document.getElementById('dtlMessage').innerText = ticket.message;
 
+            // Reset Svar sektion
+            document.getElementById('dtlReplyText').value = '';
+            document.getElementById('replyFeedback').style.display = 'none';
+            document.getElementById('dtlAutoResolve').checked = true;
+
             // Interne Noter
             document.getElementById('dtlInternalNotes').value = ticket.internal_notes || '';
 
@@ -1125,6 +1155,74 @@
             document.getElementById('btnSetNy').className = 'btn-status-toggle' + (currentStatus === 'Ny' ? ' current-ny' : '');
             document.getElementById('btnSetIgang').className = 'btn-status-toggle' + (currentStatus === 'I gang' ? ' current-igang' : '');
             document.getElementById('btnSetLost').className = 'btn-status-toggle' + (currentStatus === 'Løst' ? ' current-lost' : '');
+        }
+
+        async function sendDirectReply() {
+            if (!currentActiveTicket) return;
+            const replyText = document.getElementById('dtlReplyText').value.trim();
+            const autoResolve = document.getElementById('dtlAutoResolve').checked;
+            const btn = document.getElementById('btnSendDirectReply');
+            const feedback = document.getElementById('replyFeedback');
+
+            if (!replyText) {
+                alert('Skriv venligst et svar til kunden først.');
+                document.getElementById('dtlReplyText').focus();
+                return;
+            }
+
+            const oldHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender e-mail...';
+            feedback.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/support/tickets/${currentActiveTicket.id}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': currentAdminPassword
+                    },
+                    body: JSON.stringify({
+                        reply_message: replyText,
+                        mark_as_resolved: autoResolve
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    feedback.style.display = 'block';
+                    feedback.style.background = 'rgba(16, 185, 129, 0.15)';
+                    feedback.style.border = '1px solid #10b981';
+                    feedback.style.color = '#34d399';
+                    feedback.innerHTML = `<i class="fas fa-check-circle"></i> Svaret er sendt direkte til <strong>${escapeHtml(currentActiveTicket.email)}</strong>!`;
+
+                    document.getElementById('dtlReplyText').value = '';
+                    if (data.ticket) {
+                        currentActiveTicket.status = data.ticket.status;
+                        currentActiveTicket.internal_notes = data.ticket.internal_notes;
+                        document.getElementById('dtlInternalNotes').value = data.ticket.internal_notes || '';
+                        updateDrawerStatusButtons(data.ticket.status);
+                    }
+                    loadTickets();
+                } else {
+                    feedback.style.display = 'block';
+                    feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+                    feedback.style.border = '1px solid #ef4444';
+                    feedback.style.color = '#f87171';
+                    feedback.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Fejl: ${escapeHtml(data.detail || 'Kunne ikke sende svar.')}`;
+                }
+            } catch(err) {
+                console.error(err);
+                feedback.style.display = 'block';
+                feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+                feedback.style.border = '1px solid #ef4444';
+                feedback.style.color = '#f87171';
+                feedback.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Netværksfejl ved afsendelse.`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = oldHtml;
+            }
         }
 
         async function changeTicketStatus(newStatus) {

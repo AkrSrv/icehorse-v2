@@ -334,3 +334,80 @@ equievent_support@alkdata.dk
     except Exception as e:
         print(f"SMTP FEJL ved support-henvendelse: {e}")
         return False
+
+
+def send_ticket_reply_email(to_email: str, recipient_name: str, subject: str, reply_text: str, original_message: str = "", source_system: str = "EquiEvent"):
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        raise Exception("SMTP konfiguration mangler på serveren.")
+
+    clean_subject = subject.replace("Re: ", "").strip()
+    full_subject = f"Re: [{source_system}] {clean_subject}"
+    
+    sender_name = f"Arno L. Kristiansen | {source_system} Support"
+    from_email = SMTP_FROM_EMAIL or "arno@alkdata.dk"
+
+    msg = EmailMessage()
+    msg['Subject'] = full_subject
+    msg['From'] = f"{sender_name} <{from_email}>"
+    msg['To'] = to_email
+    msg['Reply-To'] = "arno@alkdata.dk"
+
+    plain_content = f"""Kære {recipient_name},
+
+{reply_text}
+
+Med venlig hilsen,
+Arno L. Kristiansen
+ALKData & {source_system}
+arno@alkdata.dk
+https://alkdata.dk
+
+----------------------------------------
+Oprindelig henvendelse:
+{original_message}
+----------------------------------------
+"""
+
+    quote_block = f"""
+    <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+      <p style="font-size: 12px; font-weight: bold; color: #94a3b8; margin: 0 0 6px 0;">Oprindelig henvendelse:</p>
+      <div style="font-size: 12px; color: #64748b; background: #f1f5f9; padding: 12px; border-radius: 6px; white-space: pre-wrap;">{original_message}</div>
+    </div>
+    """ if original_message else ""
+
+    html_content = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #0f172a, #1e293b); color: white; padding: 20px; border-radius: 12px 12px 0 0; border-bottom: 3px solid #38bdf8;">
+          <h2 style="margin: 0; color: #ffffff; font-size: 19px;">Svar på din henvendelse</h2>
+          <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px;">{source_system} Support • ALKData</p>
+        </div>
+        
+        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-top: none; padding: 24px; border-radius: 0 0 12px 12px;">
+          <p style="font-size: 15px; margin-top: 0; color: #0f172a;">Kære <strong>{recipient_name}</strong>,</p>
+          
+          <div style="background-color: #f8fafc; border-left: 4px solid #38bdf8; padding: 16px; border-radius: 8px; margin: 18px 0; font-size: 15px; line-height: 1.65; color: #0f172a; white-space: pre-wrap;">{reply_text}</div>
+          
+          <p style="margin-bottom: 0; font-size: 14px; color: #334155;">
+            Har du yderligere spørgsmål, er du altid velkommen til at besvare denne mail direkte.<br><br>
+            Med venlig hilsen,<br>
+            <strong>Arno L. Kristiansen</strong><br>
+            <span style="color: #64748b; font-size: 13px;">Stifter af ALKData & EquiEvent</span><br>
+            <a href="mailto:arno@alkdata.dk" style="color: #0284c7; text-decoration: none;">arno@alkdata.dk</a> • <a href="https://alkdata.dk" style="color: #0284c7; text-decoration: none;">alkdata.dk</a>
+          </p>
+          {quote_block}
+        </div>
+      </body>
+    </html>
+    """
+
+    msg.set_content(plain_content)
+    msg.add_alternative(html_content, subtype='html')
+
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server.starttls()
+    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+    server.send_message(msg)
+    server.quit()
+    return True
+

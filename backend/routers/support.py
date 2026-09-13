@@ -394,3 +394,61 @@ def create_manual_support_ticket(req: CreateManualTicketRequest, auth: bool = De
         return {"status": "success", "ticket_id": ticket.id}
     finally:
         db.close()
+
+class TicketReplyRequest(BaseModel):
+    reply_message: str
+    mark_as_resolved: Optional[bool] = True
+
+@router.post("/tickets/{ticket_id}/reply")
+def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depends(check_admin_access)):
+    if not req.reply_message or not req.reply_message.strip():
+        raise HTTPException(status_code=400, detail="Svarbesked må ikke være tom.")
+        
+    db = SessionLocal()
+    try:
+        ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Opgave ikke fundet.")
+            
+        # Send mail direkte via SMTP
+        from email_service import send_ticket_reply_email
+        send_ticket_reply_email(
+            to_email=ticket.email,
+            recipient_name=ticket.name,
+            subject=ticket.subject,
+            reply_text=req.reply_message.strip(),
+            original_message=ticket.message,
+            source_system=ticket.source_system or "EquiEvent"
+        )
+        
+        # Opdater ticket
+        if req.mark_as_resolved:
+            ticket.status = "Løst"
+            
+        timestamp_str = datetime.utcnow().strftime("%d. %b %H:%M")
+        reply_log = f"\n\n[SVAR SENDT {timestamp_str}]:\n{req.reply_message.strip()}"
+        if ticket.internal_notes:
+            ticket.internal_notes += reply_log
+        else:
+            ticket.internal_notes = reply_log.strip()
+            
+        ticket.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(ticket)
+        
+        return {
+            "status": "success",
+            "message": f"Svar er sendt til {ticket.email}",
+            "ticket": {
+                "id": ticket.id,
+                "status": ticket.status,
+                "internal_notes": ticket.internal_notes,
+                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None
+            }
+        }
+    except Exception as e:
+        print(f"Fejl ved afsendelse af svar til kunde: {e}")
+        raise HTTPException(status_code=500, detail=f"Kunne ikke sende e-mail: {str(e)}")
+    finally:
+        db.close()
+
