@@ -807,7 +807,11 @@ async function initV1Leaderboard(compId) {
         listElement.appendChild(exportDiv);
         
         if (!data.classes || data.classes.length === 0) {
-            listElement.innerHTML += '<p style="text-align: center; color: var(--text-secondary);">Ingen aktive stævneklasser fundet.</p>';
+            if (window.renderLeaderboard) {
+                window.renderLeaderboard(compId, listElement, titleElement);
+            } else {
+                listElement.innerHTML += '<p style="text-align: center; color: var(--text-secondary);">Ingen aktive stævneklasser fundet.</p>';
+            }
             return;
         }
         

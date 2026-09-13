@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EquiEvent Competition Admin</title>
     <script>
+        // Skjul landing page prompte ved specielle visninger (leaderboard, magic link, reset password)
+        (function() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('leaderboard') || params.get('magic') || params.get('reset_token')) {
+                    document.documentElement.classList.add('hide-landing-view');
+                }
+            } catch (e) {}
+        })();
+        
         window.onerror = function(message, source, lineno, colno, error) {
             alert("JS FEJL: " + message + "\nFil: " + source + "\nLinje: " + lineno);
             return false;
@@ -12,7 +22,13 @@
         window.onunhandledrejection = function(event) {
             alert("UNHANDLED REJECTION: " + event.reason);
         };
-
+    </script>
+    <style>
+        html.hide-landing-view #landing-section {
+            display: none !important;
+        }
+    </style>
+    <script>
         window.showLandingPage = function() {
             const landing = document.getElementById('landing-section');
             if (landing) landing.style.display = 'block';
@@ -62,6 +78,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root {
             --primary: #f43f5e;
@@ -470,7 +487,7 @@
                     <li><a href="#fordele">Funktioner & Fordele</a></li>
                     <li><a href="#priser">Priser</a></li>
                     <li><a href="/guide.html" style="color: #fb7185; font-weight: 600;"><i class="fas fa-book-open" style="margin-right: 4px;"></i> Vejledning</a></li>
-                    <li><a href="#kontakt">Kontakt</a></li>
+                    <li><a href="#kontakt" onclick="window.openContactSupportModal(); return false;"><i class="fas fa-headset" style="margin-right: 4px; color: #38bdf8;"></i> Support</a></li>
                 </ul>
                 <div class="landing-actions">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="window.showLoginSection()"><i class="fas fa-sign-in-alt"></i> Log Ind</button>
@@ -667,14 +684,18 @@
                         <p style="color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; margin: 0;">
                             Har du spørgsmål til systemet, ønsker en skræddersyet løsning til din klub, eller har du brug for personlig support? Tøv ikke med at række ud.
                         </p>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(15, 23, 42, 0.6); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(15, 23, 42, 0.6); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--glass-border);">
                             <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: #ffffff;">
                                 <i class="fas fa-envelope" style="color: var(--primary);"></i>
-                                <span>Support E-mail: <a href="mailto:equievent_support@alkdata.dk" style="color: #fb7185; text-decoration: underline; font-weight: 600;">equievent_support@alkdata.dk</a></span>
+                                <span>Support E-mail: <a href="javascript:void(0)" onclick="window.openContactSupportModal()" style="color: #fb7185; text-decoration: underline; font-weight: 600; cursor: pointer;" title="Klik for at åbne kontaktformular">equievent_support@alkdata.dk</a></span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: #ffffff;">
                                 <i class="fas fa-clock" style="color: #10b981;"></i>
                                 <span>Svartid: Skriftlige henvendelser besvares inden for <strong>max 3 arbejdsdage</strong></span>
+                            </div>
+                            <div style="padding-top: 0.5rem; border-top: 1px solid var(--glass-border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="window.openContactSupportModal()" style="font-weight: bold; background: linear-gradient(135deg, #f43f5e, #e11d48);"><i class="fas fa-paper-plane"></i> Send Henvendelse / Opret Sag</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="window.openAiChatSupport()" style="font-weight: 600; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.1);"><i class="fas fa-robot"></i> Spørg AI Chatbot</button>
                             </div>
                         </div>
                     </div>
@@ -808,6 +829,7 @@
                 <div id="active-club-name-topbar" style="display: none; font-size: 0.8rem; color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.1); padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid rgba(251, 191, 36, 0.2); display: inline-block; margin-top: 0.25rem;"></div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="btn btn-secondary btn-sm" onclick="window.openContactSupportModal()" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;" title="Kontakt Support"><i class="fas fa-headset"></i> Support</button>
                 <button class="btn btn-secondary btn-sm" onclick="window.showLandingPage()" style="background: transparent; border: 1px solid var(--glass-border);" title="Gå til Salgsside"><i class="fas fa-home"></i></button>
                 <button class="btn btn-secondary btn-sm" onclick="window.toggleSidebar()" style="background: transparent; border: 1px solid var(--glass-border);"><i class="fas fa-bars" style="font-size: 1.2rem;"></i></button>
             </div>
@@ -825,6 +847,7 @@
                 <button class="btn btn-secondary tab-btn" data-tab="profile"><i class="fas fa-user-cog"></i> Profil</button>
                 <button class="btn btn-secondary tab-btn" id="superadmin-tab-btn" data-tab="superadmin" style="display: none; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #3b82f6;"><i class="fas fa-user-shield"></i> Super Admin</button>
                 <a href="/guide.html" target="_blank" class="btn btn-secondary nav-guide-btn" style="text-decoration: none;"><i class="fas fa-question-circle"></i> Vejledning</a>
+                <button type="button" class="btn btn-secondary" onclick="window.openContactSupportModal()" style="text-align: left; display: flex; align-items: center; gap: 10px; background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;"><i class="fas fa-headset"></i> Kontakt Support</button>
                 <button type="button" class="btn btn-secondary" onclick="window.showLandingPage()" style="text-align: left; display: flex; align-items: center; gap: 10px; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.25); color: #fb7185;"><i class="fas fa-home"></i> Til Salgsside</button>
             </div>
 
@@ -1649,44 +1672,23 @@
                 <p id="pay-discount-success" style="color: #10b981; font-size: 0.8rem; margin: 0.25rem 0 0 0; display: none;">Rabatkode godkendt!</p>
             </div>
 
-            <!-- Betalingskort Formular (Simuleret) -->
+            <!-- Betalingskort Formular (Stripe Live) -->
             <form id="payment-form" onsubmit="submitPayment(event)">
                 <div id="pay-card-details-section">
-                    <h4 style="margin-bottom: 1rem; color: white; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-lock"></i> Sikker kortbetaling (Simuleret)</h4>
+                    <h4 style="margin-bottom: 1rem; color: white; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fas fa-lock" style="color: #10b981;"></i> Sikker betaling via Stripe</span>
+                        <span style="font-size: 0.72rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 600;"><i class="fas fa-check"></i> SSL Krypteret</span>
+                    </h4>
                     
-                    <!-- Kortlayout mockup -->
-                    <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: space-between; height: 130px; position: relative;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <i class="fas fa-sim-card" style="color: #fbbf24; font-size: 1.8rem;"></i>
-                            <span style="font-weight: bold; color: rgba(255,255,255,0.8); font-size: 0.9rem; font-style: italic;">VISA / Mastercard</span>
-                        </div>
-                        <div style="font-family: monospace; font-size: 1.1rem; color: white; letter-spacing: 2px;">•••• •••• •••• ••••</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-secondary);">
-                            <div>
-                                <div style="text-transform: uppercase; font-size: 0.6rem;">Kortholder</div>
-                                <div style="color: white; font-weight: bold;">RIDEKLUB ADMIN</div>
-                            </div>
-                            <div>
-                                <div style="text-transform: uppercase; font-size: 0.6rem;">Udløber</div>
-                                <div style="color: white; font-weight: bold;">MM/ÅÅ</div>
-                            </div>
-                        </div>
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem;">Kortoplysninger (Dankort, Visa, Mastercard)</label>
+                        <div id="stripe-card-element" style="padding: 0.85rem 1rem; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;"></div>
+                        <div id="stripe-card-errors" role="alert" style="color: #f43f5e; font-size: 0.85rem; margin-top: 0.5rem; display: none;"></div>
                     </div>
 
-                    <div class="input-group">
-                        <label>Kortnummer</label>
-                        <input type="text" id="pay-card-number" placeholder="4000 1234 5678 9010" required>
-                    </div>
-                    
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="input-group" style="flex: 1;">
-                            <label>Udløbsdato</label>
-                            <input type="text" id="pay-card-expiry" placeholder="MM/ÅÅ" required maxlength="5">
-                        </div>
-                        <div class="input-group" style="flex: 1;">
-                            <label>CVC</label>
-                            <input type="text" id="pay-card-cvc" placeholder="123" required maxlength="3">
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        <i class="fas fa-shield-halved" style="color: #10b981;"></i> 
+                        <span>Kortdata krypteres og behandles direkte hos Stripe (PCI Service Provider Level 1)</span>
                     </div>
                 </div>
 
@@ -1818,6 +1820,118 @@
         </div>
     </main>
 
+    <!-- MODAL: KONTAKT & SUPPORT -->
+    <div id="contact-support-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1005; justify-content: center; align-items: center; padding: 1rem;">
+        <div class="glass-panel" style="max-width: 520px; width: 100%; max-height: 95vh; overflow-y: auto; border-radius: 20px; border-color: rgba(56, 189, 248, 0.4); padding: 1.8rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.7);">
+            
+            <!-- HEADER -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #38bdf8;">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; color: #ffffff; font-size: 1.3rem;">Kontakt Support</h3>
+                        <p style="margin: 0.15rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Vi hjælper dig gerne med EquiEvent</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeContactSupportModal()" style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- FORMULAR SEKTION -->
+            <div id="support-form-section">
+                <!-- AI CHATBOT CALLOUT -->
+                <div style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(56, 189, 248, 0.12)); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                    <div style="font-size: 0.82rem; color: #f1f5f9; line-height: 1.35;">
+                        <span style="font-weight: bold; color: #fb7185;"><i class="fas fa-robot"></i> Få svar med det samme:</span><br>
+                        Vores AI Support Assistent kan svare straks døgnet rundt.
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openAiChatFromSupport()" style="white-space: nowrap; font-size: 0.78rem; padding: 0.4rem 0.75rem; background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.4); color: #ffffff;">
+                        Spørg AI <i class="fas fa-arrow-right" style="font-size: 0.7rem; margin-left: 2px;"></i>
+                    </button>
+                </div>
+
+                <form id="contact-support-form" onsubmit="submitContactSupport(event)">
+                    <div class="input-group" style="margin-bottom: 0.9rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Hvem er du? (Navn & evt. klub)</label>
+                        <input type="text" id="contact-sup-name" placeholder="F.eks. Lene Hansen / Hillerød Rideklub" required style="width: 100%;">
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 0.9rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Din E-mailadresse</label>
+                        <input type="email" id="contact-sup-email" placeholder="F.eks. lene@rideklub.dk" required style="width: 100%;">
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 0.9rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Hvad handler det om? (Emne)</label>
+                        <select id="contact-sup-subject" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.7rem 1rem; font-size: 0.9rem;">
+                            <option value="Generelt spørgsmål om stævneafvikling">Spørgsmål til stævneafvikling</option>
+                            <option value="Betaling & Aktivering af stævne">Betaling & Aktivering af stævne</option>
+                            <option value="Dommeradgang og Magic Links">Dommeradgang og Magic Links</option>
+                            <option value="Teknisk fejl / Uhensigtsmæssighed">Teknisk fejl / Uhensigtsmæssighed</option>
+                            <option value="Andet">Andet</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Beskrivelse</label>
+                        <textarea id="contact-sup-message" rows="4" placeholder="Beskriv hvad du har brug for hjælp til..." required style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.75rem 1rem; font-size: 0.9rem; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-clock" style="color: #fbbf24;"></i>
+                        <span>Skriftlige henvendelser besvares inden for <strong>max 3 arbejdsdage</strong>.</span>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button type="submit" id="contact-sup-submit-btn" class="btn btn-primary" style="flex: 2; padding: 0.75rem; font-weight: bold; background: linear-gradient(135deg, #f43f5e, #e11d48);">
+                            <i class="fas fa-paper-plane"></i> Send Henvendelse
+                        </button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeContactSupportModal()">Annuller</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SUCCESS STATE SEKTION -->
+            <div id="support-success-section" style="display: none; text-align: center; padding: 0.5rem 0;">
+                <div style="width: 65px; height: 65px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem; color: #10b981;">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 style="color: #ffffff; font-size: 1.3rem; margin-bottom: 0.4rem;">Tak for din henvendelse, <span id="support-success-name"></span>!</h3>
+                <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.25rem;">
+                    Vi har modtaget din besked. Vi vender tilbage til dig på <span id="support-success-email" style="color: #38bdf8; font-weight: 600;"></span> hurtigst muligt.
+                </p>
+
+                <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #fbbf24; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.2rem;">
+                        <i class="fas fa-info-circle"></i> Svartid
+                    </div>
+                    <div style="font-size: 0.82rem; color: #e2e8f0; line-height: 1.4;">
+                        Vær opmærksom på, at der er <strong>max 3 dages svartid</strong> på skriftlige support-mails.
+                    </div>
+                </div>
+
+                <!-- AI CHATBOT CALLOUT IN SUCCESS -->
+                <div style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.15), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 14px; padding: 1.1rem; margin-bottom: 1.25rem; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #fb7185; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.3rem;">
+                        <i class="fas fa-robot"></i> Har du prøvet at spørge AI Chatbotten?
+                    </div>
+                    <p style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4; margin: 0 0 0.85rem 0;">
+                        Vores AI Support Assistent kender alle stævneregler, discipliner og funktioner og sidder klar 24/7 med det samme.
+                    </p>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openAiChatFromSuccess()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: bold;">
+                        <i class="fas fa-comments"></i> Åbn AI Chatbotten nu
+                    </button>
+                </div>
+
+                <button type="button" class="btn btn-secondary" onclick="closeContactSupportModal()" style="width: 100%;">
+                    Luk vindue
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- PUBLIC LEADERBOARD SECTION -->
     <main id="public-leaderboard-section" class="glass-panel" style="display: none; max-width: 800px; margin: 1rem auto; padding: 2rem;">
         <div style="text-align: center; margin-bottom: 2rem;" class="print-header">
@@ -1826,7 +1940,8 @@
             <p id="pl-subtitle" style="color: var(--text-secondary);">Live Resultater</p>
         </div>
         
-        <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end;" class="no-print">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;" class="no-print">
+            <a href="/" class="btn btn-secondary btn-sm" style="text-decoration: none;"><i class="fas fa-arrow-left"></i> Forside</a>
             <button class="btn btn-secondary btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Udskriv</button>
         </div>
 
@@ -1839,7 +1954,7 @@
         <div style="max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.35rem;">
             <p>&copy; 2026 EquiEvent. Alle rettigheder forbeholdes.</p>
             <p style="font-size: 0.78rem; color: #94a3b8; line-height: 1.5;">
-                Der gives døgnsupport via den indbyggede <strong style="color: #cbd5e1;">AI-assistent</strong> (klik på support-ikonet nederst til højre). Yderligere support kan fås ved at kontakte <a href="mailto:equievent_support@alkdata.dk" style="color: #f43f5e; text-decoration: underline; font-weight: 600;">equievent_support@alkdata.dk</a>. Henvendelser via e-mail besvares inden for max 3 arbejdsdage.
+                Der gives døgnsupport via den indbyggede <strong style="color: #cbd5e1;">AI-assistent</strong> (klik på support-ikonet nederst til højre). Har du brug for personlig hjælp, kan du klikke på vores <a href="javascript:void(0)" onclick="window.openContactSupportModal()" style="color: #fb7185; text-decoration: underline; font-weight: 600; cursor: pointer;">kontaktformular her</a> (eller skrive til <a href="javascript:void(0)" onclick="window.openContactSupportModal()" style="color: #fb7185; text-decoration: underline; font-weight: 600; cursor: pointer;">equievent_support@alkdata.dk</a>) med max 3 dages svartid.
             </p>
         </div>
     </footer>

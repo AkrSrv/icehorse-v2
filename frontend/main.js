@@ -152,9 +152,15 @@ window.copyJudgeLink = function(uuid) {
 document.addEventListener('DOMContentLoaded', () => {
     // Undgå at main.js blander sig, hvis vi er på en dommer- eller leaderboard-side
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('magic') || urlParams.get('leaderboard')) return;
+    if (urlParams.get('magic') || urlParams.get('leaderboard')) {
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'none';
+        return;
+    }
 
     if (urlParams.get('reset_token')) {
+        const landing = document.getElementById('landing-section');
+        if (landing) landing.style.display = 'none';
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('register-section').style.display = 'none';
         document.getElementById('reset-password-section').style.display = 'block';
@@ -2040,6 +2046,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // --- STRIPE LIVE SETUP ---
+    const STRIPE_PUBLISHABLE_KEY = 'pk_live_51UEu2q2LfO98mwjdfCQxOt4tMCOamWCSVJZ6giQa4bEJXPIMydTeN8Xf6Xo2VySNFafmFkETrV0EdIqLGFzJI1Zc00meEO3PoN';
+    let stripeInstance = null;
+    let stripeElements = null;
+    let stripeCardElement = null;
+
+    function initStripeElements() {
+        if (!window.Stripe) {
+            console.warn("Stripe.js er ikke indlæst endnu.");
+            return;
+        }
+        if (!stripeInstance) {
+            stripeInstance = Stripe(STRIPE_PUBLISHABLE_KEY);
+        }
+        if (!stripeElements) {
+            stripeElements = stripeInstance.elements();
+        }
+        const cardMountPoint = document.getElementById('stripe-card-element');
+        if (cardMountPoint && !stripeCardElement) {
+            cardMountPoint.innerHTML = '';
+            stripeCardElement = stripeElements.create('card', {
+                hidePostalCode: true,
+                style: {
+                    base: {
+                        color: '#ffffff',
+                        fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
+                        fontSmoothing: 'antialiased',
+                        fontSize: '16px',
+                        iconColor: '#fbbf24',
+                        '::placeholder': {
+                            color: '#94a3b8'
+                        }
+                    },
+                    invalid: {
+                        color: '#f43f5e',
+                        iconColor: '#f43f5e'
+                    }
+                }
+            });
+            stripeCardElement.mount('#stripe-card-element');
+            stripeCardElement.on('change', function(event) {
+                const displayError = document.getElementById('stripe-card-errors');
+                if (displayError) {
+                    if (event.error) {
+                        displayError.textContent = event.error.message;
+                        displayError.style.display = 'block';
+                    } else {
+                        displayError.textContent = '';
+                        displayError.style.display = 'none';
+                    }
+                }
+            });
+        }
+    }
+
     // --- BETALING & AKTIVERING HANDLERS ---
     window.openPaymentModal = function() {
         if (!window.activeCompetition) return;
@@ -2049,20 +2110,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pay-discount-success').style.display = 'none';
         document.getElementById('pay-discount-row').style.display = 'none';
         
-        document.getElementById('pay-card-number').value = '';
-        document.getElementById('pay-card-expiry').value = '';
-        document.getElementById('pay-card-cvc').value = '';
+        const cardErrors = document.getElementById('stripe-card-errors');
+        if (cardErrors) {
+            cardErrors.style.display = 'none';
+            cardErrors.textContent = '';
+        }
         
         document.getElementById('pay-comp-name').innerText = window.activeCompetition.name;
         document.getElementById('pay-total-amount-label').innerText = '299,00';
         
         const cardSec = document.getElementById('pay-card-details-section');
         cardSec.style.display = 'block';
-        document.getElementById('pay-card-number').setAttribute('required', 'required');
-        document.getElementById('pay-card-expiry').setAttribute('required', 'required');
-        document.getElementById('pay-card-cvc').setAttribute('required', 'required');
         
         document.getElementById('payment-modal').style.display = 'flex';
+
+        // Initialiser Stripe felterne i modalen
+        setTimeout(() => {
+            initStripeElements();
+            if (stripeCardElement) {
+                stripeCardElement.clear();
+            }
+        }, 50);
     };
 
     window.closePaymentModal = function() {
@@ -2075,10 +2143,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const errLabel = document.getElementById('pay-discount-error');
         const succLabel = document.getElementById('pay-discount-success');
         const discountRow = document.getElementById('pay-discount-row');
+        const cardErrors = document.getElementById('stripe-card-errors');
         
         errLabel.style.display = 'none';
         succLabel.style.display = 'none';
         discountRow.style.display = 'none';
+        if (cardErrors) {
+            cardErrors.style.display = 'none';
+            cardErrors.textContent = '';
+        }
         
         if (!code) {
             errLabel.innerText = "Indtast venligst en rabatkode.";
@@ -2108,14 +2181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cardSec = document.getElementById('pay-card-details-section');
                 if (discountPct >= 100) {
                     cardSec.style.display = 'none';
-                    document.getElementById('pay-card-number').removeAttribute('required');
-                    document.getElementById('pay-card-expiry').removeAttribute('required');
-                    document.getElementById('pay-card-cvc').removeAttribute('required');
                 } else {
                     cardSec.style.display = 'block';
-                    document.getElementById('pay-card-number').setAttribute('required', 'required');
-                    document.getElementById('pay-card-expiry').setAttribute('required', 'required');
-                    document.getElementById('pay-card-cvc').setAttribute('required', 'required');
+                    initStripeElements();
                 }
             } else {
                 const errorData = await response.json();
@@ -2135,15 +2203,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const codeInput = document.getElementById('pay-discount-code-input');
         const discountCode = codeInput.value.trim().toUpperCase() || null;
         const submitBtn = document.getElementById('pay-submit-btn');
+        const cardErrors = document.getElementById('stripe-card-errors');
+        
+        if (cardErrors) {
+            cardErrors.style.display = 'none';
+            cardErrors.textContent = '';
+        }
         
         const oldHtml = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Behandler...';
-        
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opretter betaling...';
         
         try {
-            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/activate`, {
+            // 1. Initialiser PaymentIntent i backend
+            const piRes = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/create-payment-intent`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2153,22 +2226,74 @@ document.addEventListener('DOMContentLoaded', () => {
                     discount_code: discountCode
                 })
             });
+
+            if (!piRes.ok) {
+                const errData = await piRes.json();
+                throw new Error(errData.detail || 'Kunne ikke forberede betalingen.');
+            }
+
+            const piData = await piRes.json();
+            let paymentIntentId = null;
+
+            // 2. Hvis der er et beløb > 0, bekræft kortbetalingen direkte hos Stripe
+            if (piData.amount > 0) {
+                if (!stripeInstance || !stripeCardElement) {
+                    throw new Error('Stripe betalingsformularen er ikke klar. Genindlæs venligst siden.');
+                }
+
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Behandler med Stripe...';
+                const stripeResult = await stripeInstance.confirmCardPayment(piData.client_secret, {
+                    payment_method: {
+                        card: stripeCardElement
+                    }
+                });
+
+                if (stripeResult.error) {
+                    if (cardErrors) {
+                        cardErrors.textContent = stripeResult.error.message;
+                        cardErrors.style.display = 'block';
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldHtml;
+                    return;
+                }
+
+                if (stripeResult.paymentIntent.status !== 'succeeded') {
+                    throw new Error(`Betalingsstatus ikke godkendt: ${stripeResult.paymentIntent.status}`);
+                }
+
+                paymentIntentId = stripeResult.paymentIntent.id;
+            }
+
+            // 3. Aktiver stævnet på backend med verificeret PaymentIntent ID
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aktiverer stævne...';
+            const activateRes = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/activate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({
+                    discount_code: discountCode,
+                    payment_intent_id: paymentIntentId
+                })
+            });
             
-            if (response.ok) {
-                alert('Stævnet blev aktiveret med succes! Karakterafgivelse er nu låst op.');
+            if (activateRes.ok) {
+                alert('🎉 Betaling gennemført via Stripe Sandbox!\nStævnet er nu fuldt aktiveret i 14 dage, og karakterafgivelse er låst op.');
                 window.closePaymentModal();
                 if (window.activeCompetition) {
                     window.openCompetition(window.currentCompId, window.activeCompetition.name);
                 }
             } else {
-                const errData = await response.json();
+                const errData = await activateRes.json();
                 alert('Aktivering fejlede: ' + (errData.detail || 'Ukendt fejl'));
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = oldHtml;
             }
         } catch(err) {
             console.error(err);
-            alert('Netværksfejl under aktivering.');
+            alert('Fejl under betaling/aktivering: ' + (err.message || 'Netværksfejl'));
             submitBtn.disabled = false;
             submitBtn.innerHTML = oldHtml;
         }
@@ -2417,6 +2542,116 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             console.error(err);
+        }
+    };
+
+    // --- KONTAKT & SUPPORT MODAL LOGIK ---
+    window.openContactSupportModal = function() {
+        const modal = document.getElementById('contact-support-modal');
+        if (!modal) return;
+        
+        // Reset formular og views
+        const formSec = document.getElementById('support-form-section');
+        const succSec = document.getElementById('support-success-section');
+        if (formSec) formSec.style.display = 'block';
+        if (succSec) succSec.style.display = 'none';
+
+        // Forsøg at udfylde brugerens klub/navn automatisk hvis logget ind
+        const nameInput = document.getElementById('contact-sup-name');
+        const emailInput = document.getElementById('contact-sup-email');
+        const msgInput = document.getElementById('contact-sup-message');
+        
+        if (msgInput) msgInput.value = '';
+        
+        if (window.activeClub && nameInput && !nameInput.value) {
+            nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
+        }
+        if (window.activeClub && emailInput && !emailInput.value && window.activeClub.contact_email) {
+            emailInput.value = window.activeClub.contact_email;
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.closeContactSupportModal = function() {
+        const modal = document.getElementById('contact-support-modal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.openAiChatFromSupport = function() {
+        window.closeContactSupportModal();
+        if (window.openAiChatSupport) {
+            window.openAiChatSupport();
+        }
+    };
+
+    window.openAiChatFromSuccess = function() {
+        window.closeContactSupportModal();
+        if (window.openAiChatSupport) {
+            window.openAiChatSupport();
+        }
+    };
+
+    window.submitContactSupport = async function(event) {
+        event.preventDefault();
+        
+        const nameInput = document.getElementById('contact-sup-name');
+        const emailInput = document.getElementById('contact-sup-email');
+        const subjectInput = document.getElementById('contact-sup-subject');
+        const messageInput = document.getElementById('contact-sup-message');
+        const submitBtn = document.getElementById('contact-sup-submit-btn');
+
+        const name = nameInput ? nameInput.value.trim() : '';
+        const email = emailInput ? emailInput.value.trim() : '';
+        const subject = subjectInput ? subjectInput.value.trim() : 'Supporthenvendelse';
+        const message = messageInput ? messageInput.value.trim() : '';
+        const clubName = window.activeClub ? window.activeClub.name : '';
+
+        if (!name || !email || !message) {
+            alert('Udfyld venligst dit navn, din e-mailadresse og beskrivelsen.');
+            return;
+        }
+
+        const oldHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender henvendelse...';
+
+        try {
+            const response = await fetch(`${API_BASE}/support/contact`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    subject: subject,
+                    message: message,
+                    club_name: clubName
+                })
+            });
+
+            if (response.ok) {
+                // Skift til succesvisning
+                const succName = document.getElementById('support-success-name');
+                const succEmail = document.getElementById('support-success-email');
+                if (succName) succName.innerText = name;
+                if (succEmail) succEmail.innerText = email;
+
+                const formSec = document.getElementById('support-form-section');
+                const succSec = document.getElementById('support-success-section');
+                if (formSec) formSec.style.display = 'none';
+                if (succSec) succSec.style.display = 'block';
+            } else {
+                const errData = await response.json().catch(() => ({}));
+                alert('Der opstod en fejl: ' + (errData.detail || 'Kunne ikke sende henvendelsen.'));
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Netværksfejl: Kunne ikke forbinde til serveren.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = oldHtml;
         }
     };
 

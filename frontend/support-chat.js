@@ -320,7 +320,7 @@
             </div>
         </div>
         <div style="padding: 6px 14px; background: rgba(15, 23, 42, 0.9); font-size: 0.72rem; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
-            Yderligere support: <a href="mailto:equievent_support@alkdata.dk" style="color: #f43f5e; text-decoration: underline;">equievent_support@alkdata.dk</a> (besvares inden for max 3 arbejdsdage).
+            Personlig support: <a href="javascript:void(0)" onclick="if(window.openContactSupportModal) window.openContactSupportModal();" style="color: #fb7185; text-decoration: underline; font-weight: 600;">Skriv til support</a> (max 3 dages svartid).
         </div>
         <div class="eq-support-input-area">
             <input type="text" class="eq-support-input" id="eq-chat-input" placeholder="Stil et spørgsmål om EquiEvent...">
@@ -354,6 +354,17 @@
         windowContainer.classList.remove('open');
         trigger.innerHTML = '<i class="fas fa-comments"></i>';
     });
+
+    window.openAiChatSupport = function(initialQuestion = '') {
+        windowContainer.classList.add('open');
+        trigger.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        if (initialQuestion) {
+            chatInput.value = initialQuestion;
+            setTimeout(() => sendMessage(), 150);
+        } else {
+            setTimeout(() => chatInput.focus(), 150);
+        }
+    };
 
     // Quick chip click handlers
     document.addEventListener('click', (e) => {

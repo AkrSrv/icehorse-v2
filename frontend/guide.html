@@ -248,6 +248,37 @@
             display: block;
         }
 
+        /* DUAL VISUAL ITEMS */
+        .step-visual-dual {
+            display: flex;
+            gap: 14px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 12px;
+            border-radius: 12px;
+            align-items: flex-start;
+        }
+
+        .step-visual-dual .visual-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .step-visual-dual .visual-item img {
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            width: 100%;
+            display: block;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .step-visual-dual .visual-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
         /* STYLISH PLACEHOLDER BOXES FOR SCREENSHOTS */
         .placeholder-visual {
             display: flex;
@@ -443,6 +474,9 @@
             .step-details-content {
                 order: 2;
             }
+            .step-visual-dual {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -582,11 +616,8 @@
                             <li><i class="fas fa-arrow-right"></i> <strong>Log ud:</strong> Klik på <strong>"Log ud"</strong> i menuen øverst til højre, når du er færdig for at sikre klubbens adgang.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-lock-open main-icon"></i>
-                        <div class="ph-title">Glemt Adgangskode & Sikkerhed</div>
-                        <div class="ph-desc">Skærmbillede af nulstillings-flowet og login-bekræftelsen.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/reset_password.png" alt="Nulstil adgangskode modal dialog">
                     </div>
                 </div>
             </section>
@@ -630,7 +661,7 @@
                         </ul>
                     </div>
                     <div class="step-visual">
-                        <img src="/images/directory_screen.png" alt="Det Globale Personkartotek">
+                        <img src="/images/directory_screen.png" alt="Det Globale Personkartotek med aktive ekvipager og dommere">
                     </div>
                 </div>
             </section>
@@ -640,11 +671,17 @@
                 <p class="section-description">Opret dommerprofiler med direkte e-mail og telefonnummer til udsendelse af sikre Magic Links.</p>
                 
                 <div class="step-card">
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-user-tie main-icon"></i>
-                        <div class="ph-title">Dommerkartotek & Kontaktinfo</div>
-                        <div class="ph-desc">Skærmbillede af dommerlisten med e-mail og tildelte stævner.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <div class="step-visual-dual">
+                            <div class="visual-item">
+                                <img src="/images/judge_modal_empty.png" alt="Opret Ny Dommer dialog (tom formular)">
+                                <span class="visual-label">1. Tom formular ved opstart</span>
+                            </div>
+                            <div class="visual-item">
+                                <img src="/images/judge_modal_filled.png" alt="Opret Ny Dommer dialog (udfyldt)">
+                                <span class="visual-label">2. Udfyldt og klar til at gemme</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="step-details-content">
                         <h3>Opret Dommerprofil <span class="badge badge-sky">TC-11 & TC-12</span></h3>
@@ -716,11 +753,8 @@
                             <li><i class="fas fa-arrow-right"></i> Klik <strong>"Opret Klasse"</strong>. Klassen oprettes automatisk én gang og tilføjes til dine aktive klasser uden dubletter.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-layer-group main-icon"></i>
-                        <div class="ph-title">Opret Egne Klasser Builder</div>
-                        <div class="ph-desc">Skærmbillede af øvelsesopbyggeren med koefficienter, forhindringer og gangarter.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/class_builder_screen.png" alt="Opret egne klasser builder med disciplinvalg og delopgaver">
                     </div>
                 </div>
             </section>
@@ -730,11 +764,8 @@
                 <p class="section-description">Styr hvilke klasser der er aktive i din klub, og hold listen overskuelig med disciplin-filtre.</p>
                 
                 <div class="step-card">
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-filter main-icon"></i>
-                        <div class="ph-title">Aktive Klasser & Disciplin-filtrering</div>
-                        <div class="ph-desc">Skærmbillede af fanblad 2 med filterknapper for Dressur, Spring og Islænder.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/active_classes_screen.png" alt="Klubbens aktive klasser og disciplin-filtre">
                     </div>
                     <div class="step-details-content">
                         <h3>Aktivér / Deaktivér Klasser <span class="badge badge-emerald">TC-19, TC-20 & TC-21</span></h3>
@@ -763,11 +794,8 @@
                             <li><i class="fas fa-arrow-right"></i> Tryk <strong>"Gem Ændringer"</strong> for at opdatere klubbens version af skabelonen.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-check-square main-icon"></i>
-                        <div class="ph-title">Bulk Actions & Tjekbokse</div>
-                        <div class="ph-desc">Skærmbillede af massehandlinger med tjekbokse og samlet slet/aktivér-knap.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/bulk_actions_screen.png" alt="Tilpas skabeloner med massehandlinger og tjekbokse">
                     </div>
                 </div>
             </section>
@@ -865,11 +893,8 @@
                 <p class="section-description">Tryg og fleksibel model: Opsæt alt gratis, og betal først når stævnet skal afvikles.</p>
                 
                 <div class="step-card">
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-shield-alt main-icon"></i>
-                        <div class="ph-title">Inaktivitetslås i Dommerpanelet</div>
-                        <div class="ph-desc">Skærmbillede af dommerens visning med rød advarselsbadge og låst Gem-knap før betaling.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/judge_locked_screen.png" alt="Inaktivitetslås i Dommerpanelet med rød advarselsbadge">
                     </div>
                     <div class="step-details-content">
                         <h3>Dommerlås FØR Betaling <span class="badge badge-rose">TC-34 & TC-35</span></h3>
@@ -898,11 +923,8 @@
                             <li><i class="fas fa-arrow-right"></i> Stævnet forbliver aktivt i 14 dage efter stævnedatoen til diplomudskrift og efterbehandling.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-receipt main-icon"></i>
-                        <div class="ph-title">Betalingsmodal & Rabatkode</div>
-                        <div class="ph-desc">Skærmbillede af betalingsvinduet med rabatkodefelt og bekræftelse.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/payment_modal_screen.png" alt="Aktiver stævne betalingsmodal med rabatkode og kortbetaling">
                     </div>
                 </div>
             </section>
@@ -946,11 +968,8 @@
                             <li><i class="fas fa-arrow-right"></i> Tryk <strong>"Gem Resultat"</strong> for at indsende bedømmelsen.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-clipboard-check main-icon"></i>
-                        <div class="ph-title">Dressur Bedømmelsesskema</div>
-                        <div class="ph-desc">Skærmbillede af live beregningen med % og opnåede point ud af maksimum.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/judge_dressage_screen.png" alt="Dressur bedømmelsesskema med live procent og point">
                     </div>
                 </div>
             </section>
@@ -960,11 +979,8 @@
                 <p class="section-description">Nem registrering af nedrivninger, refuseringer, ridetid, stilpoint og omspringningsrunder.</p>
                 
                 <div class="step-card">
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-horse main-icon"></i>
-                        <div class="ph-title">Spring Bedømmelsesskema</div>
-                        <div class="ph-desc">Skærmbillede af fejl- og tidsindtastning med omspringning og statusvalg (ELI/Clear).</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/judge_jumping_screen.png" alt="Spring bedømmelsesskema med forhindringer, fejl og tid">
                     </div>
                     <div class="step-details-content">
                         <h3>Fejl & Tid i Springning <span class="badge badge-emerald">TC-46, TC-47 & TC-48</span></h3>
@@ -993,11 +1009,8 @@
                             <li><i class="fas fa-arrow-right"></i> <strong>Rette en bedømmelse:</strong> Skulle en dommer taste forkert, vælges rytteren igen fra <em>"Seneste bedømmelser"</em> for at rette og gemme på ny.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-star-half-alt main-icon"></i>
-                        <div class="ph-title">Islænder Gangartsskema</div>
-                        <div class="ph-desc">Skærmbillede af delopgaverne med vægtede gennemsnit og kommentarfelter.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/judge_icelandic_screen.png" alt="Islænder gangartsskema med delopgaver og vægtede snit">
                     </div>
                 </div>
             </section>
@@ -1040,11 +1053,8 @@
                             <li><i class="fas fa-arrow-right"></i> Der åbnes et stilrent A4-printlayout med stævnenavn, dato, rytternavn, hest, klasse, officiel placering, samlet resultat (% og point) samt dommerens rosende ord.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-award main-icon"></i>
-                        <div class="ph-title">EquiEvent Diplomcertifikat</div>
-                        <div class="ph-desc">Skærmbillede af det færdige print-diplom i A4 guldramme-layout.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/certificate_print.png" alt="EquiEvent print-klart A4 diplomcertifikat">
                     </div>
                 </div>
             </section>
@@ -1087,11 +1097,8 @@
                             <li><i class="fas fa-arrow-right"></i> <strong>Minimer:</strong> Minimer chatten når som helst uden at miste samtalen.</li>
                         </ul>
                     </div>
-                    <div class="step-visual placeholder-visual">
-                        <i class="fas fa-comments main-icon"></i>
-                        <div class="ph-title">EquiEvent AI Support Chat</div>
-                        <div class="ph-desc">Skærmbillede af support-chatten med hurtigvalg og interaktive vejledninger.</div>
-                        <span class="ph-tag">Billede Placeholder</span>
+                    <div class="step-visual">
+                        <img src="/images/ai_support_chat.png" alt="EquiEvent AI Support Chat med hurtigvalg">
                     </div>
                 </div>
             </section>
@@ -1111,7 +1118,7 @@
     <footer>
         <p>&copy; 2026 EquiEvent. Alle rettigheder forbeholdes. | Udviklet til moderne hestesport.</p>
         <p style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.5rem; line-height: 1.5;">
-            Der gives døgnsupport via den indbyggede <strong style="color: #cbd5e1;">AI-assistent</strong> (klik på support-ikonet nederst til højre). Yderligere support kan fås ved at kontakte <a href="mailto:equievent_support@alkdata.dk" style="color: #f43f5e; text-decoration: underline; font-weight: 600;">equievent_support@alkdata.dk</a>. Henvendelser via e-mail besvares inden for max 3 arbejdsdage.
+            Der gives døgnsupport via den indbyggede <strong style="color: #cbd5e1;">AI-assistent</strong> (klik på support-ikonet nederst til højre). Har du brug for personlig hjælp, kan du benytte <a href="/#kontakt" style="color: #fb7185; text-decoration: underline; font-weight: 600;">kontaktformularen på forsiden</a> eller skrive til equievent_support@alkdata.dk (besvares inden for max 3 arbejdsdage).
         </p>
     </footer>
 

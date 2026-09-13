@@ -251,8 +251,18 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+class CreatePaymentIntentRequest(BaseModel):
+    discount_code: Optional[str] = None
+
+class CreatePaymentIntentResponse(BaseModel):
+    client_secret: Optional[str] = None
+    amount: float
+    currency: str = "dkk"
+    discount_pct: float = 0.0
+
 class ActivateCompetitionRequest(BaseModel):
     discount_code: Optional[str] = None
+    payment_intent_id: Optional[str] = None
 
 
 # --- NEW JUDGING SCHEMAS ---

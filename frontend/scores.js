@@ -308,8 +308,11 @@ window.updateJudgeActivationUI = function() {
 // --- MAGIC LINK / DOMMER PANEL ---
 async function initMagicJudge(uuid) {
     magicUuid = uuid;
+    const landing = document.getElementById('landing-section');
+    if (landing) landing.style.display = 'none';
     document.querySelectorAll('main').forEach(m => m.style.display = 'none'); // Skjul alt andet
-    document.getElementById('magic-judge-section').style.display = 'block';
+    const mjSection = document.getElementById('magic-judge-section');
+    if (mjSection) mjSection.style.display = 'block';
     
     await loadDrfTemplates();
     
@@ -1396,8 +1399,11 @@ document.getElementById('mj-score-form')?.addEventListener('submit', window.subm
 
 // --- PUBLIC LEADERBOARD ---
 async function initPublicLeaderboard(compId) {
+    const landing = document.getElementById('landing-section');
+    if (landing) landing.style.display = 'none';
     document.querySelectorAll('main').forEach(m => m.style.display = 'none'); // Skjul alt andet
-    document.getElementById('public-leaderboard-section').style.display = 'block';
+    const plSection = document.getElementById('public-leaderboard-section');
+    if (plSection) plSection.style.display = 'block';
     
     renderLeaderboard(compId, document.getElementById('pl-list'), document.getElementById('pl-title'));
 }

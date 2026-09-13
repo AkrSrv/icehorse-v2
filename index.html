@@ -15,6 +15,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root {
             --primary: #f43f5e;
@@ -934,44 +935,23 @@
                 <p id="pay-discount-success" style="color: #10b981; font-size: 0.8rem; margin: 0.25rem 0 0 0; display: none;">Rabatkode godkendt!</p>
             </div>
 
-            <!-- Betalingskort Formular (Simuleret) -->
+            <!-- Betalingskort Formular (Stripe Live) -->
             <form id="payment-form" onsubmit="submitPayment(event)">
                 <div id="pay-card-details-section">
-                    <h4 style="margin-bottom: 1rem; color: white; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-lock"></i> Sikker kortbetaling (Simuleret)</h4>
+                    <h4 style="margin-bottom: 1rem; color: white; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fas fa-lock" style="color: #10b981;"></i> Sikker betaling via Stripe</span>
+                        <span style="font-size: 0.72rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 6px; font-weight: 600;"><i class="fas fa-check"></i> SSL Krypteret</span>
+                    </h4>
                     
-                    <!-- Kortlayout mockup -->
-                    <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: space-between; height: 130px; position: relative;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <i class="fas fa-sim-card" style="color: #fbbf24; font-size: 1.8rem;"></i>
-                            <span style="font-weight: bold; color: rgba(255,255,255,0.8); font-size: 0.9rem; font-style: italic;">VISA / Mastercard</span>
-                        </div>
-                        <div style="font-family: monospace; font-size: 1.1rem; color: white; letter-spacing: 2px;">•••• •••• •••• ••••</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-secondary);">
-                            <div>
-                                <div style="text-transform: uppercase; font-size: 0.6rem;">Kortholder</div>
-                                <div style="color: white; font-weight: bold;">RIDEKLUB ADMIN</div>
-                            </div>
-                            <div>
-                                <div style="text-transform: uppercase; font-size: 0.6rem;">Udløber</div>
-                                <div style="color: white; font-weight: bold;">MM/ÅÅ</div>
-                            </div>
-                        </div>
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem;">Kortoplysninger (Dankort, Visa, Mastercard)</label>
+                        <div id="stripe-card-element" style="padding: 0.85rem 1rem; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;"></div>
+                        <div id="stripe-card-errors" role="alert" style="color: #f43f5e; font-size: 0.85rem; margin-top: 0.5rem; display: none;"></div>
                     </div>
 
-                    <div class="input-group">
-                        <label>Kortnummer</label>
-                        <input type="text" id="pay-card-number" placeholder="4000 1234 5678 9010" required>
-                    </div>
-                    
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="input-group" style="flex: 1;">
-                            <label>Udløbsdato</label>
-                            <input type="text" id="pay-card-expiry" placeholder="MM/ÅÅ" required maxlength="5">
-                        </div>
-                        <div class="input-group" style="flex: 1;">
-                            <label>CVC</label>
-                            <input type="text" id="pay-card-cvc" placeholder="123" required maxlength="3">
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        <i class="fas fa-shield-halved" style="color: #10b981;"></i> 
+                        <span>Kortdata krypteres og behandles direkte hos Stripe (PCI Service Provider Level 1)</span>
                     </div>
                 </div>
 
