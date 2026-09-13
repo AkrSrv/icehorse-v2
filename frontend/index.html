@@ -2155,49 +2155,49 @@
 
     <!-- MODAL: KONTAKT & SUPPORT -->
     <div id="contact-support-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1005; justify-content: center; align-items: center; padding: 1rem;">
-        <div class="glass-panel" style="max-width: 520px; width: 100%; max-height: 95vh; overflow-y: auto; border-radius: 20px; border-color: rgba(56, 189, 248, 0.4); padding: 1.8rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.7);">
+        <div class="glass-panel" style="max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; border-radius: 20px; border-color: rgba(56, 189, 248, 0.4); padding: 1.4rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.7); scrollbar-width: thin;">
             
             <!-- HEADER -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #38bdf8;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #38bdf8;">
                         <i class="fas fa-headset"></i>
                     </div>
                     <div>
-                        <h3 style="margin: 0; color: #ffffff; font-size: 1.3rem;">Kontakt Support</h3>
-                        <p style="margin: 0.15rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Vi hjælper dig gerne med EquiEvent</p>
+                        <h3 style="margin: 0; color: #ffffff; font-size: 1.25rem;">Kontakt Support</h3>
+                        <p style="margin: 0.1rem 0 0 0; font-size: 0.82rem; color: var(--text-secondary);">Vi hjælper dig gerne med EquiEvent</p>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeContactSupportModal()" style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;"><i class="fas fa-times"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeContactSupportModal()" style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;"><i class="fas fa-times"></i></button>
             </div>
 
             <!-- FORMULAR SEKTION -->
             <div id="support-form-section">
                 <!-- AI CHATBOT CALLOUT -->
-                <div style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(56, 189, 248, 0.12)); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
-                    <div style="font-size: 0.82rem; color: #f1f5f9; line-height: 1.35;">
+                <div style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(56, 189, 248, 0.12)); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                    <div style="font-size: 0.8rem; color: #f1f5f9; line-height: 1.35;">
                         <span style="font-weight: bold; color: #fb7185;"><i class="fas fa-robot"></i> Få svar med det samme:</span><br>
                         Vores AI Support Assistent kan svare straks døgnet rundt.
                     </div>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="openAiChatFromSupport()" style="white-space: nowrap; font-size: 0.78rem; padding: 0.4rem 0.75rem; background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.4); color: #ffffff;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openAiChatFromSupport()" style="white-space: nowrap; font-size: 0.78rem; padding: 0.35rem 0.7rem; background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.4); color: #ffffff;">
                         Spørg AI <i class="fas fa-arrow-right" style="font-size: 0.7rem; margin-left: 2px;"></i>
                     </button>
                 </div>
 
                 <form id="contact-support-form" onsubmit="submitContactSupport(event)">
-                    <div class="input-group" style="margin-bottom: 0.9rem;">
-                        <label style="font-size: 0.85rem; font-weight: 600;">Hvem er du? (Navn & evt. klub)</label>
+                    <div class="input-group" style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.82rem; font-weight: 600;">Hvem er du? (Navn & evt. klub)</label>
                         <input type="text" id="contact-sup-name" placeholder="F.eks. Lene Hansen / Hillerød Rideklub" required style="width: 100%;">
                     </div>
 
-                    <div class="input-group" style="margin-bottom: 0.9rem;">
-                        <label style="font-size: 0.85rem; font-weight: 600;">Din E-mailadresse</label>
+                    <div class="input-group" style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.82rem; font-weight: 600;">Din E-mailadresse</label>
                         <input type="email" id="contact-sup-email" placeholder="F.eks. lene@rideklub.dk" required style="width: 100%;">
                     </div>
 
-                    <div class="input-group" style="margin-bottom: 0.9rem;">
-                        <label style="font-size: 0.85rem; font-weight: 600;">Hvad handler det om? (Emne)</label>
-                        <select id="contact-sup-subject" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.7rem 1rem; font-size: 0.9rem;">
+                    <div class="input-group" style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.82rem; font-weight: 600;">Hvad handler det om? (Emne)</label>
+                        <select id="contact-sup-subject" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.65rem 0.9rem; font-size: 0.88rem;">
                             <option value="Generelt spørgsmål om stævneafvikling">Spørgsmål til stævneafvikling</option>
                             <option value="Betaling & Aktivering af stævne">Betaling & Aktivering af stævne</option>
                             <option value="Dommeradgang og Magic Links">Dommeradgang og Magic Links</option>
@@ -2206,9 +2206,9 @@
                         </select>
                     </div>
 
-                    <div class="input-group" style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85rem; font-weight: 600;">Beskrivelse</label>
-                        <textarea id="contact-sup-message" rows="4" placeholder="Beskriv hvad du har brug for hjælp til..." required style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.75rem 1rem; font-size: 0.9rem; resize: vertical;"></textarea>
+                    <div class="input-group" style="margin-bottom: 0.8rem;">
+                        <label style="font-size: 0.82rem; font-weight: 600;">Beskrivelse</label>
+                        <textarea id="contact-sup-message" rows="3" placeholder="Beskriv hvad du har brug for hjælp til..." required style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.65rem 0.9rem; font-size: 0.88rem; resize: vertical;"></textarea>
                     </div>
 
                     <div class="input-group" style="margin-bottom: 1.1rem;">
