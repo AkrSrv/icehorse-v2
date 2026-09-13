@@ -280,10 +280,15 @@ def list_support_tickets(
             query = query.filter(models.SupportTicket.source_system == source)
             
         if status and status != "Alle":
-            if status == "Aabne":
+            if status in ["Aabne", "Aktive", "aktive", "aabne"]:
                 query = query.filter(models.SupportTicket.status.in_(["Ny", "I gang", "Modtaget svar"]))
+            elif status in ["Arkiv", "arkiv", "Løst", "loest"]:
+                query = query.filter(models.SupportTicket.status == "Løst")
             else:
                 query = query.filter(models.SupportTicket.status == status)
+        elif not status:
+            # Standard visning: Vis kun aktive opgaver (løste sager ligger i arkivet)
+            query = query.filter(models.SupportTicket.status.in_(["Ny", "I gang", "Modtaget svar"]))
                 
         if search:
             term = f"%{search.strip().lower()}%"
@@ -316,6 +321,7 @@ def list_support_tickets(
             "new_count": sum(1 for t in all_tickets if t.status == "Ny"),
             "replied_count": sum(1 for t in all_tickets if t.status == "Modtaget svar"),
             "in_progress_count": sum(1 for t in all_tickets if t.status == "I gang"),
+            "active_count": sum(1 for t in all_tickets if t.status in ["Ny", "I gang", "Modtaget svar"]),
             "resolved_count": sum(1 for t in all_tickets if t.status == "Løst"),
             "sources": sorted(list(set(t.source_system for t in all_tickets if t.source_system)))
         }
