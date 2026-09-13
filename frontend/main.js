@@ -2623,6 +2623,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
+                    source_system: 'EquiEvent',
                     name: name,
                     email: email,
                     subject: subject,
@@ -2632,11 +2633,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
+                const resData = await response.json().catch(() => ({}));
                 // Skift til succesvisning
                 const succName = document.getElementById('support-success-name');
                 const succEmail = document.getElementById('support-success-email');
+                const succTicket = document.getElementById('support-success-ticket-id');
                 if (succName) succName.innerText = name;
                 if (succEmail) succEmail.innerText = email;
+                if (succTicket && resData.ticket_id) succTicket.innerText = `#${resData.ticket_id}`;
 
                 const formSec = document.getElementById('support-form-section');
                 const succSec = document.getElementById('support-success-section');
