@@ -1007,7 +1007,7 @@
                 <label style="font-size: 0.82rem; font-weight: 600; color: #fbbf24; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
                     <i class="fas fa-sticky-note"></i> Interne arbejdssnoter (kun synlige for dig):
                 </label>
-                <textarea id="dtlInternalNotes" rows="3" placeholder="Skriv noter her (fx 'Talt i tlf. tirsdag - rettet i databasen')..."></textarea>
+                <textarea id="dtlInternalNotes" rows="3" placeholder="Skriv noter her (fx 'Talt i tlf. tirsdag - rettet i databasen')..." oninput="handleNotesInput()"></textarea>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
                     <button type="button" class="btn-hub btn-hub-secondary" onclick="saveInternalNotes()" style="font-size: 0.82rem; padding: 0.4rem 0.85rem;">
                         <i class="fas fa-save"></i> Gem note
@@ -1403,7 +1403,7 @@
             // Reset Svar sektion
             document.getElementById('dtlReplyText').value = '';
             document.getElementById('replyFeedback').style.display = 'none';
-            document.getElementById('dtlAutoResolve').checked = true;
+            document.getElementById('dtlAutoResolve').checked = false;
 
             // Interne Noter
             document.getElementById('dtlInternalNotes').value = ticket.internal_notes || '';
@@ -1549,7 +1549,8 @@
                             if (currentViewMode === 'Aktive') closeTicketDrawer();
                         }, 1200);
                     } else {
-                        showNotificationToast(`Svar sendt til ${currentActiveTicket.email}`, 'success');
+                        const statusMsg = data.ticket && data.ticket.status === 'I gang' ? ' – sagen er nu sat til "I gang" ⚙️' : '';
+                        showNotificationToast(`Svar sendt til ${currentActiveTicket.email}${statusMsg}`, 'success');
                     }
                     loadTickets();
                 } else {
@@ -1645,22 +1646,63 @@
             }
         }
 
+        let notesAutoStatusTimeout = null;
+        function handleNotesInput() {
+            if (currentActiveTicket && currentActiveTicket.status === 'Ny') {
+                currentActiveTicket.status = 'I gang';
+                updateDrawerStatusButtons('I gang');
+                
+                clearTimeout(notesAutoStatusTimeout);
+                notesAutoStatusTimeout = setTimeout(async () => {
+                    if (!currentActiveTicket) return;
+                    try {
+                        await fetch(`${API_BASE}/support/tickets/${currentActiveTicket.id}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Admin-Key': currentAdminPassword
+                            },
+                            body: JSON.stringify({ status: 'I gang' })
+                        });
+                        loadTickets();
+                    } catch(e) {
+                        console.error("Auto status update error:", e);
+                    }
+                }, 400);
+            }
+        }
+
         async function saveInternalNotes() {
             if (!currentActiveTicket) return;
             const notes = document.getElementById('dtlInternalNotes').value;
+            const wasNy = currentActiveTicket.status === 'Ny';
             try {
+                const payload = { internal_notes: notes };
+                if (wasNy) {
+                    payload.status = 'I gang';
+                }
                 const response = await fetch(`${API_BASE}/support/tickets/${currentActiveTicket.id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Admin-Key': currentAdminPassword
                     },
-                    body: JSON.stringify({ internal_notes: notes })
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
+                    const data = await response.json();
                     currentActiveTicket.internal_notes = notes;
-                    alert('Noten er gemt!');
+                    if (data.ticket && data.ticket.status) {
+                        currentActiveTicket.status = data.ticket.status;
+                        updateDrawerStatusButtons(data.ticket.status);
+                    }
+                    if (wasNy) {
+                        showNotificationToast('Note gemt – sagen er nu sat til "I gang" ⚙️', 'success');
+                    } else {
+                        showNotificationToast('Noten er gemt!', 'success');
+                    }
+                    loadTickets();
                 } else {
                     alert('Kunne ikke gemme noten.');
                 }

@@ -386,6 +386,9 @@ def update_support_ticket(ticket_id: int, req: UpdateTicketRequest, auth: bool =
             ticket.priority = req.priority
         if req.internal_notes is not None:
             ticket.internal_notes = req.internal_notes
+            # Hvis der skrives en intern note og status stadig er "Ny", rykkes sagen automatisk til "I gang"
+            if req.status is None and ticket.status == "Ny":
+                ticket.status = "I gang"
             
         ticket.updated_at = datetime.utcnow()
         db.commit()
@@ -488,6 +491,9 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
         # 3. Opdater ticket
         if req.mark_as_resolved:
             ticket.status = "Løst"
+        else:
+            if ticket.status in ["Ny", "Modtaget svar"]:
+                ticket.status = "I gang"
             
         timestamp_str = datetime.utcnow().strftime("%d. %b %H:%M")
         reply_log = f"\n\n[SVAR SENDT {timestamp_str}]:\n{req.reply_message.strip()}"
