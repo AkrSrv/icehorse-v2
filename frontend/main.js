@@ -2683,6 +2683,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (emailInput && !emailInput.value && parsed.email) emailInput.value = parsed.email;
                 } catch(e) {}
             }
+            if (typeof window.clearSupportFileAttachment === 'function') {
+                window.clearSupportFileAttachment();
+            }
         }
 
         modal.style.display = 'flex';
@@ -2691,6 +2694,85 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeContactSupportModal = function() {
         const modal = document.getElementById('contact-support-modal');
         if (modal) modal.style.display = 'none';
+        if (typeof window.clearSupportFileAttachment === 'function') {
+            window.clearSupportFileAttachment();
+        }
+    };
+
+    window.supportPendingAttachment = null;
+
+    window.formatFileSize = function(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
+    window.handleSupportFileSelect = function(event) {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+        window.processSupportAttachmentFile(files[0]);
+    };
+
+    window.processSupportAttachmentFile = function(file) {
+        if (!file) return;
+        const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+        if (file.size > MAX_SIZE) {
+            alert('Billedet er for stort! Maksimal tilladt filstørrelse er 5 MB (din fil er ' + window.formatFileSize(file.size) + '). Vælg venligst et mindre billede.');
+            window.clearSupportFileAttachment();
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            alert('Ugyldigt filformat! Du kan kun vedhæfte billedfiler (PNG, JPG, WebP, GIF).');
+            window.clearSupportFileAttachment();
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result;
+            window.supportPendingAttachment = {
+                base64: base64Data,
+                name: file.name || 'screenshot.png',
+                size: file.size,
+                type: file.type
+            };
+
+            const previewImg = document.getElementById('contact-sup-preview-img');
+            const previewName = document.getElementById('contact-sup-preview-name');
+            const previewSize = document.getElementById('contact-sup-preview-size');
+            const previewContainer = document.getElementById('contact-sup-preview-container');
+            const emptyState = document.getElementById('contact-sup-empty-state');
+
+            if (previewImg) previewImg.src = base64Data;
+            if (previewName) previewName.innerText = file.name || 'screenshot.png';
+            if (previewSize) previewSize.innerText = window.formatFileSize(file.size);
+
+            if (previewContainer) previewContainer.style.display = 'flex';
+            if (emptyState) emptyState.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.clearSupportFileAttachment = function(event) {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        window.supportPendingAttachment = null;
+        const fileInput = document.getElementById('contact-sup-file');
+        if (fileInput) fileInput.value = '';
+
+        const previewImg = document.getElementById('contact-sup-preview-img');
+        const previewContainer = document.getElementById('contact-sup-preview-container');
+        const emptyState = document.getElementById('contact-sup-empty-state');
+
+        if (previewImg) previewImg.src = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'block';
     };
 
     window.openAiChatFromSupport = function() {
@@ -2743,6 +2825,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        let attBase64 = null;
+        let attName = null;
+        if (window.supportPendingAttachment && window.supportPendingAttachment.base64) {
+            attBase64 = window.supportPendingAttachment.base64;
+            attName = window.supportPendingAttachment.name;
+        }
+
         const oldHtml = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender henvendelse...';
@@ -2759,7 +2848,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     email: email,
                     subject: subject,
                     message: message,
-                    club_name: clubName
+                    club_name: clubName,
+                    attachment_base64: attBase64,
+                    attachment_name: attName
                 })
             });
 
@@ -2775,6 +2866,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (succName) succName.innerText = name;
                 if (succEmail) succEmail.innerText = email;
                 if (succTicket && resData.ticket_id) succTicket.innerText = `#${resData.ticket_id}`;
+
+                if (typeof window.clearSupportFileAttachment === 'function') {
+                    window.clearSupportFileAttachment();
+                }
 
                 const formSec = document.getElementById('support-form-section');
                 const succSec = document.getElementById('support-success-section');

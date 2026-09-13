@@ -323,6 +323,11 @@ class SupportTicket(Base):
     status = Column(String, default="Ny", index=True)  # "Ny", "I gang", "Modtaget svar", "Løst", "Arkiveret"
     priority = Column(String, default="Normal")  # "Lav", "Normal", "Høj"
     internal_notes = Column(Text, nullable=True)
+    attachment_filename = Column(String, nullable=True)
+    attachment_path = Column(String, nullable=True)
+    attachment_size = Column(Integer, nullable=True)
+    attachment_mimetype = Column(String, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

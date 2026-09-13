@@ -197,13 +197,115 @@
                 emailInput.value = userEmail || contactEmail || '';
             }
 
+            if (typeof window.clearSupportFileAttachment === 'function') {
+                window.clearSupportFileAttachment();
+            }
+
             modal.style.display = 'flex';
         };
 
         window.closeContactSupportModal = function() {
             const modal = document.getElementById('contact-support-modal');
             if (modal) modal.style.display = 'none';
+            if (typeof window.clearSupportFileAttachment === 'function') {
+                window.clearSupportFileAttachment();
+            }
         };
+
+        window.supportPendingAttachment = null;
+
+        window.formatFileSize = function(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        };
+
+        window.handleSupportFileSelect = function(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            window.processSupportAttachmentFile(files[0]);
+        };
+
+        window.processSupportAttachmentFile = function(file) {
+            if (!file) return;
+            const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+            if (file.size > MAX_SIZE) {
+                alert('Billedet er for stort! Maksimal tilladt filstørrelse er 5 MB (din fil er ' + window.formatFileSize(file.size) + '). Vælg venligst et mindre billede.');
+                window.clearSupportFileAttachment();
+                return;
+            }
+
+            if (!file.type.startsWith('image/')) {
+                alert('Ugyldigt filformat! Du kan kun vedhæfte billedfiler (PNG, JPG, WebP, GIF).');
+                window.clearSupportFileAttachment();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                window.supportPendingAttachment = {
+                    base64: base64Data,
+                    name: file.name || 'screenshot.png',
+                    size: file.size,
+                    type: file.type
+                };
+
+                const previewImg = document.getElementById('contact-sup-preview-img');
+                const previewName = document.getElementById('contact-sup-preview-name');
+                const previewSize = document.getElementById('contact-sup-preview-size');
+                const previewContainer = document.getElementById('contact-sup-preview-container');
+                const emptyState = document.getElementById('contact-sup-empty-state');
+
+                if (previewImg) previewImg.src = base64Data;
+                if (previewName) previewName.innerText = file.name || 'screenshot.png';
+                if (previewSize) previewSize.innerText = window.formatFileSize(file.size);
+
+                if (previewContainer) previewContainer.style.display = 'flex';
+                if (emptyState) emptyState.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.clearSupportFileAttachment = function(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            window.supportPendingAttachment = null;
+            const fileInput = document.getElementById('contact-sup-file');
+            if (fileInput) fileInput.value = '';
+
+            const previewImg = document.getElementById('contact-sup-preview-img');
+            const previewContainer = document.getElementById('contact-sup-preview-container');
+            const emptyState = document.getElementById('contact-sup-empty-state');
+
+            if (previewImg) previewImg.src = '';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+        };
+
+        // Clipboard paste (Ctrl+V / Cmd+V screenshot)
+        document.addEventListener('paste', function(e) {
+            const modal = document.getElementById('contact-support-modal');
+            if (!modal || modal.style.display === 'none') return;
+
+            if (e.clipboardData && e.clipboardData.items) {
+                for (let i = 0; i < e.clipboardData.items.length; i++) {
+                    const item = e.clipboardData.items[i];
+                    if (item.type.indexOf('image') !== -1) {
+                        const blob = item.getAsFile();
+                        if (blob) {
+                            window.processSupportAttachmentFile(blob);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
 
         window.openAiChatFromSupport = function() {
             window.closeContactSupportModal();
@@ -239,6 +341,13 @@
                 return;
             }
 
+            let attBase64 = null;
+            let attName = null;
+            if (window.supportPendingAttachment && window.supportPendingAttachment.base64) {
+                attBase64 = window.supportPendingAttachment.base64;
+                attName = window.supportPendingAttachment.name;
+            }
+
             const oldHtml = submitBtn ? submitBtn.innerHTML : '';
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -259,7 +368,9 @@
                         subject: subject,
                         message: message,
                         club_name: clubName,
-                        source_system: 'EquiEvent'
+                        source_system: 'EquiEvent',
+                        attachment_base64: attBase64,
+                        attachment_name: attName
                     })
                 });
 
@@ -274,6 +385,10 @@
                     if (succName) succName.innerText = name;
                     if (succEmail) succEmail.innerText = email;
                     if (succTicket && data.ticket_id) succTicket.innerText = `#${data.ticket_id}`;
+
+                    if (typeof window.clearSupportFileAttachment === 'function') {
+                        window.clearSupportFileAttachment();
+                    }
 
                     const formSec = document.getElementById('support-form-section');
                     const succSec = document.getElementById('support-success-section');
@@ -291,7 +406,6 @@
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = oldHtml;
                 }
-            }
         };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -2097,6 +2211,40 @@
                         <textarea id="contact-sup-message" rows="4" placeholder="Beskriv hvad du har brug for hjælp til..." required style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.75rem 1rem; font-size: 0.9rem; resize: vertical;"></textarea>
                     </div>
 
+                    <div class="input-group" style="margin-bottom: 1.1rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <span><i class="fas fa-paperclip" style="color: #38bdf8;"></i> Vedhæft skærmbillede / billede (valgfrit)</span>
+                            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal;">Maks. 5 MB</span>
+                        </label>
+                        
+                        <div id="contact-sup-dropzone" style="border: 2px dashed rgba(56, 189, 248, 0.35); border-radius: 12px; padding: 0.85rem 1rem; text-align: center; background: rgba(15, 23, 42, 0.4); cursor: pointer; transition: all 0.2s ease;">
+                            <input type="file" id="contact-sup-file" accept="image/png, image/jpeg, image/webp, image/gif" style="display: none;" onchange="handleSupportFileSelect(event)">
+                            
+                            <div id="contact-sup-empty-state" onclick="document.getElementById('contact-sup-file').click()">
+                                <i class="fas fa-image" style="font-size: 1.5rem; color: #38bdf8; margin-bottom: 0.35rem;"></i>
+                                <div style="font-size: 0.85rem; color: #e2e8f0; font-weight: 500;">
+                                    Klik for at vælge billede <span style="color: #94a3b8; font-size: 0.78rem;">(eller træk hertil / indsæt med Ctrl+V)</span>
+                                </div>
+                                <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.25rem;">
+                                    PNG, JPG, WebP eller GIF (maks. 5 MB)
+                                </div>
+                            </div>
+
+                            <div id="contact-sup-preview-container" style="display: none; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; overflow: hidden; text-align: left;">
+                                    <img id="contact-sup-preview-img" src="" alt="Forhåndsvisning" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.4); flex-shrink: 0; background: #000;">
+                                    <div style="overflow: hidden;">
+                                        <div id="contact-sup-preview-name" style="font-size: 0.82rem; color: #f1f5f9; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;"></div>
+                                        <div id="contact-sup-preview-size" style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;"></div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="clearSupportFileAttachment(event)" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #f87171;" title="Fjern billede">
+                                    <i class="fas fa-trash-alt"></i> Fjern
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-clock" style="color: #fbbf24;"></i>
                         <span>Skriftlige henvendelser besvares inden for <strong>max 3 arbejdsdage</strong>.</span>
@@ -2186,10 +2334,10 @@
         </div>
     </footer>
 
-    <script type="module" src="/scores.js?v=4.8"></script>
-    <script type="module" src="/v1_judging.js?v=4.8"></script>
-    <script type="module" src="/main.js?v=4.8"></script>
-    <script type="module" src="/support-chat.js?v=4.8"></script>
+    <script type="module" src="/scores.js?v=4.9"></script>
+    <script type="module" src="/v1_judging.js?v=4.9"></script>
+    <script type="module" src="/main.js?v=4.9"></script>
+    <script type="module" src="/support-chat.js?v=4.9"></script>
 </body>
 
 </html>

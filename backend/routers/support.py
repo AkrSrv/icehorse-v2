@@ -1,8 +1,12 @@
 import os
+import re
 import json
+import uuid
+import base64
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Header, Query, Depends
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from email_service import send_support_ticket_email
@@ -10,6 +14,37 @@ from database import SessionLocal
 import models
 
 router = APIRouter(prefix="/support", tags=["Support"])
+
+UPLOAD_DIR = os.getenv("SUPPORT_UPLOAD_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads", "support_attachments"))
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def cleanup_expired_attachments(db):
+    """
+    Sletter vedhæftede filer på sager, der har været løst i mere end 8 dage.
+    """
+    try:
+        cutoff_date = datetime.utcnow() - timedelta(days=8)
+        expired_tickets = db.query(models.SupportTicket).filter(
+            models.SupportTicket.status == "Løst",
+            models.SupportTicket.resolved_at != None,
+            models.SupportTicket.resolved_at <= cutoff_date,
+            models.SupportTicket.attachment_path != None
+        ).all()
+
+        for t in expired_tickets:
+            file_path = os.path.join(UPLOAD_DIR, t.attachment_path)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"Fejl ved sletning af udløbet fil {file_path}: {e}")
+            del_note = f"\n[System {datetime.utcnow().strftime('%d-%m-%Y %H:%M')}: Vedhæftet fil ({t.attachment_filename or 'billede'}) blev automatisk slettet jf. 8-dages reglen for løste sager]"
+            t.internal_notes = (t.internal_notes or "") + del_note
+            t.attachment_path = None
+        if expired_tickets:
+            db.commit()
+    except Exception as e:
+        print(f"Fejl under cleanup_expired_attachments: {e}")
 
 class ChatMessage(BaseModel):
     role: str
@@ -174,6 +209,8 @@ class ContactSupportRequest(BaseModel):
     club_name: Optional[str] = None
     source_system: Optional[str] = "EquiEvent"
     priority: Optional[str] = "Normal"
+    attachment_base64: Optional[str] = None
+    attachment_name: Optional[str] = None
 
 class UpdateTicketRequest(BaseModel):
     status: Optional[str] = None
@@ -210,6 +247,61 @@ def submit_contact_support(req: ContactSupportRequest):
     club_name = req.club_name.strip() if req.club_name else None
     priority = req.priority.strip() if req.priority else "Normal"
     
+    # Valider og gem vedhæftet billede (maks 5 MB)
+    attachment_filename = None
+    attachment_path = None
+    attachment_size = None
+    attachment_mimetype = None
+    saved_disk_path = None
+
+    if req.attachment_base64 and req.attachment_base64.strip():
+        b64_str = req.attachment_base64.strip()
+        mimetype = "image/png"
+        if b64_str.startswith("data:") and ";base64," in b64_str:
+            head, b64_str = b64_str.split(";base64,", 1)
+            mimetype = head.replace("data:", "").strip()
+        
+        try:
+            raw_bytes = base64.b64decode(b64_str)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Det vedhæftede billede er i et ugyldigt format.")
+
+        MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+        if len(raw_bytes) > MAX_BYTES:
+            raise HTTPException(status_code=400, detail="Det vedhæftede billede er for stort (maks. 5 MB).")
+
+        orig_name = req.attachment_name.strip() if req.attachment_name else "skaermbillede.png"
+        ext = os.path.splitext(orig_name)[1].lower()
+        if ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+            if raw_bytes.startswith(b"\x89PNG"):
+                ext = ".png"
+                mimetype = "image/png"
+            elif raw_bytes.startswith(b"\xff\xd8"):
+                ext = ".jpg"
+                mimetype = "image/jpeg"
+            elif raw_bytes.startswith(b"GIF8"):
+                ext = ".gif"
+                mimetype = "image/gif"
+            elif raw_bytes.startswith(b"RIFF") and b"WEBP" in raw_bytes[:16]:
+                ext = ".webp"
+                mimetype = "image/webp"
+            else:
+                ext = ".png"
+                mimetype = "image/png"
+
+        unique_file = f"ticket_att_{uuid.uuid4().hex[:12]}{ext}"
+        saved_disk_path = os.path.join(UPLOAD_DIR, unique_file)
+        try:
+            with open(saved_disk_path, "wb") as f:
+                f.write(raw_bytes)
+            attachment_filename = orig_name
+            attachment_path = unique_file
+            attachment_size = len(raw_bytes)
+            attachment_mimetype = mimetype
+        except Exception as write_err:
+            print(f"Fejl ved lagring af vedhæftet billede: {write_err}")
+            saved_disk_path = None
+
     # 1. Gem i databasen
     ticket_id = None
     try:
@@ -222,7 +314,11 @@ def submit_contact_support(req: ContactSupportRequest):
             message=message,
             club_name=club_name,
             status="Ny",
-            priority=priority
+            priority=priority,
+            attachment_filename=attachment_filename,
+            attachment_path=attachment_path,
+            attachment_size=attachment_size,
+            attachment_mimetype=attachment_mimetype
         )
         db.add(ticket)
         db.commit()
@@ -252,7 +348,9 @@ def submit_contact_support(req: ContactSupportRequest):
             message=message,
             club_name=club_name or "",
             source_system=src,
-            ticket_id=ticket_id
+            ticket_id=ticket_id,
+            attachment_file_path=saved_disk_path,
+            attachment_filename=attachment_filename
         )
     except Exception as e:
         print(f"Fejl ved afsendelse af support email: {e}")
@@ -273,6 +371,7 @@ def list_support_tickets(
 ):
     db = SessionLocal()
     try:
+        cleanup_expired_attachments(db)
         query = db.query(models.SupportTicket)
         
         # Filtre
@@ -348,6 +447,13 @@ def list_support_tickets(
                     "message": t.message,
                     "created_at": t.created_at.isoformat() if t.created_at else None
                 })
+
+            days_until_del = None
+            if t.attachment_path:
+                if t.status == "Løst" and t.resolved_at:
+                    elapsed = (datetime.utcnow() - t.resolved_at).total_seconds()
+                    rem_sec = (8 * 86400) - elapsed
+                    days_until_del = max(0, int(rem_sec // 86400))
                 
             ticket_items.append({
                 "id": t.id,
@@ -360,6 +466,12 @@ def list_support_tickets(
                 "status": t.status,
                 "priority": t.priority,
                 "internal_notes": t.internal_notes,
+                "attachment_filename": t.attachment_filename,
+                "attachment_size": t.attachment_size,
+                "attachment_mimetype": t.attachment_mimetype,
+                "has_attachment": bool(t.attachment_path),
+                "resolved_at": t.resolved_at.isoformat() if t.resolved_at else None,
+                "days_until_file_deletion": days_until_del,
                 "created_at": t.created_at.isoformat() if t.created_at else None,
                 "updated_at": t.updated_at.isoformat() if t.updated_at else None,
                 "messages": msgs
@@ -381,7 +493,12 @@ def update_support_ticket(ticket_id: int, req: UpdateTicketRequest, auth: bool =
             raise HTTPException(status_code=404, detail="Opgave ikke fundet.")
             
         if req.status is not None:
+            if req.status == "Løst" and ticket.status != "Løst":
+                ticket.resolved_at = datetime.utcnow()
+            elif req.status != "Løst":
+                ticket.resolved_at = None
             ticket.status = req.status
+
         if req.priority is not None:
             ticket.priority = req.priority
         if req.internal_notes is not None:
@@ -400,6 +517,7 @@ def update_support_ticket(ticket_id: int, req: UpdateTicketRequest, auth: bool =
                 "status": ticket.status,
                 "priority": ticket.priority,
                 "internal_notes": ticket.internal_notes,
+                "resolved_at": ticket.resolved_at.isoformat() if ticket.resolved_at else None,
                 "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None
             }
         }
@@ -491,9 +609,11 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
         # 3. Opdater ticket
         if req.mark_as_resolved:
             ticket.status = "Løst"
+            ticket.resolved_at = datetime.utcnow()
         else:
             if ticket.status in ["Ny", "Modtaget svar"]:
                 ticket.status = "I gang"
+            ticket.resolved_at = None
             
         timestamp_str = datetime.utcnow().strftime("%d. %b %H:%M")
         reply_log = f"\n\n[SVAR SENDT {timestamp_str}]:\n{req.reply_message.strip()}"
@@ -526,6 +646,7 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
                 "id": ticket.id,
                 "status": ticket.status,
                 "internal_notes": ticket.internal_notes,
+                "resolved_at": ticket.resolved_at.isoformat() if ticket.resolved_at else None,
                 "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
                 "messages": all_msgs
             }
@@ -575,5 +696,27 @@ def customer_reply_to_ticket(ticket_id: int, req: CustomerReplyRequest):
         return {"status": "success", "message": "Dit svar er modtaget i sagen."}
     finally:
         db.close()
+
+@router.get("/tickets/{ticket_id}/attachment")
+def get_ticket_attachment(ticket_id: int, auth: bool = Depends(check_admin_access)):
+    db = SessionLocal()
+    try:
+        cleanup_expired_attachments(db)
+        ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
+        if not ticket or not ticket.attachment_path:
+            raise HTTPException(status_code=404, detail="Ingen vedhæftet fil fundet for denne opgave.")
+
+        file_path = os.path.join(UPLOAD_DIR, ticket.attachment_path)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Billedfilen er ikke længere tilgængelig (slettet jf. 8-dages reglen for løste sager).")
+
+        return FileResponse(
+            path=file_path,
+            filename=ticket.attachment_filename or "skaermbillede.png",
+            media_type=ticket.attachment_mimetype or "image/png"
+        )
+    finally:
+        db.close()
+
 
 

@@ -1,6 +1,7 @@
 import os
 import re
 import smtplib
+import mimetypes
 from email.message import EmailMessage
 from datetime import datetime
 
@@ -228,7 +229,7 @@ EquiEvent Teamet
         print(f"SMTP FEJL (Faktura): {e}")
         raise Exception(f"Kunne ikke sende faktura-mailen: {str(e)}")
 
-def send_support_ticket_email(name: str, email: str, subject: str, message: str, club_name: str = "", source_system: str = "EquiEvent", ticket_id: int = None):
+def send_support_ticket_email(name: str, email: str, subject: str, message: str, club_name: str = "", source_system: str = "EquiEvent", ticket_id: int = None, attachment_file_path: str = None, attachment_filename: str = None):
     if not SMTP_USERNAME or not SMTP_PASSWORD:
         print("Mail-opsætningen mangler, logger henvendelse til konsol.")
         return False
@@ -306,6 +307,18 @@ Tip: Du kan besvare sagen fra ALKData Support Hub på https://alkdata.dk/support
 
     msg.set_content(text_content)
     msg.add_alternative(html_content, subtype='html')
+
+    if attachment_file_path and os.path.exists(attachment_file_path):
+        try:
+            with open(attachment_file_path, 'rb') as f:
+                file_bytes = f.read()
+            ctype, encoding = mimetypes.guess_type(attachment_filename or attachment_file_path)
+            if ctype is None or encoding is not None:
+                ctype = 'image/png'
+            maintype, subtype = ctype.split('/', 1)
+            msg.add_attachment(file_bytes, maintype=maintype, subtype=subtype, filename=attachment_filename or 'skaermbillede.png')
+        except Exception as att_err:
+            print(f"Fejl ved tilføjelse af vedhæftet fil til mail: {att_err}")
 
     try:
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
