@@ -2563,11 +2563,43 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (msgInput) msgInput.value = '';
         
-        if (window.activeClub && nameInput && !nameInput.value) {
-            nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
+        // 1. Aktiv klub info
+        if (window.activeClub) {
+            if (nameInput && !nameInput.value) {
+                nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
+            }
+            if (emailInput && !emailInput.value && window.activeClub.contact_email) {
+                emailInput.value = window.activeClub.contact_email;
+            }
         }
-        if (window.activeClub && emailInput && !emailInput.value && window.activeClub.contact_email) {
-            emailInput.value = window.activeClub.contact_email;
+
+        // 2. Logget ind bruger (fra JWT token)
+        const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
+        if (token) {
+            try {
+                const payload = parseJwt ? parseJwt(token) : JSON.parse(atob(token.split('.')[1]));
+                const userEmail = payload ? payload.sub : null;
+                if (userEmail) {
+                    if (emailInput && !emailInput.value) emailInput.value = userEmail;
+                    if (nameInput && !nameInput.value) {
+                        if (userEmail.includes('arno') || userEmail.includes('arnolkristiansen')) {
+                            nameInput.value = 'Arno L. Kristiansen (Admin)';
+                        } else {
+                            nameInput.value = userEmail.split('@')[0];
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // 3. Tidligere udfyldt kontaktinfo
+        const savedContact = localStorage.getItem('equievent_last_contact_info');
+        if (savedContact) {
+            try {
+                const parsed = JSON.parse(savedContact);
+                if (nameInput && !nameInput.value && parsed.name) nameInput.value = parsed.name;
+                if (emailInput && !emailInput.value && parsed.email) emailInput.value = parsed.email;
+            } catch(e) {}
         }
 
         modal.style.display = 'flex';
@@ -2633,6 +2665,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
+                try {
+                    localStorage.setItem('equievent_last_contact_info', JSON.stringify({ name: name, email: email }));
+                } catch(e) {}
                 const resData = await response.json().catch(() => ({}));
                 // Skift til succesvisning
                 const succName = document.getElementById('support-success-name');
