@@ -713,7 +713,8 @@ def get_ticket_attachment(ticket_id: int, auth: bool = Depends(check_admin_acces
         return FileResponse(
             path=file_path,
             filename=ticket.attachment_filename or "skaermbillede.png",
-            media_type=ticket.attachment_mimetype or "image/png"
+            media_type=ticket.attachment_mimetype or "image/png",
+            content_disposition_type="inline"
         )
     finally:
         db.close()
