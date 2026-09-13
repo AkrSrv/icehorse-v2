@@ -1,4 +1,5 @@
 import os
+import re
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime
@@ -227,23 +228,27 @@ EquiEvent Teamet
         print(f"SMTP FEJL (Faktura): {e}")
         raise Exception(f"Kunne ikke sende faktura-mailen: {str(e)}")
 
-def send_support_ticket_email(name: str, email: str, subject: str, message: str, club_name: str = ""):
+def send_support_ticket_email(name: str, email: str, subject: str, message: str, club_name: str = "", source_system: str = "EquiEvent", ticket_id: int = None):
     if not SMTP_USERNAME or not SMTP_PASSWORD:
         print("Mail-opsætningen mangler, logger henvendelse til konsol.")
         return False
 
+    t_tag = f"Ticket #{ticket_id}" if ticket_id else "Ticket"
+    clean_subj = re.sub(r'\[.*?\]', '', subject).strip()
+
     msg = EmailMessage()
-    msg['Subject'] = f"[EquiEvent Support] {subject} - fra {name}"
-    msg['From'] = f"EquiEvent Support <{SMTP_FROM_EMAIL}>"
+    msg['Subject'] = f"[{source_system} {t_tag}] {clean_subj} - fra {name}"
+    msg['From'] = f"{source_system} Support <{SMTP_FROM_EMAIL}>"
     msg['To'] = f"arno@alkdata.dk, {SMTP_FROM_EMAIL}"
     msg['Reply-To'] = email
 
-    text_content = f"""Ny supporthenvendelse modtaget via EquiEvent:
+    text_content = f"""Ny supporthenvendelse modtaget via {source_system}:
 
+Sagsnummer: #{ticket_id if ticket_id else 'Ny'}
 Afsender: {name}
 E-mail: {email}
 Klub: {club_name or 'Ikke angivet / Forside'}
-Emne: {subject}
+Emne: {clean_subj}
 Tidspunkt: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
 Besked:
@@ -251,21 +256,25 @@ Besked:
 {message}
 ----------------------------------------
 
-Tip: Du kan svare afsenderen direkte ved at besvare denne mail.
+Tip: Du kan besvare sagen fra ALKData Support Hub på https://alkdata.dk/support.html eller besvare denne mail direkte.
 """
 
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #0f172a; color: white; padding: 20px; border-radius: 10px 10px 0 0; border-bottom: 3px solid #f43f5e;">
-          <h2 style="margin: 0; color: #ffffff; font-size: 20px;">🎧 Ny Supporthenvendelse</h2>
-          <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 13px;">EquiEvent Kontaktformular</p>
+        <div style="background-color: #0f172a; color: white; padding: 20px; border-radius: 10px 10px 0 0; border-bottom: 3px solid #38bdf8;">
+          <h2 style="margin: 0; color: #ffffff; font-size: 20px;">🎧 Ny Henvendelse [{t_tag}]</h2>
+          <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 13px;">{source_system} Support Hub</p>
         </div>
         
         <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <tr>
-              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 100px;">Afsender:</td>
+              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 100px;">Sagsnr.:</td>
+              <td style="padding: 6px 0; font-weight: bold; color: #38bdf8;">#{ticket_id if ticket_id else 'Ny'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; font-size: 13px;">Afsender:</td>
               <td style="padding: 6px 0; font-weight: bold; color: #0f172a;">{name}</td>
             </tr>
             <tr>
@@ -278,7 +287,7 @@ Tip: Du kan svare afsenderen direkte ved at besvare denne mail.
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #64748b; font-size: 13px;">Emne:</td>
-              <td style="padding: 6px 0; font-weight: bold; color: #f43f5e;">{subject}</td>
+              <td style="padding: 6px 0; font-weight: bold; color: #0f172a;">{clean_subj}</td>
             </tr>
           </table>
           
@@ -288,7 +297,7 @@ Tip: Du kan svare afsenderen direkte ved at besvare denne mail.
           </div>
           
           <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-            Tip: Du kan svare afsenderen direkte ved at besvare denne mail (Reply-To er sat til {email}).
+            Tip: Besvar direkte fra <a href="https://alkdata.dk/support.html" style="color: #0284c7;">Support Hub</a> eller besvar denne e-mail.
           </p>
         </div>
       </body>
@@ -307,22 +316,27 @@ Tip: Du kan svare afsenderen direkte ved at besvare denne mail.
         # Send også automatisk kvitteringsmail til kunden
         try:
             ack_msg = EmailMessage()
-            ack_msg['Subject'] = f"Vi har modtaget din henvendelse: {subject} - EquiEvent"
-            ack_msg['From'] = f"EquiEvent Support <{SMTP_FROM_EMAIL}>"
+            ack_msg['Subject'] = f"Vi har modtaget din henvendelse: [{source_system} {t_tag}] {clean_subj}"
+            ack_msg['From'] = f"{source_system} Support <{SMTP_FROM_EMAIL}>"
             ack_msg['To'] = email
+            ack_msg['Reply-To'] = "arno@alkdata.dk"
             
             ack_text = f"""Kære {name},
 
-Tak for din henvendelse til EquiEvent Support vedrørende '{subject}'.
+Tak for din henvendelse til {source_system} Support vedrørende '{clean_subj}'.
+Dit sagsnummer er: {t_tag}
 
 Vi har modtaget din besked og undersøger sagen. Vi bestræber os på at svare hurtigst muligt, og senest inden for 3 arbejdsdage.
+
+Har du yderligere oplysninger eller spørgsmål i sagen, kan du blot besvare denne e-mail direkte. Dit svar indlæses automatisk direkte i sagen.
 
 Har du i mellemtiden brug for hurtig hjælp?
 Prøv vores indbyggede AI Support Assistent på https://equievent.dk – den sidder klar 24/7 og kan besvare de fleste spørgsmål om stævner, koefficienter og dommeropsætning på få sekunder.
 
 Med venlig hilsen,
-EquiEvent Support
-equievent_support@alkdata.dk
+Arno L. Kristiansen | {source_system} Support
+arno@alkdata.dk
+https://alkdata.dk
 """
             ack_msg.set_content(ack_text)
             server.send_message(ack_msg)
@@ -336,12 +350,15 @@ equievent_support@alkdata.dk
         return False
 
 
-def send_ticket_reply_email(to_email: str, recipient_name: str, subject: str, reply_text: str, original_message: str = "", source_system: str = "EquiEvent"):
+def send_ticket_reply_email(to_email: str, recipient_name: str, subject: str, reply_text: str, original_message: str = "", source_system: str = "EquiEvent", ticket_id: int = None):
     if not SMTP_USERNAME or not SMTP_PASSWORD:
         raise Exception("SMTP konfiguration mangler på serveren.")
 
-    clean_subject = subject.replace("Re: ", "").strip()
-    full_subject = f"Re: [{source_system}] {clean_subject}"
+    clean_subject = re.sub(r'^(Re:\s*)+', '', subject, flags=re.IGNORECASE).strip()
+    clean_subject = re.sub(r'\[.*?\]', '', clean_subject).strip()
+    
+    t_tag = f"Ticket #{ticket_id}" if ticket_id else "Ticket"
+    full_subject = f"Re: [{source_system} {t_tag}] {clean_subject}"
     
     sender_name = f"Arno L. Kristiansen | {source_system} Support"
     from_email = SMTP_FROM_EMAIL or "arno@alkdata.dk"
@@ -361,6 +378,8 @@ Arno L. Kristiansen
 ALKData & {source_system}
 arno@alkdata.dk
 https://alkdata.dk
+
+(Besvarer du denne mail, modtager systemet automatisk dit svar direkte i sagen)
 
 ----------------------------------------
 Oprindelig henvendelse:

@@ -228,6 +228,17 @@ def submit_contact_support(req: ContactSupportRequest):
         db.commit()
         db.refresh(ticket)
         ticket_id = ticket.id
+
+        # Opret første besked i samtale-tråden
+        init_msg = models.SupportMessage(
+            ticket_id=ticket.id,
+            sender_type="customer",
+            sender_name=name,
+            sender_email=email,
+            message=message
+        )
+        db.add(init_msg)
+        db.commit()
         db.close()
     except Exception as e:
         print(f"Fejl ved oprettelse af support_ticket i DB: {e}")
@@ -237,9 +248,11 @@ def submit_contact_support(req: ContactSupportRequest):
         send_support_ticket_email(
             name=name,
             email=email,
-            subject=f"[{src}] {subject}",
+            subject=subject,
             message=message,
-            club_name=club_name or ""
+            club_name=club_name or "",
+            source_system=src,
+            ticket_id=ticket_id
         )
     except Exception as e:
         print(f"Fejl ved afsendelse af support email: {e}")
@@ -268,7 +281,7 @@ def list_support_tickets(
             
         if status and status != "Alle":
             if status == "Aabne":
-                query = query.filter(models.SupportTicket.status.in_(["Ny", "I gang"]))
+                query = query.filter(models.SupportTicket.status.in_(["Ny", "I gang", "Modtaget svar"]))
             else:
                 query = query.filter(models.SupportTicket.status == status)
                 
@@ -301,29 +314,53 @@ def list_support_tickets(
         stats = {
             "total": len(all_tickets),
             "new_count": sum(1 for t in all_tickets if t.status == "Ny"),
+            "replied_count": sum(1 for t in all_tickets if t.status == "Modtaget svar"),
             "in_progress_count": sum(1 for t in all_tickets if t.status == "I gang"),
             "resolved_count": sum(1 for t in all_tickets if t.status == "Løst"),
             "sources": sorted(list(set(t.source_system for t in all_tickets if t.source_system)))
         }
         
-        return {
-            "tickets": [
-                {
-                    "id": t.id,
-                    "source_system": t.source_system,
-                    "name": t.name,
-                    "email": t.email,
-                    "subject": t.subject,
+        ticket_items = []
+        for t in tickets:
+            msgs = []
+            if t.messages and len(t.messages) > 0:
+                for m in t.messages:
+                    msgs.append({
+                        "id": m.id,
+                        "sender_type": m.sender_type,
+                        "sender_name": m.sender_name,
+                        "sender_email": m.sender_email,
+                        "message": m.message,
+                        "created_at": m.created_at.isoformat() if m.created_at else None
+                    })
+            else:
+                msgs.append({
+                    "id": 0,
+                    "sender_type": "customer",
+                    "sender_name": t.name,
+                    "sender_email": t.email,
                     "message": t.message,
-                    "club_name": t.club_name,
-                    "status": t.status,
-                    "priority": t.priority,
-                    "internal_notes": t.internal_notes,
-                    "created_at": t.created_at.isoformat() if t.created_at else None,
-                    "updated_at": t.updated_at.isoformat() if t.updated_at else None
-                }
-                for t in tickets
-            ],
+                    "created_at": t.created_at.isoformat() if t.created_at else None
+                })
+                
+            ticket_items.append({
+                "id": t.id,
+                "source_system": t.source_system,
+                "name": t.name,
+                "email": t.email,
+                "subject": t.subject,
+                "message": t.message,
+                "club_name": t.club_name,
+                "status": t.status,
+                "priority": t.priority,
+                "internal_notes": t.internal_notes,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+                "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+                "messages": msgs
+            })
+
+        return {
+            "tickets": ticket_items,
             "stats": stats
         }
     finally:
@@ -391,6 +428,16 @@ def create_manual_support_ticket(req: CreateManualTicketRequest, auth: bool = De
         db.add(ticket)
         db.commit()
         db.refresh(ticket)
+
+        init_msg = models.SupportMessage(
+            ticket_id=ticket.id,
+            sender_type="admin" if (req.email == "arno@alkdata.dk" or req.name == "Arno") else "customer",
+            sender_name=req.name,
+            sender_email=req.email,
+            message=req.message
+        )
+        db.add(init_msg)
+        db.commit()
         return {"status": "success", "ticket_id": ticket.id}
     finally:
         db.close()
@@ -410,7 +457,7 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
         if not ticket:
             raise HTTPException(status_code=404, detail="Opgave ikke fundet.")
             
-        # Send mail direkte via SMTP
+        # 1. Send mail direkte via SMTP
         from email_service import send_ticket_reply_email
         send_ticket_reply_email(
             to_email=ticket.email,
@@ -418,10 +465,21 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
             subject=ticket.subject,
             reply_text=req.reply_message.strip(),
             original_message=ticket.message,
-            source_system=ticket.source_system or "EquiEvent"
+            source_system=ticket.source_system or "EquiEvent",
+            ticket_id=ticket.id
         )
         
-        # Opdater ticket
+        # 2. Opret SupportMessage i tråden
+        admin_msg = models.SupportMessage(
+            ticket_id=ticket.id,
+            sender_type="admin",
+            sender_name="Arno L. Kristiansen",
+            sender_email="arno@alkdata.dk",
+            message=req.reply_message.strip()
+        )
+        db.add(admin_msg)
+        
+        # 3. Opdater ticket
         if req.mark_as_resolved:
             ticket.status = "Løst"
             
@@ -436,6 +494,19 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
         db.commit()
         db.refresh(ticket)
         
+        # Hent opdaterede beskeder
+        all_msgs = [
+            {
+                "id": m.id,
+                "sender_type": m.sender_type,
+                "sender_name": m.sender_name,
+                "sender_email": m.sender_email,
+                "message": m.message,
+                "created_at": m.created_at.isoformat() if m.created_at else None
+            }
+            for m in ticket.messages
+        ]
+        
         return {
             "status": "success",
             "message": f"Svar er sendt til {ticket.email}",
@@ -443,7 +514,8 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
                 "id": ticket.id,
                 "status": ticket.status,
                 "internal_notes": ticket.internal_notes,
-                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None
+                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+                "messages": all_msgs
             }
         }
     except Exception as e:
@@ -451,4 +523,45 @@ def reply_to_ticket(ticket_id: int, req: TicketReplyRequest, auth: bool = Depend
         raise HTTPException(status_code=500, detail=f"Kunne ikke sende e-mail: {str(e)}")
     finally:
         db.close()
+
+@router.post("/sync-emails")
+def sync_support_emails(auth: bool = Depends(check_admin_access)):
+    db = SessionLocal()
+    try:
+        from imap_service import sync_inbound_emails
+        res = sync_inbound_emails(db)
+        return res
+    finally:
+        db.close()
+
+class CustomerReplyRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    message: str
+
+@router.post("/tickets/{ticket_id}/customer-reply")
+def customer_reply_to_ticket(ticket_id: int, req: CustomerReplyRequest):
+    if not req.message or not req.message.strip():
+        raise HTTPException(status_code=400, detail="Besked må ikke være tom.")
+    db = SessionLocal()
+    try:
+        ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Opgave ikke fundet.")
+        
+        new_msg = models.SupportMessage(
+            ticket_id=ticket.id,
+            sender_type="customer",
+            sender_name=req.name.strip() if req.name else ticket.name,
+            sender_email=req.email.strip() if req.email else ticket.email,
+            message=req.message.strip()
+        )
+        db.add(new_msg)
+        ticket.status = "Modtaget svar"
+        ticket.updated_at = datetime.utcnow()
+        db.commit()
+        return {"status": "success", "message": "Dit svar er modtaget i sagen."}
+    finally:
+        db.close()
+
 

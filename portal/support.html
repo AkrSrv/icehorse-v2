@@ -348,8 +348,104 @@
 
         /* Status badges */
         .badge-status-ny { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .badge-status-modtagetsvar { background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); }
         .badge-status-igang { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
         .badge-status-lost { background: rgba(100, 116, 139, 0.25); color: #94a3b8; }
+
+        /* Conversation Thread Styling */
+        .conversation-thread {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            max-height: 360px;
+            overflow-y: auto;
+            padding: 0.75rem;
+            background: rgba(10, 15, 28, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+        }
+
+        .chat-msg-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 88%;
+        }
+        .chat-msg-wrapper.customer {
+            align-self: flex-start;
+        }
+        .chat-msg-wrapper.admin {
+            align-self: flex-end;
+        }
+
+        .chat-msg-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.74rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            padding: 0 0.3rem;
+        }
+        .chat-msg-wrapper.admin .chat-msg-header {
+            justify-content: flex-end;
+        }
+
+        .chat-msg-bubble {
+            padding: 0.9rem 1.15rem;
+            border-radius: 16px;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+        .chat-msg-wrapper.customer .chat-msg-bubble {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f1f5f9;
+            border-bottom-left-radius: 4px;
+        }
+        .chat-msg-wrapper.admin .chat-msg-bubble {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(30, 64, 175, 0.55));
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
+        }
+
+        /* Toast Notifications */
+        .hub-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #ffffff;
+            padding: 0.95rem 1.35rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            backdrop-filter: blur(12px);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .hub-toast.visible {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .hub-toast.toast-success {
+            border-color: rgba(16, 185, 129, 0.5);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15);
+        }
+        .hub-toast.toast-info {
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.15);
+        }
 
         .ticket-main {
             display: flex;
@@ -606,6 +702,9 @@
             </div>
 
             <div class="hub-header-actions">
+                <button class="btn-hub btn-hub-primary" onclick="syncEmails()" id="btnSyncEmails" title="Tjekker din Simply.com indbakke for nye svar fra kunder">
+                    <i class="fas fa-inbox" id="syncIcon"></i> Hent Svar fra E-mail
+                </button>
                 <button class="btn-hub btn-hub-primary" onclick="openCreateManualModal()">
                     <i class="fas fa-plus"></i> Opret Opgave
                 </button>
@@ -633,6 +732,14 @@
 
             <div class="kpi-card">
                 <div class="kpi-info">
+                    <h3>Svar modtaget fra kunde</h3>
+                    <div class="kpi-value" id="kpiRepliedCount" style="color: #38bdf8;">0</div>
+                </div>
+                <div class="kpi-icon sources"><i class="fas fa-reply"></i></div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
                     <h3>I gang / Behandles</h3>
                     <div class="kpi-value" id="kpiInProgressCount">0</div>
                 </div>
@@ -645,14 +752,6 @@
                     <div class="kpi-value" id="kpiResolvedCount">0</div>
                 </div>
                 <div class="kpi-icon resolved"><i class="fas fa-check-double"></i></div>
-            </div>
-
-            <div class="kpi-card">
-                <div class="kpi-info">
-                    <h3>SLA Målsætning</h3>
-                    <div class="kpi-value" style="font-size: 1.35rem; color: #38bdf8;">Max 3 dage</div>
-                </div>
-                <div class="kpi-icon sources"><i class="fas fa-clock"></i></div>
             </div>
         </section>
 
@@ -674,6 +773,7 @@
                 <div class="status-pill-filters">
                     <button class="pill-filter-btn active" data-status="Alle" onclick="setStatusFilter('Alle', this)">Alle</button>
                     <button class="pill-filter-btn" data-status="Aabne" onclick="setStatusFilter('Aabne', this)"><i class="fas fa-circle" style="color: #10b981; font-size: 0.6rem;"></i> Åbne</button>
+                    <button class="pill-filter-btn" data-status="Modtaget svar" onclick="setStatusFilter('Modtaget svar', this)"><i class="fas fa-reply" style="color: #38bdf8; font-size: 0.6rem;"></i> Svar modtaget</button>
                     <button class="pill-filter-btn" data-status="Ny" onclick="setStatusFilter('Ny', this)">Nye</button>
                     <button class="pill-filter-btn" data-status="I gang" onclick="setStatusFilter('I gang', this)">I gang</button>
                     <button class="pill-filter-btn" data-status="Løst" onclick="setStatusFilter('Løst', this)">Løste</button>
@@ -760,10 +860,17 @@
                 <div><i class="fas fa-hourglass-half"></i> <span id="dtlSlaStatus"></span></div>
             </div>
 
-            <!-- Besked Tekst -->
+            <!-- Samtalehistorik / Tråd -->
             <div>
-                <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">Henvendelsens indhold:</label>
-                <div id="dtlMessage" class="detail-message-box"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label style="font-size: 0.85rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                        <i class="fas fa-comments" style="color: #38bdf8;"></i> Samtalehistorik & Svar i sagen:
+                    </label>
+                    <span id="dtlMessageCount" class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 0.75rem; border: 1px solid rgba(56, 189, 248, 0.3);">1 besked</span>
+                </div>
+                <div id="dtlConversationThread" class="conversation-thread">
+                    <!-- Fyldes dynamisk af renderConversationThread -->
+                </div>
             </div>
 
             <!-- DIREKTE SVAR FRA SYSTEMET -->
@@ -901,6 +1008,7 @@
                 document.getElementById('authWall').style.display = 'none';
                 document.getElementById('hubMainContent').style.display = 'flex';
                 loadTickets();
+                syncEmails(true); // Automatisk sync i baggrunden ved start
             } else {
                 document.getElementById('authWall').style.display = 'flex';
                 document.getElementById('hubMainContent').style.display = 'none';
@@ -1123,8 +1231,8 @@
                 ? '<span style="color: #34d399;">Sagen er løst</span>' 
                 : `<span class="sla-indicator ${timeInfo.slaClass}">${timeInfo.slaText}</span>`;
 
-            // Besked
-            document.getElementById('dtlMessage').innerText = ticket.message;
+            // Samtalehistorik / Tråd
+            renderConversationThread(ticket.messages, ticket);
 
             // Reset Svar sektion
             document.getElementById('dtlReplyText').value = '';
@@ -1138,6 +1246,59 @@
             document.getElementById('ticketDrawer').classList.add('active');
         }
 
+        function renderConversationThread(messages, defaultTicket) {
+            const container = document.getElementById('dtlConversationThread');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let msgList = (messages && messages.length > 0) ? messages : [];
+            if (msgList.length === 0 && defaultTicket && defaultTicket.message) {
+                msgList = [{
+                    id: 0,
+                    sender_type: 'customer',
+                    sender_name: defaultTicket.name,
+                    sender_email: defaultTicket.email,
+                    message: defaultTicket.message,
+                    created_at: defaultTicket.created_at
+                }];
+            }
+
+            const countEl = document.getElementById('dtlMessageCount');
+            if (countEl) {
+                countEl.innerText = `${msgList.length} ${msgList.length === 1 ? 'besked' : 'beskeder'}`;
+            }
+
+            if (msgList.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; padding: 1.5rem;">Ingen beskeder endnu.</div>';
+                return;
+            }
+
+            msgList.forEach((msg) => {
+                const isCustomer = msg.sender_type === 'customer';
+                const timeInfo = formatRelativeTime(msg.created_at);
+                const wrapper = document.createElement('div');
+                wrapper.className = `chat-msg-wrapper ${isCustomer ? 'customer' : 'admin'}`;
+
+                const roleLabel = isCustomer 
+                    ? (msg.sender_name ? `${msg.sender_name} (Kunde)` : 'Kunde') 
+                    : 'Arno L. Kristiansen (Support)';
+                const icon = isCustomer ? 'fa-user' : 'fa-headset';
+
+                wrapper.innerHTML = `
+                    <div class="chat-msg-header">
+                        <i class="fas ${icon}"></i>
+                        <span><strong>${escapeHtml(roleLabel)}</strong> &bull; ${escapeHtml(timeInfo.fullDate)} (${timeInfo.relative})</span>
+                    </div>
+                    <div class="chat-msg-bubble">${escapeHtml(msg.message || '')}</div>
+                `;
+                container.appendChild(wrapper);
+            });
+
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 60);
+        }
+
         function closeTicketDrawer() {
             document.getElementById('ticketDrawer').classList.remove('active');
             currentActiveTicket = null;
@@ -1149,7 +1310,8 @@
 
         function updateDrawerStatusButtons(currentStatus) {
             const stBadge = document.getElementById('dtlStatusBadge');
-            stBadge.className = `badge badge-status-${currentStatus.toLowerCase().replace(' ', '')}`;
+            const cleanStatus = currentStatus.toLowerCase().replace(/\s+/g, '');
+            stBadge.className = `badge badge-status-${cleanStatus}`;
             stBadge.innerText = currentStatus;
 
             document.getElementById('btnSetNy').className = 'btn-status-toggle' + (currentStatus === 'Ny' ? ' current-ny' : '');
@@ -1203,7 +1365,13 @@
                         currentActiveTicket.internal_notes = data.ticket.internal_notes;
                         document.getElementById('dtlInternalNotes').value = data.ticket.internal_notes || '';
                         updateDrawerStatusButtons(data.ticket.status);
+                        
+                        if (data.ticket.messages) {
+                            currentActiveTicket.messages = data.ticket.messages;
+                            renderConversationThread(data.ticket.messages, currentActiveTicket);
+                        }
                     }
+                    showNotificationToast(`Svar sendt til ${currentActiveTicket.email}`, 'success');
                     loadTickets();
                 } else {
                     feedback.style.display = 'block';
@@ -1404,6 +1572,77 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+
+        // --- E-MAIL SYNC (SIMPLY IMAP) & NOTIFICATIONS ---
+        async function syncEmails(isSilent = false) {
+            const btn = document.getElementById('btnSyncEmails');
+            const icon = document.getElementById('syncIcon');
+            if (!isSilent && btn && icon) {
+                btn.disabled = true;
+                icon.className = 'fas fa-spinner fa-spin';
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/support/sync-emails`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Admin-Key': currentAdminPassword
+                    }
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.imported > 0) {
+                        showNotificationToast(`📬 ${data.imported} nyt/nye svar indlæst fra e-mail direkte i sagerne!`, 'success');
+                        await loadTickets();
+                        if (currentActiveTicket) {
+                            const updated = allLoadedTickets.find(t => t.id === currentActiveTicket.id);
+                            if (updated) {
+                                openTicketDetail(updated);
+                            }
+                        }
+                    } else if (!isSilent) {
+                        showNotificationToast(data.message || '✅ Indbakken er synkroniseret – ingen nye svar fundet.', 'info');
+                    }
+                } else {
+                    if (!isSilent) alert(data.detail || 'Kunne ikke hente mails.');
+                }
+            } catch(e) {
+                console.error('IMAP sync fejl:', e);
+                if (!isSilent) alert('Netværksfejl ved synkronisering af e-mails.');
+            } finally {
+                if (!isSilent && btn && icon) {
+                    btn.disabled = false;
+                    icon.className = 'fas fa-inbox';
+                }
+            }
+        }
+
+        function showNotificationToast(msg, type = 'info') {
+            let toast = document.getElementById('hubGlobalToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'hubGlobalToast';
+                toast.className = 'hub-toast';
+                document.body.appendChild(toast);
+            }
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
+            const iconColor = type === 'success' ? '#34d399' : '#38bdf8';
+            toast.className = `hub-toast toast-${type} visible`;
+            toast.innerHTML = `<i class="fas ${icon}" style="color: ${iconColor}; font-size: 1.15rem;"></i> <span>${escapeHtml(msg)}</span>`;
+            
+            clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 4500);
+        }
+
+        // Tjek automatisk for nye e-mail svar i baggrunden hvert minut
+        setInterval(() => {
+            if (currentAdminPassword === AUTH_KEY) {
+                syncEmails(true);
+            }
+        }, 60000);
 
         // Initialize on load
         window.addEventListener('DOMContentLoaded', checkAuth);

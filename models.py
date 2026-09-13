@@ -320,11 +320,27 @@ class SupportTicket(Base):
     subject = Column(String)
     message = Column(Text)
     club_name = Column(String, nullable=True)
-    status = Column(String, default="Ny", index=True)  # "Ny", "I gang", "Løst", "Arkiveret"
+    status = Column(String, default="Ny", index=True)  # "Ny", "I gang", "Modtaget svar", "Løst", "Arkiveret"
     priority = Column(String, default="Normal")  # "Lav", "Normal", "Høj"
     internal_notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    messages = relationship("SupportMessage", back_populates="ticket", cascade="all, delete-orphan", order_by="SupportMessage.created_at.asc()")
+
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("support_tickets.id"), index=True)
+    sender_type = Column(String, default="customer")  # "customer" or "admin"
+    sender_name = Column(String)
+    sender_email = Column(String)
+    message = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    ticket = relationship("SupportTicket", back_populates="messages")
+
 
 
 
