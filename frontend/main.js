@@ -419,16 +419,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper til at afkode JWT payload
     function parseJwt(token) {
         try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            if (!token || typeof token !== 'string') return null;
+            const parts = token.split('.');
+            if (parts.length < 2) return null;
+            let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            while (base64.length % 4) {
+                base64 += '=';
+            }
             const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             }).join(''));
             return JSON.parse(jsonPayload);
         } catch(e) {
-            return null;
+            try {
+                let base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) {
+                    base64 += '=';
+                }
+                return JSON.parse(window.atob(base64));
+            } catch(e2) {
+                return null;
+            }
         }
     }
+    window.parseJwt = parseJwt;
 
     // MULTI-KLUB LOGIK
     async function checkUserClubs() {
@@ -437,6 +451,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const payload = parseJwt(token);
         const email = payload ? payload.sub : null;
+        if (email) {
+            localStorage.setItem('equievent_user_email', email);
+        }
         const saBtn = document.getElementById('superadmin-tab-btn');
         if (saBtn) {
             if (email === 'arno@alkdata.dk' || email === 'arnolkristiansen@outlook.com') {
@@ -452,10 +469,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if(response.ok) {
                 const clubs = await response.json();
+                window.userClubs = clubs;
                 if(clubs.length === 0) {
                     // Måske vise "Opret din første klub" skærm
                     showClubSelectionSection([]);
                 } else if(clubs.length === 1) {
+                    window.activeClub = clubs[0];
+                    if (clubs[0].name) localStorage.setItem('equievent_active_club_name', clubs[0].name);
                     const justCreated = localStorage.getItem('just_registered_club') === 'true';
                     localStorage.removeItem('just_registered_club');
                     selectClub(clubs[0].id, justCreated);
@@ -491,6 +511,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.selectClub = function(id, goToProfile = false) {
         window.activeClubId = id;
+        if (window.userClubs) {
+            const found = window.userClubs.find(c => c.id === id);
+            if (found) {
+                window.activeClub = found;
+                if (found.name) localStorage.setItem('equievent_active_club_name', found.name);
+            }
+        }
         showDashboard();
         if (goToProfile) {
             window.switchTab('profile');
@@ -595,6 +622,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 const data = await response.json();
+                window.activeClub = data;
+                if (data.name) localStorage.setItem('equievent_active_club_name', data.name);
+                if (data.contact_name) localStorage.setItem('equievent_active_contact_name', data.contact_name);
+                if (data.contact_email) localStorage.setItem('equievent_active_contact_email', data.contact_email);
+
                 document.getElementById('prof-name').value = data.name || '';
                 document.getElementById('prof-contact-name').value = data.contact_name || '';
                 document.getElementById('prof-phone').value = data.phone || '';
@@ -2563,43 +2595,92 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (msgInput) msgInput.value = '';
         
-        // 1. Aktiv klub info
-        if (window.activeClub) {
-            if (nameInput && !nameInput.value) {
-                nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
-            }
-            if (emailInput && !emailInput.value && window.activeClub.contact_email) {
-                emailInput.value = window.activeClub.contact_email;
-            }
+        // 1. Find klubnavn
+        let clubName = '';
+        if (window.activeClub && window.activeClub.name) {
+            clubName = window.activeClub.name;
+        }
+        if (!clubName) {
+            const bannerName = document.getElementById('active-club-banner-name');
+            const sidebarName = document.getElementById('active-club-name-sidebar');
+            const profName = document.getElementById('prof-name');
+            if (bannerName && bannerName.innerText.trim()) clubName = bannerName.innerText.trim();
+            else if (sidebarName && sidebarName.innerText.trim()) clubName = sidebarName.innerText.trim();
+            else if (profName && profName.value.trim()) clubName = profName.value.trim();
+            else if (localStorage.getItem('equievent_active_club_name')) clubName = localStorage.getItem('equievent_active_club_name');
         }
 
-        // 2. Logget ind bruger (fra JWT token)
-        const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
-        if (token) {
-            try {
-                const payload = parseJwt ? parseJwt(token) : JSON.parse(atob(token.split('.')[1]));
-                const userEmail = payload ? payload.sub : null;
-                if (userEmail) {
-                    if (emailInput && !emailInput.value) emailInput.value = userEmail;
-                    if (nameInput && !nameInput.value) {
-                        if (userEmail.includes('arno') || userEmail.includes('arnolkristiansen')) {
-                            nameInput.value = 'Arno L. Kristiansen (Admin)';
-                        } else {
-                            nameInput.value = userEmail.split('@')[0];
-                        }
-                    }
+        // 2. Find kontaktperson / navn
+        let contactName = '';
+        if (window.activeClub && window.activeClub.contact_name) {
+            contactName = window.activeClub.contact_name;
+        }
+        if (!contactName) {
+            const profContact = document.getElementById('prof-contact-name');
+            if (profContact && profContact.value.trim()) contactName = profContact.value.trim();
+            else if (localStorage.getItem('equievent_active_contact_name')) contactName = localStorage.getItem('equievent_active_contact_name');
+        }
+
+        // 3. Find e-mailadresse
+        let userEmail = '';
+        if (window.activeClub && window.activeClub.contact_email) {
+            userEmail = window.activeClub.contact_email;
+        }
+        if (!userEmail) {
+            const profEmail = document.getElementById('prof-contact-email');
+            if (profEmail && profEmail.value.trim()) userEmail = profEmail.value.trim();
+            else if (localStorage.getItem('equievent_active_contact_email')) userEmail = localStorage.getItem('equievent_active_contact_email');
+        }
+
+        // 4. Hvis e-mail mangler, tjek token eller gemt login
+        if (!userEmail) {
+            userEmail = localStorage.getItem('equievent_user_email') || sessionStorage.getItem('equievent_user_email') || '';
+        }
+        if (!userEmail) {
+            const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
+            if (token) {
+                const payload = (typeof window.parseJwt === 'function') ? window.parseJwt(token) : parseJwt(token);
+                if (payload && payload.sub) {
+                    userEmail = payload.sub;
                 }
-            } catch(e) {}
+            }
         }
 
-        // 3. Tidligere udfyldt kontaktinfo
-        const savedContact = localStorage.getItem('equievent_last_contact_info');
-        if (savedContact) {
-            try {
-                const parsed = JSON.parse(savedContact);
-                if (nameInput && !nameInput.value && parsed.name) nameInput.value = parsed.name;
-                if (emailInput && !emailInput.value && parsed.email) emailInput.value = parsed.email;
-            } catch(e) {}
+        // 5. Hvis kontaktnavn mangler, udled fra e-mail
+        if (!contactName && userEmail) {
+            if (userEmail.toLowerCase().includes('arno')) {
+                contactName = 'Arno L. Kristiansen';
+            } else {
+                const localPart = userEmail.split('@')[0];
+                contactName = localPart.charAt(0).toUpperCase() + localPart.slice(1);
+            }
+        }
+
+        // 6. Udfyld inputfelter automatisk
+        if (emailInput && userEmail) {
+            emailInput.value = userEmail;
+        }
+
+        if (nameInput) {
+            if (contactName && clubName) {
+                nameInput.value = `${contactName} (${clubName})`;
+            } else if (contactName) {
+                nameInput.value = contactName;
+            } else if (clubName) {
+                nameInput.value = clubName;
+            }
+        }
+
+        // 7. Fallback til tidligere gemt kontaktinfo hvis felterne stadig er tomme
+        if ((nameInput && !nameInput.value) || (emailInput && !emailInput.value)) {
+            const savedContact = localStorage.getItem('equievent_last_contact_info');
+            if (savedContact) {
+                try {
+                    const parsed = JSON.parse(savedContact);
+                    if (nameInput && !nameInput.value && parsed.name) nameInput.value = parsed.name;
+                    if (emailInput && !emailInput.value && parsed.email) emailInput.value = parsed.email;
+                } catch(e) {}
+            }
         }
 
         modal.style.display = 'flex';
@@ -2637,7 +2718,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = emailInput ? emailInput.value.trim() : '';
         const subject = subjectInput ? subjectInput.value.trim() : 'Supporthenvendelse';
         const message = messageInput ? messageInput.value.trim() : '';
-        const clubName = window.activeClub ? window.activeClub.name : '';
+        
+        let clubName = '';
+        if (window.activeClub && window.activeClub.name) {
+            clubName = window.activeClub.name;
+        } else {
+            const bannerName = document.getElementById('active-club-banner-name');
+            const sidebarName = document.getElementById('active-club-name-sidebar');
+            const profName = document.getElementById('prof-name');
+            if (bannerName && bannerName.innerText.trim()) clubName = bannerName.innerText.trim();
+            else if (sidebarName && sidebarName.innerText.trim()) clubName = sidebarName.innerText.trim();
+            else if (profName && profName.value.trim()) clubName = profName.value.trim();
+            else if (localStorage.getItem('equievent_active_club_name')) clubName = localStorage.getItem('equievent_active_club_name');
+        }
+        if (!clubName && name.includes('(') && name.includes(')')) {
+            const m = name.match(/\(([^)]+)\)/);
+            if (m) clubName = m[1];
+        }
 
         if (!name || !email || !message) {
             alert('Udfyld venligst dit navn, din e-mailadresse og beskrivelsen.');

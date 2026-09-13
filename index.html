@@ -76,6 +76,21 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
+        function safeParseJwt(t) {
+            if (!t) return null;
+            try {
+                let base64 = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) base64 += '=';
+                return JSON.parse(decodeURIComponent(escape(atob(base64))));
+            } catch (e) {
+                try {
+                    let b = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                    while (b.length % 4) b += '=';
+                    return JSON.parse(atob(b));
+                } catch (e2) { return null; }
+            }
+        }
+
         window.openContactSupportModal = function() {
             const modal = document.getElementById('contact-support-modal');
             if (!modal) return;
@@ -90,44 +105,96 @@
             const msgInput = document.getElementById('contact-sup-message');
             
             if (msgInput) msgInput.value = '';
-            
-            // 1. Aktiv klub info
+
+            // 1. Resolve club info
+            let clubName = '';
+            let contactName = '';
+            let contactEmail = '';
+
             if (window.activeClub) {
-                if (nameInput && !nameInput.value) {
-                    nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
-                }
-                if (emailInput && !emailInput.value && window.activeClub.contact_email) {
-                    emailInput.value = window.activeClub.contact_email;
-                }
+                clubName = window.activeClub.name || '';
+                contactName = window.activeClub.contact_name || '';
+                contactEmail = window.activeClub.contact_email || '';
             }
 
-            // 2. Logget ind bruger (fra JWT token)
+            if (!clubName) {
+                const bannerEl = document.getElementById('active-club-banner-name');
+                if (bannerEl && bannerEl.textContent.trim()) {
+                    clubName = bannerEl.textContent.trim();
+                }
+            }
+            if (!clubName) {
+                const sideEl = document.getElementById('active-club-name-sidebar');
+                if (sideEl && sideEl.textContent.trim()) {
+                    clubName = sideEl.textContent.trim();
+                }
+            }
+            if (!clubName) {
+                clubName = localStorage.getItem('equievent_active_club_name') || '';
+            }
+
+            // 2. Profile input fallback if available in DOM
+            if (!contactName) {
+                const profNameEl = document.getElementById('prof-contact-name');
+                if (profNameEl && profNameEl.value) contactName = profNameEl.value.trim();
+            }
+            if (!contactName) {
+                contactName = localStorage.getItem('equievent_active_contact_name') || '';
+            }
+
+            if (!contactEmail) {
+                const profEmailEl = document.getElementById('prof-contact-email');
+                if (profEmailEl && profEmailEl.value) contactEmail = profEmailEl.value.trim();
+            }
+            if (!contactEmail) {
+                contactEmail = localStorage.getItem('equievent_active_contact_email') || '';
+            }
+
+            // 3. Resolve user email & name from JWT
             const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
+            let userEmail = contactEmail || localStorage.getItem('equievent_user_email') || '';
             if (token) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    const userEmail = payload ? payload.sub : null;
-                    if (userEmail) {
-                        if (emailInput && !emailInput.value) emailInput.value = userEmail;
-                        if (nameInput && !nameInput.value) {
-                            if (userEmail.includes('arno') || userEmail.includes('arnolkristiansen')) {
-                                nameInput.value = 'Arno L. Kristiansen (Admin)';
-                            } else {
-                                nameInput.value = userEmail.split('@')[0];
-                            }
+                const payload = safeParseJwt(token);
+                if (payload && (payload.sub || payload.email)) {
+                    const jwtEmail = payload.sub || payload.email;
+                    if (!userEmail) userEmail = jwtEmail;
+                    if (!contactName) {
+                        if (payload.name) {
+                            contactName = payload.name;
+                        } else if (jwtEmail.toLowerCase().includes('arno')) {
+                            contactName = 'Arno L. Kristiansen';
                         }
                     }
-                } catch(e) {}
+                }
             }
 
-            // 3. Tidligere udfyldt kontaktinfo
+            // 4. Saved contact info fallback
             const savedContact = localStorage.getItem('equievent_last_contact_info');
             if (savedContact) {
                 try {
                     const parsed = JSON.parse(savedContact);
-                    if (nameInput && !nameInput.value && parsed.name) nameInput.value = parsed.name;
-                    if (emailInput && !emailInput.value && parsed.email) emailInput.value = parsed.email;
+                    if (!contactName && parsed.name) contactName = parsed.name;
+                    if (!userEmail && parsed.email) userEmail = parsed.email;
                 } catch(e) {}
+            }
+
+            // Format Name & Club display
+            let finalNameDisplay = '';
+            if (contactName && clubName) {
+                finalNameDisplay = `${contactName} (${clubName})`;
+            } else if (contactName) {
+                finalNameDisplay = contactName;
+            } else if (clubName) {
+                finalNameDisplay = clubName;
+            } else if (userEmail) {
+                finalNameDisplay = userEmail.split('@')[0];
+            }
+
+            if (nameInput) {
+                nameInput.value = finalNameDisplay;
+            }
+            if (emailInput) {
+                emailInput.value = userEmail || contactEmail || '';
             }
 
             modal.style.display = 'flex';
