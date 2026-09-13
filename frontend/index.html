@@ -165,10 +165,13 @@
                 });
 
                 if (response.ok) {
+                    const data = await response.json().catch(() => ({}));
                     const succName = document.getElementById('support-success-name');
                     const succEmail = document.getElementById('support-success-email');
+                    const succTicket = document.getElementById('support-success-ticket-id');
                     if (succName) succName.innerText = name;
                     if (succEmail) succEmail.innerText = email;
+                    if (succTicket && data.ticket_id) succTicket.innerText = `#${data.ticket_id}`;
 
                     const formSec = document.getElementById('support-form-section');
                     const succSec = document.getElementById('support-success-section');
