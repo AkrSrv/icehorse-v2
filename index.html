@@ -5,12 +5,187 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EquiEvent Competition Admin</title>
     <script>
+        // Skjul landing page prompte ved specielle visninger (leaderboard, magic link, reset password)
+        (function() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('leaderboard') || params.get('magic') || params.get('reset_token')) {
+                    document.documentElement.classList.add('hide-landing-view');
+                }
+            } catch (e) {}
+        })();
+        
         window.onerror = function(message, source, lineno, colno, error) {
             alert("JS FEJL: " + message + "\nFil: " + source + "\nLinje: " + lineno);
             return false;
         };
         window.onunhandledrejection = function(event) {
             alert("UNHANDLED REJECTION: " + event.reason);
+        };
+    </script>
+    <style>
+        html.hide-landing-view #landing-section {
+            display: none !important;
+        }
+    </style>
+    <script>
+        window.showLandingPage = function() {
+            const landing = document.getElementById('landing-section');
+            if (landing) landing.style.display = 'block';
+            const login = document.getElementById('login-section');
+            if (login) login.style.display = 'none';
+            const reg = document.getElementById('register-section');
+            if (reg) reg.style.display = 'none';
+            const forgot = document.getElementById('forgot-password-section');
+            if (forgot) forgot.style.display = 'none';
+            const reset = document.getElementById('reset-password-section');
+            if (reset) reset.style.display = 'none';
+            const dash = document.getElementById('dashboard');
+            if (dash) dash.style.display = 'none';
+            const clubs = document.getElementById('club-selection-section');
+            if (clubs) clubs.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.showLoginSection = function() {
+            const token = localStorage.getItem('equievent_token') || sessionStorage.getItem('equievent_token');
+            if (token && window.showDashboard) {
+                window.showDashboard();
+                return;
+            }
+            const landing = document.getElementById('landing-section');
+            if (landing) landing.style.display = 'none';
+            const login = document.getElementById('login-section');
+            if (login) login.style.display = 'block';
+            const reg = document.getElementById('register-section');
+            if (reg) reg.style.display = 'none';
+            const forgot = document.getElementById('forgot-password-section');
+            if (forgot) forgot.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.showRegisterSection = function() {
+            const landing = document.getElementById('landing-section');
+            if (landing) landing.style.display = 'none';
+            const login = document.getElementById('login-section');
+            if (login) login.style.display = 'none';
+            const reg = document.getElementById('register-section');
+            if (reg) reg.style.display = 'block';
+            const forgot = document.getElementById('forgot-password-section');
+            if (forgot) forgot.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.openContactSupportModal = function() {
+            const modal = document.getElementById('contact-support-modal');
+            if (!modal) return;
+            
+            const formSec = document.getElementById('support-form-section');
+            const succSec = document.getElementById('support-success-section');
+            if (formSec) formSec.style.display = 'block';
+            if (succSec) succSec.style.display = 'none';
+
+            const nameInput = document.getElementById('contact-sup-name');
+            const emailInput = document.getElementById('contact-sup-email');
+            const msgInput = document.getElementById('contact-sup-message');
+            
+            if (msgInput) msgInput.value = '';
+            
+            if (window.activeClub && nameInput && !nameInput.value) {
+                nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
+            }
+            if (window.activeClub && emailInput && !emailInput.value && window.activeClub.contact_email) {
+                emailInput.value = window.activeClub.contact_email;
+            }
+
+            modal.style.display = 'flex';
+        };
+
+        window.closeContactSupportModal = function() {
+            const modal = document.getElementById('contact-support-modal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.openAiChatFromSupport = function() {
+            window.closeContactSupportModal();
+            if (window.openAiChatSupport) {
+                window.openAiChatSupport();
+            }
+        };
+
+        window.openAiChatFromSuccess = function() {
+            window.closeContactSupportModal();
+            if (window.openAiChatSupport) {
+                window.openAiChatSupport();
+            }
+        };
+
+        window.submitContactSupport = async function(event) {
+            if (event) event.preventDefault();
+            
+            const nameInput = document.getElementById('contact-sup-name');
+            const emailInput = document.getElementById('contact-sup-email');
+            const subjectInput = document.getElementById('contact-sup-subject');
+            const messageInput = document.getElementById('contact-sup-message');
+            const submitBtn = document.getElementById('contact-sup-submit-btn');
+
+            const name = nameInput ? nameInput.value.trim() : '';
+            const email = emailInput ? emailInput.value.trim() : '';
+            const subject = subjectInput ? subjectInput.value.trim() : 'Supporthenvendelse';
+            const message = messageInput ? messageInput.value.trim() : '';
+            const clubName = window.activeClub ? window.activeClub.name : '';
+
+            if (!name || !email || !message) {
+                alert('Udfyld venligst dit navn, din e-mailadresse og beskrivelsen.');
+                return;
+            }
+
+            const oldHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender henvendelse...';
+            }
+
+            const apiBase = window.API_BASE || (window.location.hostname.includes('equievent.online') ? 'https://api.equievent.online' : (window.location.hostname.includes('equievent.dk') ? 'https://api.equievent.dk' : (window.location.hostname.includes('alkdata.dk') ? 'https://api.alkdata.dk' : 'http://' + window.location.hostname + ':8082')));
+
+            try {
+                const response = await fetch(`${apiBase}/support/contact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        subject: subject,
+                        message: message,
+                        club_name: clubName
+                    })
+                });
+
+                if (response.ok) {
+                    const succName = document.getElementById('support-success-name');
+                    const succEmail = document.getElementById('support-success-email');
+                    if (succName) succName.innerText = name;
+                    if (succEmail) succEmail.innerText = email;
+
+                    const formSec = document.getElementById('support-form-section');
+                    const succSec = document.getElementById('support-success-section');
+                    if (formSec) formSec.style.display = 'none';
+                    if (succSec) succSec.style.display = 'block';
+                } else {
+                    const errData = await response.json().catch(() => ({}));
+                    alert('Der opstod en fejl: ' + (errData.detail || 'Kunne ikke sende henvendelsen.'));
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Netværksfejl: Kunne ikke forbinde til serveren.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldHtml;
+                }
+            }
         };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -28,7 +203,26 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; background-image: radial-gradient(circle at top right, #1e1b4b, #0f172a); }
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            align-items: center; 
+            background-image: radial-gradient(circle at top right, #1e1b4b, #0f172a); 
+            margin: 0;
+            padding: 0;
+        }
+
+        #login-section, #register-section, #forgot-password-section, #reset-password-section {
+            margin: auto auto;
+        }
+
+        #admin-section, #magic-judge-section, #public-leaderboard-section {
+            width: 100%;
+        }
         
         .glass-panel {
             background: var(--surface);
@@ -124,20 +318,513 @@
                 padding: 1.5rem; transition: left 0.3s ease;
             }
             .sidebar.open { left: 0; box-shadow: 10px 0 25px rgba(0,0,0,0.5); }
-            
             .sidebar > h2 { display: none; }
             .mobile-close-btn { display: block; align-self: flex-end; margin-bottom: 1.5rem; background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); width: 40px; height: 40px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
-            
             .main-content { padding: 1rem; }
-            
             .flex-col-min { min-width: 100%; }
+        }
+            
+        /* LANDING PAGE STYLES (GLOBAL) */
+        #landing-section a {
+            text-decoration: none;
+            color: inherit;
+        }
+        #landing-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .landing-container {
+            width: 100%;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        .landing-header {
+            width: 100%;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 2rem;
+        }
+
+        .landing-header-inner {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .landing-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: #ffffff;
+            font-size: 1.45rem;
+            font-weight: 800;
+        }
+        .landing-logo i { color: var(--primary); font-size: 1.5rem; }
+
+        .landing-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.8rem;
+            list-style: none;
+        }
+
+        .landing-nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .landing-nav-links a:hover { color: #ffffff; }
+
+        .landing-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .hero-section {
+            padding: 5rem 0 3.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hero-badge {
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid rgba(244, 63, 94, 0.35);
+            color: #fb7185;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .hero-title {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 1.2rem;
+            max-width: 950px;
+            letter-spacing: -1px;
+            background: linear-gradient(to right, #ffffff 40%, #fb7185 80%, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 800px;
+            line-height: 1.7;
+            margin-bottom: 2.2rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 3.5rem;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .stat-num {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 0.2rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .section-header-block {
+            text-align: center;
+            margin: 5rem 0 3rem;
+        }
+
+        .section-header-block h2 {
+            font-size: 2.3rem;
+            font-weight: 800;
+            margin-bottom: 0.6rem;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+
+        .section-header-block p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        .landing-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.8rem;
+        }
+
+        .feature-card {
+            background: rgba(30, 41, 59, 0.65);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            backdrop-filter: blur(14px);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(244, 63, 94, 0.4);
+        }
+
+        .feature-icon-box {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .pricing-box {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 2px solid rgba(244, 63, 94, 0.4);
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);
+        }
+
+        .contact-box {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            max-width: 850px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        @media (max-width: 900px) {
+            .landing-nav-links { display: none; }
+            .hero-title { font-size: 2.3rem; }
+            .contact-box { grid-template-columns: 1fr; text-align: center; }
+            .landing-header { padding: 1rem; }
         }
     </style>
 </head>
 <body>
 
+    <!-- ========================================================================= -->
+    <!-- OFFICIEL SALGS- & LANDING PAGE -->
+    <!-- ========================================================================= -->
+    <section id="landing-section" style="width: 100%; display: block;">
+        <!-- STICKY HEADER -->
+        <header class="landing-header">
+            <div class="landing-header-inner">
+                <a href="#" class="landing-logo" onclick="window.showLandingPage(); return false;">
+                    <i class="fas fa-horse-head"></i>
+                    <span>EquiEvent</span>
+                </a>
+                <ul class="landing-nav-links">
+                    <li><a href="#discipliner">Discipliner</a></li>
+                    <li><a href="#fordele">Funktioner & Fordele</a></li>
+                    <li><a href="#priser">Priser</a></li>
+                    <li><a href="/guide.html" style="color: #fb7185; font-weight: 600;"><i class="fas fa-book-open" style="margin-right: 4px;"></i> Vejledning</a></li>
+                    <li><a href="#kontakt" onclick="window.openContactSupportModal(); return false;"><i class="fas fa-headset" style="margin-right: 4px; color: #38bdf8;"></i> Support</a></li>
+                </ul>
+                <div class="landing-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.showLoginSection()"><i class="fas fa-sign-in-alt"></i> Log Ind</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="window.showRegisterSection()"><i class="fas fa-plus-circle"></i> Opret Klub</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="landing-container">
+            <!-- HERO SEKTION -->
+            <section class="hero-section">
+                <div class="hero-badge">
+                    <i class="fas fa-sparkles"></i> Danmarks mest intuitive stævneplatform
+                </div>
+                <h1 class="hero-title">Slut med papirkaos og ventetid til dit hestestævne</h1>
+                <p class="hero-subtitle">
+                    EquiEvent samler alt hvad rideklubben behøver: digital dommerbedømmelse direkte fra mobilen ved banekanten, live publikums-leaderboard, automatiske A4-diplomer og 100% papirfri afvikling.
+                </p>
+                <div class="hero-buttons">
+                    <button type="button" class="btn btn-primary" style="width: auto; padding: 1.1rem 2.2rem; font-size: 1.05rem;" onclick="window.showRegisterSection()">
+                        <i class="fas fa-rocket" style="margin-right: 8px;"></i> Opret din klub gratis
+                    </button>
+                    <a href="/guide.html" class="btn btn-secondary" style="width: auto; padding: 1.1rem 2rem; font-size: 1.05rem; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-book-reader" style="margin-right: 8px; color: #fb7185;"></i> Se Brugervejledning
+                    </a>
+                    <button type="button" class="btn btn-secondary" style="width: auto; padding: 1.1rem 1.8rem; font-size: 1.05rem;" onclick="window.showLoginSection()">
+                        <i class="fas fa-key" style="margin-right: 8px;"></i> Log Ind
+                    </button>
+                </div>
+
+                <!-- STATS & TRUST BADGES -->
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-num" style="color: #10b981;">0 kr.</div>
+                        <div class="stat-label">Gratis oprettelse & opsætning</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-num" style="color: #f43f5e;">100%</div>
+                        <div class="stat-label">Papirfri dommerafvikling</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-num" style="color: #38bdf8;">3</div>
+                        <div class="stat-label">Discipliner (Dressur, Spring, Islænder)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-num" style="color: #fbbf24;">Live</div>
+                        <div class="stat-label">Realtids-leaderboard for alle</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DISCIPLINER I FOKUS -->
+            <section id="discipliner">
+                <div class="section-header-block">
+                    <h2>Skræddersyet til dine foretrukne discipliner</h2>
+                    <p>Uanset om du arrangerer et hyggeligt klubstævne eller en officiel konkurrence, er scoringsreglerne bygget direkte ind i systemet.</p>
+                </div>
+
+                <div class="landing-grid-3">
+                    <!-- Dressur -->
+                    <div class="feature-card">
+                        <div class="feature-icon-box">
+                            <i class="fas fa-horse"></i>
+                        </div>
+                        <h3>Dressur</h3>
+                        <p>Fuld understøttelse af DRF-programmer og klubbens egne klasser. Dommeren giver karakterer 0–10 med halve point (fx 6.5, 7.5), koefficienter (x2) ganges automatisk, fejlridning fratrækkes prompte (-2p / -6p), og scorelisten viser <strong>både samlet procent og opnåede point</strong> (fx 85.91% (171.8 p)).</p>
+                    </div>
+
+                    <!-- Springning -->
+                    <div class="feature-card">
+                        <div class="feature-icon-box" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;">
+                            <i class="fas fa-road"></i>
+                        </div>
+                        <h3>Springning</h3>
+                        <p>Hurtig og fejlfri scoring af forhindringer, nedslag (hver 4 fejl), refuseringer og ridetid i sekunder. Separat registrering for omspringning, stilkarakterer og statusvalg (Fejlfri, Elimineret, Udgået) med øjeblikkelig rangering.</p>
+                    </div>
+
+                    <!-- Islandske Heste -->
+                    <div class="feature-card">
+                        <div class="feature-icon-box" style="background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.3); color: #fbbf24;">
+                            <i class="fas fa-award"></i>
+                        </div>
+                        <h3>Islandske Heste</h3>
+                        <p>Specialudviklet til gangartskonkurrencer som Tølt (T8, T1), Firgang (4.1) og Femgang (5.1). Karakterer for hver enkelt opgavedel/gangart ganges med den korrekte vægtning, og det samlede gennemsnit beregnes øjeblikkeligt.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NØGLEFORDELE -->
+            <section id="fordele">
+                <div class="section-header-block">
+                    <h2>Hvorfor vælge EquiEvent til dit næste stævne?</h2>
+                    <p>Fra forberedelse og startlister til banedommeren og præmieoverrækkelsen — alt fungerer gnidningsfrit.</p>
+                </div>
+
+                <div class="landing-grid-3">
+                    <div class="feature-card">
+                        <div class="feature-icon-box">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <h3>Magic Links til Dommere</h3>
+                        <p>Ingen besværlig app-download eller kodeord for dommerne. Send et sikkert engangslink direkte på mail eller SMS. Dommeren dømmer touch-venligt fra mobilen ved banen.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <h3>Live Public Leaderboard</h3>
+                        <p>Del ét offentligt link eller QR-kode med ryttere og publikum. Stillingen opdateres i realtid med 🥇 Guld, 🥈 Sølv og 🥉 Bronze medaljer i samme sekund en rytter afslutter.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc;">
+                            <i class="fas fa-certificate"></i>
+                        </div>
+                        <h3>Print-Klare A4 Diplomer</h3>
+                        <p>Print officielle, præsentable stævnediplomer med klubbens navn, rytter, hest, officiel placering, samlet score og dommerens ord med ét enkelt klik.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;">
+                            <i class="fas fa-sliders-h"></i>
+                        </div>
+                        <h3>Fleksible Skabeloner & Klasser</h3>
+                        <p>Brug færdige standardprogrammer eller byg klubbens helt egne klasser med specifikke øvelser, bogstaver, anvisninger og koefficienter.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box" style="background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.3); color: #fbbf24;">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <h3>CSV & Excel Eksport</h3>
+                        <p>Eksporter alle stævneresultater, delkarakterer og placeringer som semikolon-separeret CSV til klubbens arkiv, hjemmeside eller Excel.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3>Indbygget AI-Support</h3>
+                        <p>Få øjeblikkelig hjælp døgnet rundt til oprettelse af klasser, stævneafvikling og pointberegninger direkte i den integrerede chat-assistent.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PRISER -->
+            <section id="priser">
+                <div class="section-header-block">
+                    <h2>Enkel og gennemskuelig pris</h2>
+                    <p>Ingen skjulte gebyrer, ingen dyre månedlige abonnementer. Du betaler kun, når du rent faktisk afholder et stævne.</p>
+                </div>
+
+                <div class="pricing-box">
+                    <div style="font-size: 0.9rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">Pr. Stævne Pakke</div>
+                    <div style="font-size: 3.5rem; font-weight: 800; color: #ffffff; margin-bottom: 0.5rem;">299 <span style="font-size: 1.5rem; font-weight: 500; color: var(--text-secondary);">DKK</span></div>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Inkl. moms &bull; Fuld gyldighed indtil 14 dage efter stævnedatoen</p>
+                    
+                    <ul style="text-align: left; list-style: none; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2.5rem;">
+                        <li style="display: flex; align-items: center; gap: 10px; color: #f1f5f9;"><i class="fas fa-check-circle" style="color: #10b981;"></i> 100% gratis opsætning, person- og hestekartoteker</li>
+                        <li style="display: flex; align-items: center; gap: 10px; color: #f1f5f9;"><i class="fas fa-check-circle" style="color: #10b981;"></i> Ubegrænset antal klasser, ryttere og dommere</li>
+                        <li style="display: flex; align-items: center; gap: 10px; color: #f1f5f9;"><i class="fas fa-check-circle" style="color: #10b981;"></i> Touch-venlig dommerafvikling via Magic Links</li>
+                        <li style="display: flex; align-items: center; gap: 10px; color: #f1f5f9;"><i class="fas fa-check-circle" style="color: #10b981;"></i> Live public leaderboard i realtid</li>
+                        <li style="display: flex; align-items: center; gap: 10px; color: #f1f5f9;"><i class="fas fa-check-circle" style="color: #10b981;"></i> Print af officielle A4-diplomer & CSV-eksport</li>
+                        <li style="display: flex; align-items: center; gap: 10px; color: #f1f5f9;"><i class="fas fa-check-circle" style="color: #10b981;"></i> Gratis AI-supportassistent døgnet rundt</li>
+                    </ul>
+
+                    <button type="button" class="btn btn-primary" style="padding: 1.1rem; font-size: 1.1rem;" onclick="window.showRegisterSection()">
+                        Opret gratis klub og prøv systemet
+                    </button>
+                </div>
+            </section>
+
+            <!-- KONTAKT & OM STIFTEREN -->
+            <section id="kontakt">
+                <div class="section-header-block">
+                    <h2>Kontakt & Udvikler</h2>
+                    <p>EquiEvent er udviklet af ALKData i Danmark med fokus på høj driftssikkerhed, moderne webstandarder og kærlighed til hestesporten.</p>
+                </div>
+
+                <div class="contact-box">
+                    <div style="text-align: center;">
+                        <div style="width: 100px; height: 100px; border-radius: 50%; background: rgba(244, 63, 94, 0.2); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2.8rem; color: #ffffff;">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <h3 style="color: #ffffff; font-size: 1.3rem; margin-bottom: 0.3rem;">Arno L. Kristiansen</h3>
+                        <p style="color: #38bdf8; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem;">Lead Domain Architect & Stifter</p>
+                        <a href="https://alkdata.dk" target="_blank" style="color: var(--primary); text-decoration: none; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-external-link-alt"></i> Besøg alkdata.dk
+                        </a>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <p style="color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                            Har du spørgsmål til systemet, ønsker en skræddersyet løsning til din klub, eller har du brug for personlig support? Tøv ikke med at række ud.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(15, 23, 42, 0.6); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                            <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: #ffffff;">
+                                <i class="fas fa-envelope" style="color: var(--primary);"></i>
+                                <span>Support E-mail: <a href="javascript:void(0)" onclick="window.openContactSupportModal()" style="color: #fb7185; text-decoration: underline; font-weight: 600; cursor: pointer;" title="Klik for at åbne kontaktformular">equievent_support@alkdata.dk</a></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: #ffffff;">
+                                <i class="fas fa-clock" style="color: #10b981;"></i>
+                                <span>Svartid: Skriftlige henvendelser besvares inden for <strong>max 3 arbejdsdage</strong></span>
+                            </div>
+                            <div style="padding-top: 0.5rem; border-top: 1px solid var(--glass-border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="window.openContactSupportModal()" style="font-weight: bold; background: linear-gradient(135deg, #f43f5e, #e11d48);"><i class="fas fa-paper-plane"></i> Send Henvendelse / Opret Sag</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="window.openAiChatSupport()" style="font-weight: 600; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.1);"><i class="fas fa-robot"></i> Spørg AI Chatbot</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- KLUB SYSTEM AUTH SEKTIONER -->
+    <!-- ========================================================================= -->
+
     <!-- LOGIN -->
-    <main id="login-section" class="glass-panel">
+    <main id="login-section" class="glass-panel" style="display: none;">
+        <div style="display: flex; justify-content: flex-start; margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.showLandingPage()"><i class="fas fa-arrow-left"></i> Tilbage til Forsiden</button>
+        </div>
         <div style="text-align: center; margin-bottom: 2rem;">
             <i class="fas fa-horse-head" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
             <h2>Klub Login</h2>
@@ -166,6 +853,9 @@
 
     <!-- REGISTER -->
     <main id="register-section" class="glass-panel" style="display: none;">
+        <div style="display: flex; justify-content: flex-start; margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.showLandingPage()"><i class="fas fa-arrow-left"></i> Tilbage til Forsiden</button>
+        </div>
         <div style="text-align: center; margin-bottom: 2rem;">
             <i class="fas fa-horse-head" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
             <h2>Opret Klub</h2>
@@ -236,8 +926,9 @@
         <div id="club-selection-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
             <!-- Renderes via JS -->
         </div>
-        <div style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.8rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
             <button type="button" class="btn btn-secondary" onclick="document.getElementById('create-new-club-modal').style.display='flex'">+ Opret en anden klub</button>
+            <button type="button" class="btn btn-secondary" onclick="window.showLandingPage()" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.25); color: #fb7185;"><i class="fas fa-home"></i> Til Salgsside / Forside</button>
             <button type="button" class="btn btn-danger" onclick="logout()">Log ud</button>
         </div>
     </main>
@@ -249,7 +940,11 @@
                 <h2>EquiEvent</h2>
                 <div id="active-club-name-topbar" style="display: none; font-size: 0.8rem; color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.1); padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid rgba(251, 191, 36, 0.2); display: inline-block; margin-top: 0.25rem;"></div>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="window.toggleSidebar()" style="background: transparent; border: 1px solid var(--glass-border);"><i class="fas fa-bars" style="font-size: 1.2rem;"></i></button>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="btn btn-secondary btn-sm" onclick="window.openContactSupportModal()" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;" title="Kontakt Support"><i class="fas fa-headset"></i> Support</button>
+                <button class="btn btn-secondary btn-sm" onclick="window.showLandingPage()" style="background: transparent; border: 1px solid var(--glass-border);" title="Gå til Salgsside"><i class="fas fa-home"></i></button>
+                <button class="btn btn-secondary btn-sm" onclick="window.toggleSidebar()" style="background: transparent; border: 1px solid var(--glass-border);"><i class="fas fa-bars" style="font-size: 1.2rem;"></i></button>
+            </div>
         </div>
         <div id="sidebar-overlay" class="sidebar-overlay" onclick="window.toggleSidebar()"></div>
 
@@ -264,6 +959,8 @@
                 <button class="btn btn-secondary tab-btn" data-tab="profile"><i class="fas fa-user-cog"></i> Profil</button>
                 <button class="btn btn-secondary tab-btn" id="superadmin-tab-btn" data-tab="superadmin" style="display: none; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #3b82f6;"><i class="fas fa-user-shield"></i> Super Admin</button>
                 <a href="/guide.html" target="_blank" class="btn btn-secondary nav-guide-btn" style="text-decoration: none;"><i class="fas fa-question-circle"></i> Vejledning</a>
+                <button type="button" class="btn btn-secondary" onclick="window.openContactSupportModal()" style="text-align: left; display: flex; align-items: center; gap: 10px; background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;"><i class="fas fa-headset"></i> Kontakt Support</button>
+                <button type="button" class="btn btn-secondary" onclick="window.showLandingPage()" style="text-align: left; display: flex; align-items: center; gap: 10px; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.25); color: #fb7185;"><i class="fas fa-home"></i> Til Salgsside</button>
             </div>
 
             
@@ -403,12 +1100,11 @@
                         <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
                                 <h4 style="margin: 0;">Administrér klasser for dette stævne</h4>
-                                <button class="btn btn-primary btn-sm" type="button" onclick="importStandardClasses()" style="background: #10b981; border: none; font-weight: bold;"><i class="fas fa-download"></i> Importer standardklasser</button>
                             </div>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Vælg hvilke af klubbens oprettede klasser/poster der skal afvikles ved dette stævne. Du kan også klikke på "Importer standardklasser" for automatisk at oprette standardklasser for de valgte discipliner.</p>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Vælg hvilke af klubbens aktive klasser/poster der skal afvikles ved dette stævne. Du kan åbne og lukke de enkelte discipliner nedenfor for et hurtigt overblik.</p>
                             
-                            <div id="comp-classes-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 6px; border: 1px solid var(--glass-border);">
-                                <!-- Bliver fyldt af JS -->
+                            <div id="comp-classes-checkboxes" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                                <!-- Bliver fyldt med foldbare disciplin-accordions af JS -->
                             </div>
                             <button class="btn btn-primary" type="button" onclick="saveCompetitionClasses()"><i class="fas fa-save"></i> Gem Klassevalg</button>
                         </div>
@@ -501,71 +1197,159 @@
                 </div>
             </div>
 
-            <!-- POSTER TAB -->
+            <!-- POSTER / KLASSER TAB -->
             <div class="tab-content" id="posts-tab" style="display: none;">
                 <div class="content-header">
                     <h3>Poster / Klasser</h3>
                 </div>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">Opret klubbens faste poster (f.eks. "Tølt T1", "Pasløb"). Disse kan genbruges ved alle stævner.</p>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Administrer klubbens klasser, opret egne unikke opgaver/forhindringer og tilpas standardprogrammer.</p>
                 
-                <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
-                    <div class="flex-col-min">
-                        <form id="club-post-form" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
-                            <h4 style="margin-bottom: 1rem;">Opret Ny Post / Klasse</h4>
-                            <div class="input-group">
-                                <label>Navn (F.eks. LC1 el. 80 cm)</label>
-                                <input type="text" id="club-post-name" required>
-                            </div>
-                            <div style="display: flex; gap: 1rem;">
-                                <div class="input-group" style="flex: 1;">
-                                    <label>Disciplin</label>
-                                    <select id="club-post-discipline" onchange="window.updateClubPostScoringMethodOptions(); window.renderClubPosts();" required>
-                                        <option value="all" selected>Alle poster/klasser</option>
-                                        <option value="gait">Gangart (Islandske Heste)</option>
-                                        <option value="dressage">Dressur (Traditionel)</option>
-                                        <option value="jumping">Springning (Traditionel)</option>
-                                    </select>
+                <!-- 3 FANEBLADE -->
+                <div style="display: flex; gap: 0.8rem; margin-bottom: 2rem; flex-wrap: wrap; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                    <button type="button" class="btn btn-secondary posts-subtab-btn active" id="posts-subtab-btn-create" onclick="window.switchPostsSubTab('create')" style="font-weight: 700;">
+                        <i class="fas fa-plus-circle"></i> Opret mine egne klasser/poster
+                    </button>
+                    <button type="button" class="btn btn-secondary posts-subtab-btn" id="posts-subtab-btn-active" onclick="window.switchPostsSubTab('active')" style="font-weight: 700;">
+                        <i class="fas fa-list-check"></i> Klasser/Poster som jeg anvender i min klub
+                    </button>
+                    <button type="button" class="btn btn-secondary posts-subtab-btn" id="posts-subtab-btn-standards" onclick="window.switchPostsSubTab('standards')" style="font-weight: 700;">
+                        <i class="fas fa-sliders-h"></i> Tilpasning af standard klasseskabeloner
+                    </button>
+                </div>
+
+                <!-- SUBTAB 1: OPRET MINE EGNE KLASSER/POSTER -->
+                <div id="posts-subtab-create" class="posts-subtab-pane">
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.8rem; max-width: 800px; margin-bottom: 2rem;">
+                        <h4 style="color: #fbbf24; margin-bottom: 0.5rem;"><i class="fas fa-magic"></i> Opret Ny Klub-individuel Klasse / Post</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Klassen gemmes på klub-niveau og er kun synlig for din klub. Du kan tilføje specifikke opgavedele, dressurøvelser eller springforhindringer.</p>
+                        
+                        <form id="custom-class-create-form" onsubmit="window.saveCustomClubClass(event)">
+                            <div class="input-group" style="margin-bottom: 1.2rem;">
+                                <label style="font-weight: 700; color: white;">Vælg Disciplin:</label>
+                                <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-sm custom-disc-btn active" id="btn-disc-gait" onclick="window.setCustomClassDiscipline('gait')" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fbbf24; font-weight: 700; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                                        🇮🇸 Islænder (Gangart / Post)
+                                    </button>
+                                    <button type="button" class="btn btn-sm custom-disc-btn" id="btn-disc-dressage" onclick="window.setCustomClassDiscipline('dressage')" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--glass-border); color: #10b981; font-weight: 700; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                                        🐎 Dressur
+                                    </button>
+                                    <button type="button" class="btn btn-sm custom-disc-btn" id="btn-disc-jumping" onclick="window.setCustomClassDiscipline('jumping')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--glass-border); color: #60a5fa; font-weight: 700; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                                        🚧 Springning
+                                    </button>
                                 </div>
-                                <div class="input-group" style="flex: 1;">
-                                    <label>Bedømmelsesmetode</label>
-                                    <select id="club-post-scoring-method" required>
-                                        <option value="standard" selected>Standard (sum/gns)</option>
-                                    </select>
+                                <input type="hidden" id="custom-class-discipline" value="gait">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label>Klassenavn / Postnavn *</label>
+                                    <input type="text" id="custom-class-name" placeholder="F.eks. Tølt-Cup, Klub LD eller Mini-Spring 50 cm" required>
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label>Lokation / Bane (Valgfri)</label>
+                                    <input type="text" id="custom-class-location" placeholder="F.eks. Ovalbane 1, Ridehus A, Springbane">
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 1rem;">
-                                <div class="input-group" style="flex: 1;">
-                                    <label>Koefficient (Dressur)</label>
-                                    <input type="number" step="0.1" id="club-post-coefficient" value="1.0">
-                                </div>
-                                <div class="input-group" style="flex: 1;">
-                                    <label>Max karakter</label>
-                                    <input type="number" step="0.5" id="club-post-max-value" value="10.0">
-                                </div>
-                            </div>
-                            <div class="input-group">
-                                <label>Lokation (Valgfri)</label>
-                                <input type="text" id="club-post-location" placeholder="F.eks. Ovalbane 1">
-                            </div>
-                            <div class="input-group">
+
+                            <div class="input-group" style="margin-bottom: 1rem;">
                                 <label>Beskrivelse (Valgfri)</label>
-                                <textarea id="club-post-description" rows="3" placeholder="Kort beskrivelse..."></textarea>
+                                <textarea id="custom-class-description" rows="2" placeholder="Kort vejledning eller anvisning til ryttere og dommere..."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary">Opret Post</button>
+
+                            <!-- DYNAMISK ØVELSES- / FORHINDRINGSBYGGER -->
+                            <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 10px; padding: 1.2rem; margin-bottom: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;">
+                                    <h5 id="custom-builder-title" style="margin: 0; color: #fbbf24; font-size: 1rem;">Opgavedele / Øvelser til bedømmelse</h5>
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="window.addCustomClassRow()" style="font-size: 0.8rem; font-weight: 700;">
+                                        <i class="fas fa-plus"></i> <span id="custom-builder-add-btn-text">Tilføj Opgavedel</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- MASSEHANDLINGER VÆRKTØJSLINJE -->
+                                <div id="custom-builder-bulk-toolbar" style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.5rem 0.8rem; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                    <label style="font-size: 0.8rem; color: white; display: flex; align-items: center; gap: 0.4rem; margin: 0; cursor: pointer; font-weight: 600;">
+                                        <input type="checkbox" id="custom-select-all-cb" onchange="window.toggleSelectAllCustomRows(this.checked)" style="width: auto; margin: 0; cursor: pointer;">
+                                        Vælg alle (<span id="custom-selected-count">0</span>)
+                                    </label>
+                                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                        <button type="button" class="btn btn-sm" id="custom-bulk-active-btn" onclick="window.setBulkActiveCustomRows(true)" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;" disabled>
+                                            <i class="fas fa-check"></i> Aktivér
+                                        </button>
+                                        <button type="button" class="btn btn-sm" id="custom-bulk-inactive-btn" onclick="window.setBulkActiveCustomRows(false)" style="background: rgba(148,163,184,0.15); border: 1px solid rgba(148,163,184,0.3); color: #94a3b8; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;" disabled>
+                                            <i class="fas fa-eye-slash"></i> Deaktivér
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm" id="custom-bulk-delete-btn" onclick="window.deleteSelectedCustomRows()" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;" disabled>
+                                            <i class="fas fa-trash"></i> Slet valgte (<span id="custom-btn-count">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="custom-class-rows-container" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                                    <!-- Dynamic rows for selected discipline -->
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="background: #fbbf24; color: #0f172a; border: none; font-weight: 700; font-size: 1rem; padding: 0.8rem 1.6rem; border-radius: 8px;">
+                                <i class="fas fa-check-circle"></i> Opret & Gem Klasse i Klubben
+                            </button>
                         </form>
                     </div>
-                    <div class="flex-col-min">
-                        <div id="club-posts-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                </div>
+
+                <!-- SUBTAB 2: KLASSER/POSTER SOM JEG ANVENDER I MIN KLUB -->
+                <div id="posts-subtab-active" class="posts-subtab-pane" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="active-posts-filter-btns">
+                            <button type="button" class="btn btn-sm active-filter-btn active" onclick="window.filterActiveClubPosts('all')" style="background: rgba(255,255,255,0.15); border: 1px solid var(--glass-border); color: #fff; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                Alle (<span id="count-active-all">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-sm active-filter-btn" onclick="window.filterActiveClubPosts('gait')" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                🇮🇸 Islænder (<span id="count-active-gait">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-sm active-filter-btn" onclick="window.filterActiveClubPosts('dressage')" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                🐎 Dressur (<span id="count-active-dressage">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-sm active-filter-btn" onclick="window.filterActiveClubPosts('jumping')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                🚧 Spring (<span id="count-active-jumping">0</span>)
+                            </button>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                            <i class="fas fa-sort-amount-down-alt"></i> Sorteret efter sværhedsgrad (lettest øverst)
+                        </div>
+                    </div>
+
+                    <div id="club-posts-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <!-- Renderes via JS -->
                     </div>
                 </div>
-                
-                <div style="border-top: 1px solid var(--glass-border); padding-top: 2rem; margin-top: 2rem; width: 100%;">
-                    <h4 style="color: #fbbf24; margin-bottom: 1rem;"><i class="fas fa-sliders-h"></i> Tilpas Klasseskabeloner (v1 API)</h4>
-                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
-                        Her kan du tilpasse de standard-øvelser eller opgavedele, der skal bedømmes for dine klasser.
-                        Ændringerne gemmes pr. klub og overskriver de globale standarder for dine stævner.
+
+                <!-- SUBTAB 3: TILPASNING AF STANDARD KLASSESKABELONER -->
+                <div id="posts-subtab-standards" class="posts-subtab-pane" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="standards-filter-btns">
+                            <button type="button" class="btn btn-sm std-filter-btn active" onclick="window.filterStandardsByDiscipline('all')" style="background: rgba(255,255,255,0.15); border: 1px solid var(--glass-border); color: #fff; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                Alle
+                            </button>
+                            <button type="button" class="btn btn-sm std-filter-btn" onclick="window.filterStandardsByDiscipline('gait')" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                🇮🇸 Islænder
+                            </button>
+                            <button type="button" class="btn btn-sm std-filter-btn" onclick="window.filterStandardsByDiscipline('dressage')" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                🐎 Dressur
+                            </button>
+                            <button type="button" class="btn btn-sm std-filter-btn" onclick="window.filterStandardsByDiscipline('jumping')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 700; padding: 0.4rem 0.9rem; border-radius: 6px;">
+                                🚧 Spring
+                            </button>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                            <i class="fas fa-sort-amount-down-alt"></i> Sorteret efter sværhedsgrad (lettest øverst)
+                        </div>
+                    </div>
+
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.88rem;">
+                        Her kan du tilpasse de enkelte øvelser, anvisninger og forhindringer for forbundets standardklasser. Du kan tilføje øvelser, ændre koefficienter eller sætte øvelser/forhindringer <strong>inaktive</strong>, så de udelades fra dommerens skema.
                     </p>
-                    <div id="v1-class-templates-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+                    <div id="v1-class-templates-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                         <!-- Indlæses via JS -->
                     </div>
                 </div>
@@ -641,21 +1425,25 @@
                 <!-- SA STATS TAB -->
                 <div id="sa-stats-section">
                     <!-- Overordnede tal -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(59, 130, 246, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
                             <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Klubber i alt</div>
                             <h2 id="sa-stat-clubs" style="font-size: 2.5rem; color: #3b82f6; margin: 0.5rem 0 0 0;">0</h2>
                         </div>
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(16, 185, 129, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Aktive/Betalte Stævner</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Aktive Stævner</div>
                             <h2 id="sa-stat-active-comps" style="font-size: 2.5rem; color: #10b981; margin: 0.5rem 0 0 0;">0</h2>
                         </div>
+                        <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(56, 189, 248, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Afviklede Stævner</div>
+                            <h2 id="sa-stat-completed-comps" style="font-size: 2.5rem; color: #38bdf8; margin: 0.5rem 0 0 0;">0</h2>
+                        </div>
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(244, 63, 94, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Inaktive Stævner</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Ikke-aktiverede</div>
                             <h2 id="sa-stat-inactive-comps" style="font-size: 2.5rem; color: #f43f5e; margin: 0.5rem 0 0 0;">0</h2>
                         </div>
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border-color: rgba(251, 191, 36, 0.3); border-style: solid; border-width: 1px; border-radius: 12px; background: rgba(0,0,0,0.2);">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Overskredet startdato</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Udløbet / Ubetalt</div>
                             <h2 id="sa-stat-outdated-comps" style="font-size: 2.5rem; color: #fbbf24; margin: 0.5rem 0 0 0;">0</h2>
                         </div>
                     </div>
@@ -669,8 +1457,10 @@
                                     <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
                                         <th style="padding: 0.75rem;">Klub Navn</th>
                                         <th style="padding: 0.75rem;">Ejer E-mail</th>
-                                        <th style="padding: 0.75rem;">Oprettede Stævner</th>
-                                        <th style="padding: 0.75rem;">Betalte/Aktive</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Oprettede i alt</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Aktive</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Afviklet</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Ikke-aktiveret</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sa-club-stats-list">
@@ -712,7 +1502,7 @@
                             <h4 style="margin-bottom: 1.5rem; color: #ffffff;">Opret ny rabatkode</h4>
                             <form id="sa-discount-form">
                                 <div class="input-group">
-                                    <label>Rabatkode (fx 'SOMMER50')</label>
+                                    <label>Rabatkode (fx 'SOMMERGRATIS')</label>
                                     <input type="text" id="sa-discount-code" required placeholder="Indtast kode" style="text-transform: uppercase;">
                                 </div>
                                 <div class="input-group">
@@ -722,8 +1512,15 @@
                                         <option value="25">25% rabat</option>
                                         <option value="50">50% rabat</option>
                                         <option value="75">75% rabat</option>
-                                        <option value="100">100% rabat (Gratis stævne)</option>
+                                        <option value="100" selected>100% rabat (Gratis stævne)</option>
                                     </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Maks. anvendelser pr. klub / login</label>
+                                    <input type="number" id="sa-discount-max-per-club" min="1" placeholder="F.eks. 3 (lad stå tomt for ubegrænset)" style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 8px; color: white;">
+                                    <small style="color: var(--text-secondary); font-size: 0.78rem; display: block; margin-top: 0.35rem;">
+                                        F.eks. <strong>3</strong> hvis hver klub maks. må bruge koden til 3 stævner. Lad stå tomt for ubegrænset.
+                                    </small>
                                 </div>
                                 <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Opret rabatkode</button>
                             </form>
@@ -738,7 +1535,9 @@
                                         <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
                                             <th style="padding: 0.75rem;">Kode</th>
                                             <th style="padding: 0.75rem;">Rabat</th>
-                                            <th style="padding: 0.75rem;">Status</th>
+                                            <th style="padding: 0.75rem; text-align: center;">Maks. pr. klub</th>
+                                            <th style="padding: 0.75rem; text-align: center;">Anvendt i alt</th>
+                                            <th style="padding: 0.75rem; text-align: center;">Status</th>
                                             <th style="padding: 0.75rem; text-align: right;">Handling</th>
                                         </tr>
                                     </thead>
@@ -747,6 +1546,34 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Klub Forbrugsoversigt for rabatkoder -->
+                    <div class="glass-panel" style="border-radius: 12px; margin-top: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h4 style="color: #ffffff; margin-bottom: 0.25rem;"><i class="fas fa-history" style="color: var(--primary);"></i> Rabatkode-forbrug pr. Klub</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary);">Oversigt over hvilke klubber der har brugt hvilke koder, og hvor mange gange de er anvendt i forhold til maksgrænsen.</p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="fetchSaDiscounts()"><i class="fas fa-sync-alt"></i> Opdatér</button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
+                                        <th style="padding: 0.75rem;">Klub Navn</th>
+                                        <th style="padding: 0.75rem;">Ejer E-mail</th>
+                                        <th style="padding: 0.75rem;">Anvendt Rabatkode</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Forbrug / Maks</th>
+                                        <th style="padding: 0.75rem;">Tilknyttede Stævner</th>
+                                        <th style="padding: 0.75rem; text-align: right;">Senest anvendt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sa-discount-usages-list">
+                                    <!-- Indsættes dynamisk via JS -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -859,9 +1686,12 @@
 
     <!-- MODAL: REDIGER CLASS DEFINITION TEMPLATE -->
     <div id="v1-edit-template-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1001; justify-content: center; align-items: center; padding: 1rem;">
-        <div class="glass-panel" style="max-width: 600px; width: 100%; overflow-y: auto; max-height: 90vh; border-radius: 16px; border: 1px solid var(--glass-border); padding: 2rem;">
+        <div class="glass-panel" style="max-width: 720px; width: 100%; overflow-y: auto; max-height: 90vh; border-radius: 16px; border: 1px solid var(--glass-border); padding: 2rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                <h3 id="v1-template-modal-title" style="color: #fbbf24; margin: 0;">Rediger Klasseskabelon</h3>
+                <div>
+                    <h3 id="v1-template-modal-title" style="color: #fbbf24; margin: 0;">Tilpas Klasseskabelon</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">Sæt øvelser eller forhindringer inaktive for at udelade dem fra dommerens skema.</p>
+                </div>
                 <span style="font-size: 1.5rem; color: var(--text-secondary); cursor: pointer;" onclick="document.getElementById('v1-edit-template-modal').style.display='none'">&times;</span>
             </div>
             
@@ -872,20 +1702,39 @@
                 <input type="hidden" id="v1-template-class-scoring">
                 
                 <div class="input-group">
-                    <label>Navn</label>
+                    <label>Klassenavn</label>
                     <input type="text" id="v1-template-class-name" required style="width: 100%;">
                 </div>
                 
-                <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1rem; color: white;">Øvelser / Opgavedele</h4>
-                <div id="v1-template-exercises-container" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h4 id="v1-template-section-heading" style="margin: 0; font-size: 1rem; color: white;">Øvelser / Forhindringer</h4>
+                    <button type="button" class="btn btn-secondary btn-sm" id="v1-template-add-row-btn" onclick="window.addV1TemplateExerciseRow()" style="font-weight: 700;">+ Tilføj Række</button>
+                </div>
+                
+                <!-- MASSEHANDLINGER VÆRKTØJSLINJE -->
+                <div id="v1-template-bulk-toolbar" style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.5rem 0.8rem; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <label style="font-size: 0.8rem; color: white; display: flex; align-items: center; gap: 0.4rem; margin: 0; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" id="v1-tpl-select-all-cb" onchange="window.toggleSelectAllTemplateRows(this.checked)" style="width: auto; margin: 0; cursor: pointer;">
+                        Vælg alle (<span id="v1-tpl-selected-count">0</span>)
+                    </label>
+                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-sm" id="v1-tpl-bulk-active-btn" onclick="window.setBulkActiveTemplateRows(true)" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;" disabled title="Sæt valgte som aktive til bedømmelse">
+                            <i class="fas fa-check"></i> Aktivér valgte
+                        </button>
+                        <button type="button" class="btn btn-sm" id="v1-tpl-bulk-inactive-btn" onclick="window.setBulkActiveTemplateRows(false)" style="background: rgba(148,163,184,0.15); border: 1px solid rgba(148,163,184,0.3); color: #94a3b8; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;" disabled title="Sæt valgte som inaktive (skjules for dommer)">
+                            <i class="fas fa-eye-slash"></i> Deaktivér valgte
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" id="v1-tpl-bulk-delete-btn" onclick="window.deleteSelectedTemplateRows()" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;" disabled>
+                            <i class="fas fa-trash"></i> Slet valgte (<span id="v1-tpl-btn-count">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="v1-template-exercises-container" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 440px; overflow-y: auto; padding-right: 4px;">
                     <!-- Dynamic Rows Rendered Here -->
                 </div>
                 
-                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.addV1TemplateExerciseRow()">+ Tilføj Øvelse</button>
-                </div>
-                
-                <div style="margin-top: 2rem; display: flex; justify-content: space-between; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
+                <div style="margin-top: 2rem; display: flex; justify-content: space-between; border-top: 1px solid var(--glass-border); padding-top: 1rem; flex-wrap: wrap; gap: 0.8rem;">
                     <button type="button" class="btn btn-danger" id="v1-template-reset-btn" onclick="window.resetV1TemplateToStandard()">Nulstil til standard</button>
                     <div style="display: flex; gap: 0.5rem;">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('v1-edit-template-modal').style.display='none'">Annuller</button>
@@ -964,7 +1813,12 @@
     </div>
 
     <!-- MAGIC JUDGE SECTION -->
-    <main id="magic-judge-section" class="glass-panel" style="display: none; max-width: 600px; margin: 1rem auto; padding: 2rem;">
+    <main id="magic-judge-section" class="glass-panel" style="display: none; max-width: 600px; margin: 1rem auto; padding: 2rem; position: relative;">
+        <!-- STÆVNE STATUS BADGE I HØJRE HJØRNE -->
+        <div id="mj-comp-status-badge" style="display: none; position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; align-items: center; gap: 0.4rem; z-index: 10;">
+            <i class="fas fa-lock"></i> ⚠️ Stævne ikke aktiveret
+        </div>
+
         <div style="text-align: center; margin-bottom: 2rem;">
             <i class="fas fa-gavel" style="font-size: 3rem; color: #10b981; margin-bottom: 1rem;"></i>
             <h2 id="mj-title" style="color: #10b981;">Dommer Panel</h2>
@@ -993,11 +1847,17 @@
             </div>
             <div id="mj-rider-search-results" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; max-height: 200px; overflow-y: auto;"></div>
 
-            <form id="mj-score-form" style="display: none; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <form id="mj-score-form" onsubmit="window.submitJudgeScore(event); return false;" style="display: none; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--glass-border);">
                 <input type="hidden" id="mj-rider-id">
                 <input type="hidden" id="mj-score-id">
                 <h4 id="mj-selected-rider-name" style="margin-bottom: 1rem; color: white;"></h4>
                 
+                <!-- ADVARSEL: STÆVNE IKKE AKTIVERET -->
+                <div id="mj-inactive-notice" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1rem; color: #fca5a5; font-size: 0.85rem; align-items: center; gap: 0.6rem;">
+                    <i class="fas fa-lock" style="font-size: 1.3rem; color: #ef4444;"></i>
+                    <div><strong>Pointafgivelse er låst:</strong> Dette stævne er endnu ikke aktiveret af klubben. Du kan afprøve skemaet, men point kan først gemmes, når stævnet er aktiveret.</div>
+                </div>
+
                 <div class="input-group" id="mj-points-group">
                     <label id="mj-points-label">Point (0.00 - 10.00)</label>
                     <input type="number" step="0.01" min="0" max="10" id="mj-points" style="font-size: 1.5rem; text-align: center; color: #10b981; font-weight: bold;">
@@ -1061,8 +1921,8 @@
                     <label>Kommentar / Gode råd (Valgfrit men anbefales)</label>
                     <textarea id="mj-comment" rows="4" style="width: 100%; padding: 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; color: white; resize: vertical;"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary" style="background: #10b981;">Gem Resultat</button>
-                <button type="button" class="btn btn-secondary" style="margin-top: 1rem;" onclick="cancelScore()">Annuller</button>
+                <button type="button" id="mj-submit-score-btn" onclick="window.submitJudgeScore(event)" class="btn btn-primary" style="background: #10b981; font-weight: 700; width: 100%; padding: 0.8rem;">Gem Resultat</button>
+                <button type="button" class="btn btn-secondary" style="margin-top: 0.8rem; width: 100%;" onclick="cancelScore()">Annuller</button>
             </form>
             
             <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
@@ -1072,6 +1932,118 @@
         </div>
     </main>
 
+    <!-- MODAL: KONTAKT & SUPPORT -->
+    <div id="contact-support-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1005; justify-content: center; align-items: center; padding: 1rem;">
+        <div class="glass-panel" style="max-width: 520px; width: 100%; max-height: 95vh; overflow-y: auto; border-radius: 20px; border-color: rgba(56, 189, 248, 0.4); padding: 1.8rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.7);">
+            
+            <!-- HEADER -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #38bdf8;">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; color: #ffffff; font-size: 1.3rem;">Kontakt Support</h3>
+                        <p style="margin: 0.15rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Vi hjælper dig gerne med EquiEvent</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeContactSupportModal()" style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- FORMULAR SEKTION -->
+            <div id="support-form-section">
+                <!-- AI CHATBOT CALLOUT -->
+                <div style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(56, 189, 248, 0.12)); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                    <div style="font-size: 0.82rem; color: #f1f5f9; line-height: 1.35;">
+                        <span style="font-weight: bold; color: #fb7185;"><i class="fas fa-robot"></i> Få svar med det samme:</span><br>
+                        Vores AI Support Assistent kan svare straks døgnet rundt.
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openAiChatFromSupport()" style="white-space: nowrap; font-size: 0.78rem; padding: 0.4rem 0.75rem; background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.4); color: #ffffff;">
+                        Spørg AI <i class="fas fa-arrow-right" style="font-size: 0.7rem; margin-left: 2px;"></i>
+                    </button>
+                </div>
+
+                <form id="contact-support-form" onsubmit="submitContactSupport(event)">
+                    <div class="input-group" style="margin-bottom: 0.9rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Hvem er du? (Navn & evt. klub)</label>
+                        <input type="text" id="contact-sup-name" placeholder="F.eks. Lene Hansen / Hillerød Rideklub" required style="width: 100%;">
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 0.9rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Din E-mailadresse</label>
+                        <input type="email" id="contact-sup-email" placeholder="F.eks. lene@rideklub.dk" required style="width: 100%;">
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 0.9rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Hvad handler det om? (Emne)</label>
+                        <select id="contact-sup-subject" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.7rem 1rem; font-size: 0.9rem;">
+                            <option value="Generelt spørgsmål om stævneafvikling">Spørgsmål til stævneafvikling</option>
+                            <option value="Betaling & Aktivering af stævne">Betaling & Aktivering af stævne</option>
+                            <option value="Dommeradgang og Magic Links">Dommeradgang og Magic Links</option>
+                            <option value="Teknisk fejl / Uhensigtsmæssighed">Teknisk fejl / Uhensigtsmæssighed</option>
+                            <option value="Andet">Andet</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Beskrivelse</label>
+                        <textarea id="contact-sup-message" rows="4" placeholder="Beskriv hvad du har brug for hjælp til..." required style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: white; padding: 0.75rem 1rem; font-size: 0.9rem; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-clock" style="color: #fbbf24;"></i>
+                        <span>Skriftlige henvendelser besvares inden for <strong>max 3 arbejdsdage</strong>.</span>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button type="submit" id="contact-sup-submit-btn" class="btn btn-primary" style="flex: 2; padding: 0.75rem; font-weight: bold; background: linear-gradient(135deg, #f43f5e, #e11d48);">
+                            <i class="fas fa-paper-plane"></i> Send Henvendelse
+                        </button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeContactSupportModal()">Annuller</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SUCCESS STATE SEKTION -->
+            <div id="support-success-section" style="display: none; text-align: center; padding: 0.5rem 0;">
+                <div style="width: 65px; height: 65px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem; color: #10b981;">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 style="color: #ffffff; font-size: 1.3rem; margin-bottom: 0.4rem;">Tak for din henvendelse, <span id="support-success-name"></span>!</h3>
+                <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.25rem;">
+                    Vi har modtaget din besked. Vi vender tilbage til dig på <span id="support-success-email" style="color: #38bdf8; font-weight: 600;"></span> hurtigst muligt.
+                </p>
+
+                <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #fbbf24; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.2rem;">
+                        <i class="fas fa-info-circle"></i> Svartid
+                    </div>
+                    <div style="font-size: 0.82rem; color: #e2e8f0; line-height: 1.4;">
+                        Vær opmærksom på, at der er <strong>max 3 dages svartid</strong> på skriftlige support-mails.
+                    </div>
+                </div>
+
+                <!-- AI CHATBOT CALLOUT IN SUCCESS -->
+                <div style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.15), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 14px; padding: 1.1rem; margin-bottom: 1.25rem; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #fb7185; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.3rem;">
+                        <i class="fas fa-robot"></i> Har du prøvet at spørge AI Chatbotten?
+                    </div>
+                    <p style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4; margin: 0 0 0.85rem 0;">
+                        Vores AI Support Assistent kender alle stævneregler, discipliner og funktioner og sidder klar 24/7 med det samme.
+                    </p>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openAiChatFromSuccess()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: bold;">
+                        <i class="fas fa-comments"></i> Åbn AI Chatbotten nu
+                    </button>
+                </div>
+
+                <button type="button" class="btn btn-secondary" onclick="closeContactSupportModal()" style="width: 100%;">
+                    Luk vindue
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- PUBLIC LEADERBOARD SECTION -->
     <main id="public-leaderboard-section" class="glass-panel" style="display: none; max-width: 800px; margin: 1rem auto; padding: 2rem;">
         <div style="text-align: center; margin-bottom: 2rem;" class="print-header">
@@ -1080,7 +2052,8 @@
             <p id="pl-subtitle" style="color: var(--text-secondary);">Live Resultater</p>
         </div>
         
-        <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end;" class="no-print">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;" class="no-print">
+            <a href="/" class="btn btn-secondary btn-sm" style="text-decoration: none;"><i class="fas fa-arrow-left"></i> Forside</a>
             <button class="btn btn-secondary btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Udskriv</button>
         </div>
 
@@ -1089,10 +2062,19 @@
         </div>
     </main>
 
-    <script type="module" src="/scores.js?v=1.1"></script>
-    <script type="module" src="/v1_judging.js?v=1.1"></script>
-    <script type="module" src="/main.js?v=1.1"></script>
-    <script type="module" src="/support-chat.js?v=1.1"></script>
+    <footer style="width: 100%; margin-top: auto; padding: 1.5rem 1.5rem; text-align: center; border-top: 1px solid var(--glass-border); background: rgba(15, 23, 42, 0.6); font-size: 0.8rem; color: #94a3b8;">
+        <div style="max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.35rem;">
+            <p>&copy; 2026 EquiEvent. Alle rettigheder forbeholdes.</p>
+            <p style="font-size: 0.78rem; color: #94a3b8; line-height: 1.5;">
+                Der gives døgnsupport via den indbyggede <strong style="color: #cbd5e1;">AI-assistent</strong> (klik på support-ikonet nederst til højre). Har du brug for personlig hjælp, kan du klikke på vores <a href="javascript:void(0)" onclick="window.openContactSupportModal()" style="color: #fb7185; text-decoration: underline; font-weight: 600; cursor: pointer;">kontaktformular her</a> (eller skrive til <a href="javascript:void(0)" onclick="window.openContactSupportModal()" style="color: #fb7185; text-decoration: underline; font-weight: 600; cursor: pointer;">equievent_support@alkdata.dk</a>) med max 3 dages svartid.
+            </p>
+        </div>
+    </footer>
+
+    <script type="module" src="/scores.js?v=4.7"></script>
+    <script type="module" src="/v1_judging.js?v=4.7"></script>
+    <script type="module" src="/main.js?v=4.7"></script>
+    <script type="module" src="/support-chat.js?v=4.7"></script>
 </body>
 
 </html>

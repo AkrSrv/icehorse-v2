@@ -75,6 +75,118 @@
             if (forgot) forgot.style.display = 'none';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+
+        window.openContactSupportModal = function() {
+            const modal = document.getElementById('contact-support-modal');
+            if (!modal) return;
+            
+            const formSec = document.getElementById('support-form-section');
+            const succSec = document.getElementById('support-success-section');
+            if (formSec) formSec.style.display = 'block';
+            if (succSec) succSec.style.display = 'none';
+
+            const nameInput = document.getElementById('contact-sup-name');
+            const emailInput = document.getElementById('contact-sup-email');
+            const msgInput = document.getElementById('contact-sup-message');
+            
+            if (msgInput) msgInput.value = '';
+            
+            if (window.activeClub && nameInput && !nameInput.value) {
+                nameInput.value = window.activeClub.contact_name ? `${window.activeClub.contact_name} (${window.activeClub.name})` : window.activeClub.name;
+            }
+            if (window.activeClub && emailInput && !emailInput.value && window.activeClub.contact_email) {
+                emailInput.value = window.activeClub.contact_email;
+            }
+
+            modal.style.display = 'flex';
+        };
+
+        window.closeContactSupportModal = function() {
+            const modal = document.getElementById('contact-support-modal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.openAiChatFromSupport = function() {
+            window.closeContactSupportModal();
+            if (window.openAiChatSupport) {
+                window.openAiChatSupport();
+            }
+        };
+
+        window.openAiChatFromSuccess = function() {
+            window.closeContactSupportModal();
+            if (window.openAiChatSupport) {
+                window.openAiChatSupport();
+            }
+        };
+
+        window.submitContactSupport = async function(event) {
+            if (event) event.preventDefault();
+            
+            const nameInput = document.getElementById('contact-sup-name');
+            const emailInput = document.getElementById('contact-sup-email');
+            const subjectInput = document.getElementById('contact-sup-subject');
+            const messageInput = document.getElementById('contact-sup-message');
+            const submitBtn = document.getElementById('contact-sup-submit-btn');
+
+            const name = nameInput ? nameInput.value.trim() : '';
+            const email = emailInput ? emailInput.value.trim() : '';
+            const subject = subjectInput ? subjectInput.value.trim() : 'Supporthenvendelse';
+            const message = messageInput ? messageInput.value.trim() : '';
+            const clubName = window.activeClub ? window.activeClub.name : '';
+
+            if (!name || !email || !message) {
+                alert('Udfyld venligst dit navn, din e-mailadresse og beskrivelsen.');
+                return;
+            }
+
+            const oldHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender henvendelse...';
+            }
+
+            const apiBase = window.API_BASE || (window.location.hostname.includes('equievent.online') ? 'https://api.equievent.online' : (window.location.hostname.includes('equievent.dk') ? 'https://api.equievent.dk' : (window.location.hostname.includes('alkdata.dk') ? 'https://api.alkdata.dk' : 'http://' + window.location.hostname + ':8082')));
+
+            try {
+                const response = await fetch(`${apiBase}/support/contact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        subject: subject,
+                        message: message,
+                        club_name: clubName
+                    })
+                });
+
+                if (response.ok) {
+                    const succName = document.getElementById('support-success-name');
+                    const succEmail = document.getElementById('support-success-email');
+                    if (succName) succName.innerText = name;
+                    if (succEmail) succEmail.innerText = email;
+
+                    const formSec = document.getElementById('support-form-section');
+                    const succSec = document.getElementById('support-success-section');
+                    if (formSec) formSec.style.display = 'none';
+                    if (succSec) succSec.style.display = 'block';
+                } else {
+                    const errData = await response.json().catch(() => ({}));
+                    alert('Der opstod en fejl: ' + (errData.detail || 'Kunne ikke sende henvendelsen.'));
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Netværksfejl: Kunne ikke forbinde til serveren.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldHtml;
+                }
+            }
+        };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1959,10 +2071,10 @@
         </div>
     </footer>
 
-    <script type="module" src="/scores.js?v=4.6"></script>
-    <script type="module" src="/v1_judging.js?v=4.6"></script>
-    <script type="module" src="/main.js?v=4.6"></script>
-    <script type="module" src="/support-chat.js?v=4.6"></script>
+    <script type="module" src="/scores.js?v=4.7"></script>
+    <script type="module" src="/v1_judging.js?v=4.7"></script>
+    <script type="module" src="/main.js?v=4.7"></script>
+    <script type="module" src="/support-chat.js?v=4.7"></script>
 </body>
 
 </html>
