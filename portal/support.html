@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support & Opgave Hub | ALKData</title>
+    <meta name="description" content="Central supportindbakke og opgavestyring for ALKData, EquiEvent og tilknyttede systemer.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hub-container {
+            width: 100%;
+            max-width: 1240px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Top Header Navigation */
+        .hub-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.75rem;
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px);
+        }
+
+        .hub-title-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .hub-logo-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(244, 63, 94, 0.25));
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .hub-title-text h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .hub-title-text p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0.2rem 0 0 0;
+        }
+
+        .hub-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-hub {
+            padding: 0.6rem 1.1rem;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+        }
+
+        .btn-hub-primary {
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
+        }
+        .btn-hub-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(244, 63, 94, 0.45);
+        }
+
+        .btn-hub-secondary {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: var(--glass-border);
+            color: var(--text-primary);
+        }
+        .btn-hub-secondary:hover {
+            background: rgba(51, 65, 85, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* KPI Cards Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .kpi-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.25rem 1.4rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .kpi-info h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+        }
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .kpi-icon.new { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .kpi-icon.progress { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .kpi-icon.resolved { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .kpi-icon.sources { background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+        /* Filter Controls */
+        .controls-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .select-styled {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.6rem 1rem;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .select-styled:focus {
+            border-color: #38bdf8;
+        }
+
+        .status-pill-filters {
+            display: flex;
+            gap: 0.4rem;
+            background: rgba(10, 15, 28, 0.6);
+            padding: 0.3rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .pill-filter-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .pill-filter-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .pill-filter-btn.active {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 250px;
+            flex-grow: 1;
+            max-width: 380px;
+        }
+        .search-box input {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.6rem 1rem 0.6rem 2.4rem;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            outline: none;
+        }
+        .search-box input:focus {
+            border-color: #38bdf8;
+        }
+        .search-box i {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Tickets List View */
+        .tickets-container {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 1rem;
+            backdrop-filter: blur(14px);
+            min-height: 350px;
+        }
+
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .ticket-row {
+            background: rgba(30, 41, 59, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 1.1rem 1.4rem;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 1.25rem;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .ticket-row:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(56, 189, 248, 0.35);
+            transform: translateX(4px);
+        }
+        .ticket-row.status-new::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #10b981;
+        }
+        .ticket-row.status-progress::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #f59e0b;
+        }
+        .ticket-row.status-resolved::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #64748b;
+        }
+
+        .ticket-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            align-items: flex-start;
+            min-width: 110px;
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* Source badges */
+        .badge-source-equievent { background: rgba(244, 63, 94, 0.18); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); }
+        .badge-source-vw { background: rgba(0, 180, 216, 0.18); color: #38bdf8; border: 1px solid rgba(0, 180, 216, 0.35); }
+        .badge-source-alkdata { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+        .badge-source-generic { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+
+        /* Status badges */
+        .badge-status-ny { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .badge-status-igang { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .badge-status-lost { background: rgba(100, 116, 139, 0.25); color: #94a3b8; }
+
+        .ticket-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            overflow: hidden;
+        }
+
+        .ticket-sender-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .ticket-sender-row .sender-email {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        .ticket-sender-row .sender-club {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
+
+        .ticket-subject {
+            font-size: 0.98rem;
+            font-weight: 600;
+            color: #38bdf8;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-preview {
+            font-size: 0.84rem;
+            color: #94a3b8;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.4rem;
+            min-width: 140px;
+        }
+
+        .ticket-time {
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .ticket-date-detail {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .sla-indicator {
+            font-size: 0.72rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .sla-ok { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .sla-warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .sla-late { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        /* Detail Modal / Drawer */
+        .drawer-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .drawer-overlay.active {
+            display: flex;
+        }
+
+        .drawer-card {
+            background: #0f172a;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 20px;
+            max-width: 680px;
+            width: 100%;
+            max-height: 92vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .detail-message-box {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 1.25rem;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            color: #f1f5f9;
+            white-space: pre-wrap;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .internal-notes-box textarea {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 12px;
+            color: #fef08a;
+            padding: 0.8rem;
+            font-family: inherit;
+            font-size: 0.88rem;
+            resize: vertical;
+            outline: none;
+        }
+        .internal-notes-box textarea:focus {
+            border-color: #fbbf24;
+        }
+
+        .status-btn-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-status-toggle {
+            padding: 0.5rem 0.9rem;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: 1px solid var(--glass-border);
+            background: rgba(30, 41, 59, 0.8);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-status-toggle.current-ny { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
+        .btn-status-toggle.current-igang { background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fbbf24; }
+        .btn-status-toggle.current-lost { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #93c5fd; }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3.5rem 1rem;
+            color: var(--text-secondary);
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+            color: #38bdf8;
+        }
+
+        /* Password Auth Wall */
+        .auth-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #020617;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .auth-card {
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            padding: 2.5rem 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-mesh">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- AUTHENTICATION WALL (IF NOT LOGGED IN) -->
+    <div id="authWall" class="auth-overlay" style="display: none;">
+        <div class="glass-card auth-card">
+            <div class="modal-icon-wrapper" style="margin: 0 auto 1.2rem auto;">
+                <div class="modal-icon-glow"></div>
+                <div class="modal-icon"><i class="fas fa-headset"></i></div>
+            </div>
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #ffffff;">Support & Opgave Hub</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Indtast administrator adgangskode for at åbne din centrale supportindbakke.
+            </p>
+            <form id="hubAuthForm">
+                <div class="input-wrapper" style="margin-bottom: 1rem;">
+                    <i class="fas fa-key input-icon"></i>
+                    <input type="password" id="hubAuthInput" class="password-input" placeholder="Indtast password..." required>
+                </div>
+                <div id="hubAuthError" style="display: none; color: #ef4444; font-size: 0.85rem; margin-bottom: 1rem;">
+                    <i class="fas fa-circle-exclamation"></i> Forkert adgangskode. Prøv igen.
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <span>Lås op & Gå til indbakke</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+            <div style="margin-top: 1.25rem;">
+                <a href="/" style="color: var(--text-secondary); font-size: 0.82rem; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Tilbage til ALKData Portal
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN HUB INTERFACE -->
+    <main class="hub-container" id="hubMainContent" style="display: none;">
+        
+        <!-- Header -->
+        <header class="hub-header">
+            <div class="hub-title-group">
+                <div class="hub-logo-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div class="hub-title-text">
+                    <h1>ALKData Support Hub <span class="badge badge-source-alkdata" style="font-size: 0.7rem;">Central Indbakke</span></h1>
+                    <p>Opgavestyring og supporthenvendelser på tværs af alle dine systemer</p>
+                </div>
+            </div>
+
+            <div class="hub-header-actions">
+                <button class="btn-hub btn-hub-primary" onclick="openCreateManualModal()">
+                    <i class="fas fa-plus"></i> Opret Opgave
+                </button>
+                <button class="btn-hub btn-hub-secondary" onclick="loadTickets()" title="Genindlæs liste">
+                    <i class="fas fa-sync-alt" id="refreshIcon"></i> Opdater
+                </button>
+                <a href="/" class="btn-hub btn-hub-secondary" title="Gå til ALKData forside">
+                    <i class="fas fa-home"></i> Portal
+                </a>
+                <button class="btn-hub btn-hub-secondary" onclick="logoutHub()" title="Lås systemet">
+                    <i class="fas fa-lock"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- KPI Stats Cards -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>Nye henvendelser</h3>
+                    <div class="kpi-value" id="kpiNewCount">0</div>
+                </div>
+                <div class="kpi-icon new"><i class="fas fa-bell"></i></div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>I gang / Behandles</h3>
+                    <div class="kpi-value" id="kpiInProgressCount">0</div>
+                </div>
+                <div class="kpi-icon progress"><i class="fas fa-spinner"></i></div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>Løste / Arkiverede</h3>
+                    <div class="kpi-value" id="kpiResolvedCount">0</div>
+                </div>
+                <div class="kpi-icon resolved"><i class="fas fa-check-double"></i></div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>SLA Målsætning</h3>
+                    <div class="kpi-value" style="font-size: 1.35rem; color: #38bdf8;">Max 3 dage</div>
+                </div>
+                <div class="kpi-icon sources"><i class="fas fa-clock"></i></div>
+            </div>
+        </section>
+
+        <!-- Controls: Filters, Sortering & Søgning -->
+        <section class="controls-card">
+            <div class="filter-group">
+                <!-- System Vælger -->
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;"><i class="fas fa-cubes"></i> System:</label>
+                    <select id="filterSource" class="select-styled" onchange="applyFilters()">
+                        <option value="Alle">Alle Systemer</option>
+                        <option value="EquiEvent">🐎 EquiEvent</option>
+                        <option value="VW Dashboard">🚗 VW Dashboard</option>
+                        <option value="ALKData">🌐 ALKData Portal</option>
+                    </select>
+                </div>
+
+                <!-- Status Tabs -->
+                <div class="status-pill-filters">
+                    <button class="pill-filter-btn active" data-status="Alle" onclick="setStatusFilter('Alle', this)">Alle</button>
+                    <button class="pill-filter-btn" data-status="Aabne" onclick="setStatusFilter('Aabne', this)"><i class="fas fa-circle" style="color: #10b981; font-size: 0.6rem;"></i> Åbne</button>
+                    <button class="pill-filter-btn" data-status="Ny" onclick="setStatusFilter('Ny', this)">Nye</button>
+                    <button class="pill-filter-btn" data-status="I gang" onclick="setStatusFilter('I gang', this)">I gang</button>
+                    <button class="pill-filter-btn" data-status="Løst" onclick="setStatusFilter('Løst', this)">Løste</button>
+                </div>
+            </div>
+
+            <div class="filter-group" style="flex-grow: 1; justify-content: flex-end;">
+                <!-- Sortering -->
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;"><i class="fas fa-sort-amount-down"></i> Sorter:</label>
+                    <select id="sortBy" class="select-styled" onchange="applyFilters()">
+                        <option value="date_desc">Nyeste henvendelse først</option>
+                        <option value="date_asc">Ældste henvendelse først</option>
+                        <option value="user_asc">Afsender / Bruger (A-Å)</option>
+                        <option value="user_desc">Afsender / Bruger (Å-A)</option>
+                        <option value="source">System / Kilde</option>
+                    </select>
+                </div>
+
+                <!-- Søgefelt -->
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Søg i navn, e-mail, emne..." oninput="debounceSearch()">
+                </div>
+            </div>
+        </section>
+
+        <!-- Ticket Liste -->
+        <section class="tickets-container">
+            <div id="ticketsLoading" style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; color: #38bdf8; margin-bottom: 0.75rem;"></i>
+                <p>Indlæser supporthenvendelser...</p>
+            </div>
+
+            <div id="ticketsEmpty" class="empty-state" style="display: none;">
+                <i class="fas fa-inbox"></i>
+                <h3 style="color: #ffffff; margin-bottom: 0.4rem;">Ingen opgaver fundet</h3>
+                <p>Der er i øjeblikket ingen henvendelser, der matcher de valgte filtre.</p>
+            </div>
+
+            <div id="ticketsList" class="ticket-list" style="display: none;">
+                <!-- Dynamisk genereret indhold via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- DETALJE MODAL / DRAWER -->
+    <div class="drawer-overlay" id="ticketDrawer" onclick="closeDrawerOnBackdrop(event)">
+        <div class="drawer-card" id="drawerContent">
+            <!-- Header -->
+            <div class="drawer-header">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+                        <span id="dtlSourceBadge" class="badge"></span>
+                        <span id="dtlStatusBadge" class="badge"></span>
+                        <span id="dtlIdText" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;"></span>
+                    </div>
+                    <h2 id="dtlSubject" style="font-size: 1.3rem; margin: 0; color: #ffffff;"></h2>
+                </div>
+                <button type="button" class="modal-close" onclick="closeTicketDrawer()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Afsender Info -->
+            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em;">Afsender / Kunde</div>
+                    <div id="dtlSenderName" style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin-top: 0.15rem;"></div>
+                    <div id="dtlSenderClub" style="font-size: 0.82rem; color: #cbd5e1;"></div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <a id="dtlEmailLink" href="#" class="btn-hub btn-hub-primary" style="font-size: 0.82rem; padding: 0.5rem 0.9rem;">
+                        <i class="fas fa-envelope"></i> Besvar via E-mail
+                    </a>
+                    <button class="btn-hub btn-hub-secondary" onclick="copyEmailToClipboard()" style="font-size: 0.82rem; padding: 0.5rem 0.8rem;" title="Kopier e-mailadresse">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modtaget & SLA -->
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); padding: 0 0.25rem;">
+                <div><i class="fas fa-calendar-alt"></i> Modtaget: <strong id="dtlCreatedAt" style="color: #cbd5e1;"></strong></div>
+                <div><i class="fas fa-hourglass-half"></i> <span id="dtlSlaStatus"></span></div>
+            </div>
+
+            <!-- Besked Tekst -->
+            <div>
+                <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">Henvendelsens indhold:</label>
+                <div id="dtlMessage" class="detail-message-box"></div>
+            </div>
+
+            <!-- Status Styring -->
+            <div>
+                <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">Skift opgavens status:</label>
+                <div class="status-btn-group">
+                    <button class="btn-status-toggle" id="btnSetNy" onclick="changeTicketStatus('Ny')"><i class="fas fa-circle" style="color: #10b981;"></i> Sæt til Ny</button>
+                    <button class="btn-status-toggle" id="btnSetIgang" onclick="changeTicketStatus('I gang')"><i class="fas fa-spinner" style="color: #f59e0b;"></i> Sæt til I gang</button>
+                    <button class="btn-status-toggle" id="btnSetLost" onclick="changeTicketStatus('Løst')"><i class="fas fa-check" style="color: #3b82f6;"></i> Markér som Løst</button>
+                </div>
+            </div>
+
+            <!-- Interne Noter (Arnos arbejdslapper) -->
+            <div class="internal-notes-box">
+                <label style="font-size: 0.82rem; font-weight: 600; color: #fbbf24; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fas fa-sticky-note"></i> Interne arbejdssnoter (kun synlige for dig):
+                </label>
+                <textarea id="dtlInternalNotes" rows="3" placeholder="Skriv noter her (fx 'Talt i tlf. tirsdag - rettet i databasen')..."></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                    <button type="button" class="btn-hub btn-hub-secondary" onclick="saveInternalNotes()" style="font-size: 0.82rem; padding: 0.4rem 0.85rem;">
+                        <i class="fas fa-save"></i> Gem note
+                    </button>
+                    <button type="button" onclick="deleteCurrentTicket()" style="background: transparent; border: none; color: #ef4444; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+                        <i class="fas fa-trash-alt"></i> Slet henvendelse
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MANUEL OPGAVE OPRETTELSE MODAL -->
+    <div class="drawer-overlay" id="manualTicketModal" onclick="closeManualOnBackdrop(event)">
+        <div class="drawer-card" style="max-width: 540px;">
+            <div class="drawer-header">
+                <h3 style="margin: 0; color: #ffffff; font-size: 1.25rem;"><i class="fas fa-plus-circle" style="color: #38bdf8;"></i> Opret Ny Opgave / Ticket</h3>
+                <button type="button" class="modal-close" onclick="closeCreateManualModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="manualTicketForm" onsubmit="submitManualTicket(event)">
+                <div style="display: flex; gap: 0.75rem; margin-bottom: 0.9rem;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">System / Kilde</label>
+                        <select id="manSource" class="select-styled" style="width: 100%;">
+                            <option value="EquiEvent">🐎 EquiEvent</option>
+                            <option value="VW Dashboard">🚗 VW Dashboard</option>
+                            <option value="ALKData">🌐 ALKData Portal</option>
+                            <option value="Server/Drift">🖥️ Server/Drift</option>
+                            <option value="Andet">💡 Andet / Idé</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Prioritet</label>
+                        <select id="manPriority" class="select-styled" style="width: 100%;">
+                            <option value="Normal">Normal</option>
+                            <option value="Høj">Høj 🔥</option>
+                            <option value="Lav">Lav</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 0.9rem;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Afsender / Bruger</label>
+                    <input type="text" id="manName" placeholder="F.eks. Arno eller kunde navn" required class="password-input" style="padding-left: 1rem;">
+                </div>
+
+                <div style="margin-bottom: 0.9rem;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">E-mailadresse</label>
+                    <input type="email" id="manEmail" placeholder="F.eks. arno@alkdata.dk" required class="password-input" style="padding-left: 1rem;">
+                </div>
+
+                <div style="margin-bottom: 0.9rem;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Emne</label>
+                    <input type="text" id="manSubject" placeholder="Hvad drejer opgaven sig om?" required class="password-input" style="padding-left: 1rem;">
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Beskrivelse</label>
+                    <textarea id="manMessage" rows="4" placeholder="Detaljer om opgaven..." required style="width: 100%; background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(255, 255, 255, 0.12); border-radius: 12px; color: white; padding: 0.8rem; font-family: inherit; font-size: 0.9rem; outline: none;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="submit" class="btn-hub btn-hub-primary" style="flex: 2; justify-content: center;">
+                        <i class="fas fa-check"></i> Gem Opgave
+                    </button>
+                    <button type="button" class="btn-hub btn-hub-secondary" onclick="closeCreateManualModal()" style="flex: 1; justify-content: center;">
+                        Annuller
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIK -->
+    <script>
+        const AUTH_KEY = 'SommerHaar2026';
+        let currentAdminPassword = sessionStorage.getItem('alk_admin_key') || (sessionStorage.getItem('alk_monitor_authenticated') === 'true' ? AUTH_KEY : null);
+        
+        let allLoadedTickets = [];
+        let currentStatusFilter = 'Alle';
+        let currentActiveTicket = null;
+        let searchTimeout = null;
+
+        const API_BASE = (window.location.hostname.includes('alkdata.dk') || window.location.hostname.includes('equievent.dk'))
+            ? 'https://api.equievent.dk'
+            : 'http://localhost:8000';
+
+        // --- AUTHENTICATION ---
+        function checkAuth() {
+            if (currentAdminPassword === AUTH_KEY) {
+                document.getElementById('authWall').style.display = 'none';
+                document.getElementById('hubMainContent').style.display = 'flex';
+                loadTickets();
+            } else {
+                document.getElementById('authWall').style.display = 'flex';
+                document.getElementById('hubMainContent').style.display = 'none';
+            }
+        }
+
+        document.getElementById('hubAuthForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const entered = document.getElementById('hubAuthInput').value.trim();
+            if (entered === AUTH_KEY) {
+                currentAdminPassword = AUTH_KEY;
+                sessionStorage.setItem('alk_admin_key', AUTH_KEY);
+                sessionStorage.setItem('alk_monitor_authenticated', 'true');
+                document.getElementById('hubAuthError').style.display = 'none';
+                checkAuth();
+            } else {
+                document.getElementById('hubAuthError').style.display = 'block';
+                const input = document.getElementById('hubAuthInput');
+                input.focus();
+                input.select();
+            }
+        });
+
+        function logoutHub() {
+            sessionStorage.removeItem('alk_admin_key');
+            sessionStorage.removeItem('alk_monitor_authenticated');
+            currentAdminPassword = null;
+            checkAuth();
+        }
+
+        // --- DATA FETCHING ---
+        async function loadTickets() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+            
+            const source = document.getElementById('filterSource').value;
+            const sort = document.getElementById('sortBy').value;
+            const search = document.getElementById('searchInput').value.trim();
+
+            let url = `${API_BASE}/support/tickets?sort_by=${encodeURIComponent(sort)}`;
+            if (source !== 'Alle') url += `&source=${encodeURIComponent(source)}`;
+            if (currentStatusFilter !== 'Alle') url += `&status=${encodeURIComponent(currentStatusFilter)}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'X-Admin-Key': currentAdminPassword
+                    }
+                });
+
+                if (response.status === 401) {
+                    logoutHub();
+                    return;
+                }
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allLoadedTickets = data.tickets || [];
+                    updateStatsDisplay(data.stats || {});
+                    renderTicketsList(allLoadedTickets);
+                    populateSourceDropdown(data.stats ? data.stats.sources : []);
+                } else {
+                    console.error("Kunne ikke hente tickets:", response.statusText);
+                }
+            } catch (err) {
+                console.error("Netværksfejl ved hentning af tickets:", err);
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                document.getElementById('ticketsLoading').style.display = 'none';
+            }
+        }
+
+        function updateStatsDisplay(stats) {
+            document.getElementById('kpiNewCount').innerText = stats.new_count || 0;
+            document.getElementById('kpiInProgressCount').innerText = stats.in_progress_count || 0;
+            document.getElementById('kpiResolvedCount').innerText = stats.resolved_count || 0;
+        }
+
+        function populateSourceDropdown(sources) {
+            if (!sources || !sources.length) return;
+            const select = document.getElementById('filterSource');
+            const currentVal = select.value;
+            
+            // Standard kilder
+            const knownSources = new Set(['Alle', 'EquiEvent', 'VW Dashboard', 'ALKData']);
+            sources.forEach(s => {
+                if (s && !knownSources.has(s)) {
+                    knownSources.add(s);
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.innerText = `📦 ${s}`;
+                    select.appendChild(opt);
+                }
+            });
+            select.value = currentVal;
+        }
+
+        // --- RENDERING ---
+        function renderTicketsList(tickets) {
+            const container = document.getElementById('ticketsList');
+            const emptyEl = document.getElementById('ticketsEmpty');
+
+            if (!tickets || tickets.length === 0) {
+                container.style.display = 'none';
+                emptyEl.style.display = 'block';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+            container.style.display = 'flex';
+            container.innerHTML = '';
+
+            tickets.forEach(ticket => {
+                const row = document.createElement('div');
+                
+                // Status CSS klasse
+                let statusClass = 'status-ny';
+                if (ticket.status === 'I gang') statusClass = 'status-progress';
+                else if (ticket.status === 'Løst') statusClass = 'status-resolved';
+                
+                row.className = `ticket-row ${statusClass}`;
+                row.onclick = () => openTicketDetail(ticket);
+
+                // Source badge styling
+                const src = ticket.source_system || 'EquiEvent';
+                let srcClass = 'badge-source-generic';
+                let srcIcon = 'fa-cube';
+                if (src.toLowerCase().includes('equi')) { srcClass = 'badge-source-equievent'; srcIcon = 'fa-horse-head'; }
+                else if (src.toLowerCase().includes('vw')) { srcClass = 'badge-source-vw'; srcIcon = 'fa-car'; }
+                else if (src.toLowerCase().includes('alk')) { srcClass = 'badge-source-alkdata'; srcIcon = 'fa-globe'; }
+
+                // Status badge styling
+                let stClass = 'badge-status-ny';
+                let stIcon = 'fa-circle';
+                if (ticket.status === 'I gang') { stClass = 'badge-status-igang'; stIcon = 'fa-spinner fa-spin'; }
+                else if (ticket.status === 'Løst') { stClass = 'badge-status-lost'; stIcon = 'fa-check'; }
+
+                // Beregn relativ tid og SLA
+                const timeInfo = formatRelativeTime(ticket.created_at);
+
+                row.innerHTML = `
+                    <div class="ticket-badges">
+                        <span class="badge ${srcClass}"><i class="fas ${srcIcon}"></i> ${escapeHtml(src)}</span>
+                        <span class="badge ${stClass}"><i class="fas ${stIcon}"></i> ${escapeHtml(ticket.status || 'Ny')}</span>
+                    </div>
+                    <div class="ticket-main">
+                        <div class="ticket-sender-row">
+                            <span>${escapeHtml(ticket.name)}</span>
+                            <span class="sender-email">&lt;${escapeHtml(ticket.email)}&gt;</span>
+                            ${ticket.club_name ? `<span class="sender-club"><i class="fas fa-shield-alt"></i> ${escapeHtml(ticket.club_name)}</span>` : ''}
+                            ${ticket.priority === 'Høj' ? '<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;"><i class="fas fa-fire"></i> Høj</span>' : ''}
+                        </div>
+                        <h4 class="ticket-subject">${escapeHtml(ticket.subject || 'Ingen emne')}</h4>
+                        <div class="ticket-preview">${escapeHtml(ticket.message || '')}</div>
+                    </div>
+                    <div class="ticket-meta">
+                        <div class="ticket-time"><i class="fas fa-clock"></i> ${timeInfo.relative}</div>
+                        <div class="ticket-date-detail">${timeInfo.fullDate}</div>
+                        ${ticket.status !== 'Løst' ? `<span class="sla-indicator ${timeInfo.slaClass}"><i class="fas fa-hourglass-half"></i> ${timeInfo.slaText}</span>` : '<span class="sla-indicator sla-ok"><i class="fas fa-check"></i> Afsluttet</span>'}
+                    </div>
+                `;
+
+                container.appendChild(row);
+            });
+        }
+
+        // --- FILTERS & SEARCH ---
+        function setStatusFilter(status, btn) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.pill-filter-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            loadTickets();
+        }
+
+        function applyFilters() {
+            loadTickets();
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadTickets();
+            }, 300);
+        }
+
+        // --- DETALJE DRAWER ---
+        function openTicketDetail(ticket) {
+            currentActiveTicket = ticket;
+            
+            // Badges & ID
+            document.getElementById('dtlIdText').innerText = `#${ticket.id}`;
+            document.getElementById('dtlSubject').innerText = ticket.subject || 'Ingen emne';
+
+            const src = ticket.source_system || 'EquiEvent';
+            let srcClass = 'badge-source-generic';
+            if (src.toLowerCase().includes('equi')) srcClass = 'badge-source-equievent';
+            else if (src.toLowerCase().includes('vw')) srcClass = 'badge-source-vw';
+            else if (src.toLowerCase().includes('alk')) srcClass = 'badge-source-alkdata';
+
+            const srcBadge = document.getElementById('dtlSourceBadge');
+            srcBadge.className = `badge ${srcClass}`;
+            srcBadge.innerText = src;
+
+            updateDrawerStatusButtons(ticket.status || 'Ny');
+
+            // Afsender
+            document.getElementById('dtlSenderName').innerText = ticket.name;
+            document.getElementById('dtlSenderClub').innerText = ticket.club_name ? `Tilknyttet: ${ticket.club_name}` : `E-mail: ${ticket.email}`;
+            
+            // Mail link
+            const emailSubject = encodeURIComponent(`Re: [${src}] ${ticket.subject || 'Support'}`);
+            const emailBody = encodeURIComponent(`\n\n--- Oprindelig henvendelse modtaget den ${formatRelativeTime(ticket.created_at).fullDate} ---\nFra: ${ticket.name} <${ticket.email}>\n\n${ticket.message}`);
+            document.getElementById('dtlEmailLink').href = `mailto:${ticket.email}?subject=${emailSubject}&body=${emailBody}`;
+
+            // Tid & SLA
+            const timeInfo = formatRelativeTime(ticket.created_at);
+            document.getElementById('dtlCreatedAt').innerText = `${timeInfo.fullDate} (${timeInfo.relative})`;
+            document.getElementById('dtlSlaStatus').innerHTML = ticket.status === 'Løst' 
+                ? '<span style="color: #34d399;">Sagen er løst</span>' 
+                : `<span class="sla-indicator ${timeInfo.slaClass}">${timeInfo.slaText}</span>`;
+
+            // Besked
+            document.getElementById('dtlMessage').innerText = ticket.message;
+
+            // Interne Noter
+            document.getElementById('dtlInternalNotes').value = ticket.internal_notes || '';
+
+            // Åbn Drawer
+            document.getElementById('ticketDrawer').classList.add('active');
+        }
+
+        function closeTicketDrawer() {
+            document.getElementById('ticketDrawer').classList.remove('active');
+            currentActiveTicket = null;
+        }
+
+        function closeDrawerOnBackdrop(e) {
+            if (e.target.id === 'ticketDrawer') closeTicketDrawer();
+        }
+
+        function updateDrawerStatusButtons(currentStatus) {
+            const stBadge = document.getElementById('dtlStatusBadge');
+            stBadge.className = `badge badge-status-${currentStatus.toLowerCase().replace(' ', '')}`;
+            stBadge.innerText = currentStatus;
+
+            document.getElementById('btnSetNy').className = 'btn-status-toggle' + (currentStatus === 'Ny' ? ' current-ny' : '');
+            document.getElementById('btnSetIgang').className = 'btn-status-toggle' + (currentStatus === 'I gang' ? ' current-igang' : '');
+            document.getElementById('btnSetLost').className = 'btn-status-toggle' + (currentStatus === 'Løst' ? ' current-lost' : '');
+        }
+
+        async function changeTicketStatus(newStatus) {
+            if (!currentActiveTicket) return;
+            try {
+                const response = await fetch(`${API_BASE}/support/tickets/${currentActiveTicket.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': currentAdminPassword
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) {
+                    currentActiveTicket.status = newStatus;
+                    updateDrawerStatusButtons(newStatus);
+                    loadTickets(); // Genindlæs i baggrunden
+                } else {
+                    alert('Kunne ikke opdatere status.');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Netværksfejl.');
+            }
+        }
+
+        async function saveInternalNotes() {
+            if (!currentActiveTicket) return;
+            const notes = document.getElementById('dtlInternalNotes').value;
+            try {
+                const response = await fetch(`${API_BASE}/support/tickets/${currentActiveTicket.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': currentAdminPassword
+                    },
+                    body: JSON.stringify({ internal_notes: notes })
+                });
+
+                if (response.ok) {
+                    currentActiveTicket.internal_notes = notes;
+                    alert('Noten er gemt!');
+                } else {
+                    alert('Kunne ikke gemme noten.');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Netværksfejl.');
+            }
+        }
+
+        async function deleteCurrentTicket() {
+            if (!currentActiveTicket) return;
+            if (!confirm(`Er du sikker på, at du vil slette henvendelse #${currentActiveTicket.id} fra ${currentActiveTicket.name}?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/support/tickets/${currentActiveTicket.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Admin-Key': currentAdminPassword
+                    }
+                });
+
+                if (response.ok) {
+                    closeTicketDrawer();
+                    loadTickets();
+                } else {
+                    alert('Kunne ikke slette opgaven.');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Netværksfejl.');
+            }
+        }
+
+        function copyEmailToClipboard() {
+            if (!currentActiveTicket) return;
+            navigator.clipboard.writeText(currentActiveTicket.email).then(() => {
+                alert(`Kopieret til udklipsholder: ${currentActiveTicket.email}`);
+            });
+        }
+
+        // --- MANUEL OPRETTELSE ---
+        function openCreateManualModal() {
+            document.getElementById('manualTicketForm').reset();
+            document.getElementById('manualTicketModal').classList.add('active');
+        }
+
+        function closeCreateManualModal() {
+            document.getElementById('manualTicketModal').classList.remove('active');
+        }
+
+        function closeManualOnBackdrop(e) {
+            if (e.target.id === 'manualTicketModal') closeCreateManualModal();
+        }
+
+        async function submitManualTicket(e) {
+            e.preventDefault();
+            const source = document.getElementById('manSource').value;
+            const priority = document.getElementById('manPriority').value;
+            const name = document.getElementById('manName').value.trim();
+            const email = document.getElementById('manEmail').value.trim();
+            const subject = document.getElementById('manSubject').value.trim();
+            const message = document.getElementById('manMessage').value.trim();
+
+            try {
+                const response = await fetch(`${API_BASE}/support/tickets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': currentAdminPassword
+                    },
+                    body: JSON.stringify({
+                        source_system: source,
+                        priority: priority,
+                        name: name,
+                        email: email,
+                        subject: subject,
+                        message: message,
+                        status: 'Ny'
+                    })
+                });
+
+                if (response.ok) {
+                    closeCreateManualModal();
+                    loadTickets();
+                } else {
+                    alert('Kunne ikke oprette opgaven.');
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Netværksfejl.');
+            }
+        }
+
+        // --- FORMATTING UTILITIES ---
+        function formatRelativeTime(isoString) {
+            if (!isoString) return { relative: 'Ukendt', fullDate: '', slaClass: 'sla-ok', slaText: 'SLA OK' };
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffHours / 24);
+
+            let relative = '';
+            if (diffHours < 1) {
+                const diffMin = Math.floor(diffMs / (1000 * 60));
+                relative = diffMin <= 1 ? 'Lige nu' : `for ${diffMin} min. siden`;
+            } else if (diffHours < 24) {
+                relative = `for ${diffHours} ${diffHours === 1 ? 'time' : 'timer'} siden`;
+            } else {
+                relative = `for ${diffDays} ${diffDays === 1 ? 'dag' : 'dage'} siden`;
+            }
+
+            const options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const fullDate = date.toLocaleDateString('da-DK', options);
+
+            // 3 dages SLA kalkulation (72 timer)
+            let slaClass = 'sla-ok';
+            let slaText = `${3 - diffDays} dage tilbage af SLA`;
+            if (diffHours >= 72) {
+                slaClass = 'sla-late';
+                slaText = `SLA overskredet (${diffDays - 3}d)`;
+            } else if (diffHours >= 48) {
+                slaClass = 'sla-warn';
+                slaText = 'Sidste dag af SLA';
+            }
+
+            return { relative, fullDate, slaClass, slaText };
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

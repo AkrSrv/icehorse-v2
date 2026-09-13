@@ -1,10 +1,13 @@
 import os
 import json
 import urllib.request
-from fastapi import APIRouter, HTTPException
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, Header, Query, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 from email_service import send_support_ticket_email
+from database import SessionLocal
+import models
 
 router = APIRouter(prefix="/support", tags=["Support"])
 
@@ -169,22 +172,225 @@ class ContactSupportRequest(BaseModel):
     subject: str
     message: str
     club_name: Optional[str] = None
+    source_system: Optional[str] = "EquiEvent"
+    priority: Optional[str] = "Normal"
+
+class UpdateTicketRequest(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    internal_notes: Optional[str] = None
+
+class CreateManualTicketRequest(BaseModel):
+    source_system: Optional[str] = "EquiEvent"
+    name: str
+    email: str
+    subject: str
+    message: str
+    club_name: Optional[str] = None
+    status: Optional[str] = "Ny"
+    priority: Optional[str] = "Normal"
+    internal_notes: Optional[str] = None
+
+def check_admin_access(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key"), password: Optional[str] = Query(None)):
+    token = x_admin_key or password
+    if token == "SommerHaar2026":
+        return True
+    raise HTTPException(status_code=401, detail="Ugyldig adgangskode.")
 
 @router.post("/contact")
 def submit_contact_support(req: ContactSupportRequest):
     if not req.name or not req.email or not req.message:
         raise HTTPException(status_code=400, detail="Navn, e-mail og besked skal udfyldes.")
     
-    # Send email notifikation til support og kvittering til bruger
-    send_support_ticket_email(
-        name=req.name.strip(),
-        email=req.email.strip(),
-        subject=req.subject.strip() if req.subject else "Supporthenvendelse",
-        message=req.message.strip(),
-        club_name=req.club_name.strip() if req.club_name else ""
-    )
+    src = req.source_system.strip() if req.source_system else "EquiEvent"
+    name = req.name.strip()
+    email = req.email.strip()
+    subject = req.subject.strip() if req.subject else "Supporthenvendelse"
+    message = req.message.strip()
+    club_name = req.club_name.strip() if req.club_name else None
+    priority = req.priority.strip() if req.priority else "Normal"
+    
+    # 1. Gem i databasen
+    ticket_id = None
+    try:
+        db = SessionLocal()
+        ticket = models.SupportTicket(
+            source_system=src,
+            name=name,
+            email=email,
+            subject=subject,
+            message=message,
+            club_name=club_name,
+            status="Ny",
+            priority=priority
+        )
+        db.add(ticket)
+        db.commit()
+        db.refresh(ticket)
+        ticket_id = ticket.id
+        db.close()
+    except Exception as e:
+        print(f"Fejl ved oprettelse af support_ticket i DB: {e}")
+
+    # 2. Send email notifikation til support og kvittering til bruger
+    try:
+        send_support_ticket_email(
+            name=name,
+            email=email,
+            subject=f"[{src}] {subject}",
+            message=message,
+            club_name=club_name or ""
+        )
+    except Exception as e:
+        print(f"Fejl ved afsendelse af support email: {e}")
     
     return {
         "status": "success",
+        "ticket_id": ticket_id,
         "message": "Din henvendelse er modtaget. Skriftlige henvendelser besvares inden for max 3 arbejdsdage."
     }
+
+@router.get("/tickets")
+def list_support_tickets(
+    source: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("date_desc"),
+    auth: bool = Depends(check_admin_access)
+):
+    db = SessionLocal()
+    try:
+        query = db.query(models.SupportTicket)
+        
+        # Filtre
+        if source and source != "Alle":
+            query = query.filter(models.SupportTicket.source_system == source)
+            
+        if status and status != "Alle":
+            if status == "Aabne":
+                query = query.filter(models.SupportTicket.status.in_(["Ny", "I gang"]))
+            else:
+                query = query.filter(models.SupportTicket.status == status)
+                
+        if search:
+            term = f"%{search.strip().lower()}%"
+            query = query.filter(
+                (models.SupportTicket.name.ilike(term)) |
+                (models.SupportTicket.email.ilike(term)) |
+                (models.SupportTicket.subject.ilike(term)) |
+                (models.SupportTicket.message.ilike(term)) |
+                (models.SupportTicket.club_name.ilike(term))
+            )
+            
+        # Sortering
+        if sort_by == "date_asc":
+            query = query.order_by(models.SupportTicket.created_at.asc())
+        elif sort_by == "user_asc":
+            query = query.order_by(models.SupportTicket.name.asc())
+        elif sort_by == "user_desc":
+            query = query.order_by(models.SupportTicket.name.desc())
+        elif sort_by == "source":
+            query = query.order_by(models.SupportTicket.source_system.asc(), models.SupportTicket.created_at.desc())
+        else:
+            query = query.order_by(models.SupportTicket.created_at.desc())
+            
+        tickets = query.all()
+        
+        # Beregn samlet statistik for hurtig overblik
+        all_tickets = db.query(models.SupportTicket).all()
+        stats = {
+            "total": len(all_tickets),
+            "new_count": sum(1 for t in all_tickets if t.status == "Ny"),
+            "in_progress_count": sum(1 for t in all_tickets if t.status == "I gang"),
+            "resolved_count": sum(1 for t in all_tickets if t.status == "Løst"),
+            "sources": sorted(list(set(t.source_system for t in all_tickets if t.source_system)))
+        }
+        
+        return {
+            "tickets": [
+                {
+                    "id": t.id,
+                    "source_system": t.source_system,
+                    "name": t.name,
+                    "email": t.email,
+                    "subject": t.subject,
+                    "message": t.message,
+                    "club_name": t.club_name,
+                    "status": t.status,
+                    "priority": t.priority,
+                    "internal_notes": t.internal_notes,
+                    "created_at": t.created_at.isoformat() if t.created_at else None,
+                    "updated_at": t.updated_at.isoformat() if t.updated_at else None
+                }
+                for t in tickets
+            ],
+            "stats": stats
+        }
+    finally:
+        db.close()
+
+@router.patch("/tickets/{ticket_id}")
+def update_support_ticket(ticket_id: int, req: UpdateTicketRequest, auth: bool = Depends(check_admin_access)):
+    db = SessionLocal()
+    try:
+        ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Opgave ikke fundet.")
+            
+        if req.status is not None:
+            ticket.status = req.status
+        if req.priority is not None:
+            ticket.priority = req.priority
+        if req.internal_notes is not None:
+            ticket.internal_notes = req.internal_notes
+            
+        ticket.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(ticket)
+        return {
+            "status": "success",
+            "ticket": {
+                "id": ticket.id,
+                "status": ticket.status,
+                "priority": ticket.priority,
+                "internal_notes": ticket.internal_notes,
+                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None
+            }
+        }
+    finally:
+        db.close()
+
+@router.delete("/tickets/{ticket_id}")
+def delete_support_ticket(ticket_id: int, auth: bool = Depends(check_admin_access)):
+    db = SessionLocal()
+    try:
+        ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Opgave ikke fundet.")
+        db.delete(ticket)
+        db.commit()
+        return {"status": "success", "message": "Opgaven er slettet."}
+    finally:
+        db.close()
+
+@router.post("/tickets")
+def create_manual_support_ticket(req: CreateManualTicketRequest, auth: bool = Depends(check_admin_access)):
+    db = SessionLocal()
+    try:
+        ticket = models.SupportTicket(
+            source_system=req.source_system or "EquiEvent",
+            name=req.name,
+            email=req.email,
+            subject=req.subject,
+            message=req.message,
+            club_name=req.club_name,
+            status=req.status or "Ny",
+            priority=req.priority or "Normal",
+            internal_notes=req.internal_notes
+        )
+        db.add(ticket)
+        db.commit()
+        db.refresh(ticket)
+        return {"status": "success", "ticket_id": ticket.id}
+    finally:
+        db.close()

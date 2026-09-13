@@ -6,7 +6,7 @@
     <title>Arno L. Kristiansen | ALKData</title>
     <meta name="description" content="Personlig portfolio og app-bibliotek for Arno L. Kristiansen og ALKData.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -85,20 +85,8 @@
             <h2 class="section-title mt-4"><i class="fas fa-server"></i> Mine Services & Apps</h2>
             
             <div class="app-grid">
-                <!-- App 1: VW ID.3 Dashboard -->
-                <a href="https://id3.alkdata.dk" class="app-card">
-                    <div class="app-icon vw-icon">
-                        <i class="fas fa-car-battery"></i>
-                    </div>
-                    <div class="app-info">
-                        <h3>VW ID.3 Dashboard</h3>
-                        <p>Telemetri for Volkswagen ID.3</p>
-                    </div>
-                    <i class="fas fa-chevron-right arrow"></i>
-                </a>
-
-                <!-- App 2: EquiEvent -->
-                <a href="https://equievent.alkdata.dk" class="app-card">
+                <!-- App 1: EquiEvent -->
+                <a href="https://equievent.dk" class="app-card" target="_blank">
                     <div class="app-icon icehorse-icon">
                         <i class="fas fa-horse-head"></i>
                     </div>
@@ -109,31 +97,216 @@
                     <i class="fas fa-chevron-right arrow"></i>
                 </a>
 
-                <!-- App 3: CasaOS -->
-                <a href="https://admin.alkdata.dk" class="app-card">
-                    <div class="app-icon admin-icon">
-                        <i class="fas fa-server"></i>
+                <!-- App 2: AI Token & Server Monitor (Beskyttet med adgangskode) -->
+                <a href="https://usage.alkdata.dk" class="app-card protected-app" id="openMonitorBtn" data-target="https://usage.alkdata.dk" data-title="AI & Server Monitor">
+                    <div class="app-icon usage-icon">
+                        <i class="fas fa-microchip"></i>
                     </div>
                     <div class="app-info">
-                        <h3>Server Administration</h3>
-                        <p>CasaOS kontrolpanel</p>
+                        <div class="app-title-row">
+                            <h3>AI & Server Monitor</h3>
+                            <span class="lock-pill"><i class="fas fa-lock"></i> Privat</span>
+                        </div>
+                        <p>Tokens, forbrug & serverens sundhed</p>
                     </div>
                     <i class="fas fa-chevron-right arrow"></i>
                 </a>
 
-                <!-- App 4: Partners DUO -->
-                <a href="https://partners.alkdata.dk" class="app-card">
-                    <div class="app-icon partners-icon">
-                        <i class="fas fa-gamepad"></i>
+                <!-- App 3: Support & Opgave Hub (Beskyttet med samme adgangskode) -->
+                <a href="/support.html" class="app-card protected-app" id="openSupportHubBtn" data-target="/support.html" data-title="Support & Opgave Hub">
+                    <div class="app-icon" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(244, 63, 94, 0.25)); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;">
+                        <i class="fas fa-headset"></i>
                     </div>
                     <div class="app-info">
-                        <h3>Partners DUO</h3>
-                        <p>Brætspil online for 2 spillere</p>
+                        <div class="app-title-row">
+                            <h3>Support & Opgaver</h3>
+                            <span class="lock-pill"><i class="fas fa-lock"></i> Privat</span>
+                        </div>
+                        <p>Central henvendelses- og opgavestyring for alle systemer</p>
                     </div>
                     <i class="fas fa-chevron-right arrow"></i>
                 </a>
             </div>
         </div>
     </main>
+
+    <!-- Password Modal -->
+    <div class="modal-overlay" id="passwordModal" aria-hidden="true">
+        <div class="modal-container glass-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <button type="button" class="modal-close" id="closeModalBtn" aria-label="Luk dialog">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="modal-icon-wrapper">
+                <div class="modal-icon-glow"></div>
+                <div class="modal-icon" id="modalLockIcon">
+                    <i class="fas fa-lock"></i>
+                </div>
+            </div>
+
+            <h3 class="modal-title" id="modalTitle">Administrator Adgang</h3>
+            <p class="modal-desc">Indtast adgangskode for at åbne <strong id="modalTargetName">AI & Server Monitor</strong>.</p>
+
+            <form id="passwordForm" class="password-form" autocomplete="off">
+                <div class="input-wrapper">
+                    <i class="fas fa-key input-icon"></i>
+                    <input type="password" id="passwordInput" class="password-input" placeholder="Indtast password..." autocomplete="current-password" required>
+                    <button type="button" class="toggle-pwd-btn" id="togglePwdBtn" aria-label="Vis eller skjul password" title="Vis/skjul password">
+                        <i class="fas fa-eye" id="togglePwdIcon"></i>
+                    </button>
+                </div>
+
+                <div class="error-msg" id="errorMsg" role="alert">
+                    <i class="fas fa-circle-exclamation"></i> Forkert adgangskode. Prøv igen.
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelModalBtn">Annuller</button>
+                    <button type="submit" class="btn btn-primary" id="submitPasswordBtn">
+                        <span>Lås op & Åbn</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const AUTH_KEY = 'SommerHaar2026';
+            const protectedApps = document.querySelectorAll('.protected-app');
+            const modal = document.getElementById('passwordModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const cancelModalBtn = document.getElementById('cancelModalBtn');
+            const form = document.getElementById('passwordForm');
+            const pwdInput = document.getElementById('passwordInput');
+            const togglePwdBtn = document.getElementById('togglePwdBtn');
+            const togglePwdIcon = document.getElementById('togglePwdIcon');
+            const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.getElementById('submitPasswordBtn');
+            const modalLockIcon = document.getElementById('modalLockIcon');
+            
+            let currentTargetUrl = 'https://usage.alkdata.dk';
+            let currentTargetTitle = 'AI & Server Monitor';
+            let isSubmitting = false;
+
+            function openModal(e, appEl) {
+                if (e) e.preventDefault();
+                currentTargetUrl = appEl.getAttribute('data-target') || 'https://usage.alkdata.dk';
+                currentTargetTitle = appEl.getAttribute('data-title') || 'Privat Tjeneste';
+                
+                const targetNameEl = document.getElementById('modalTargetName');
+                if (targetNameEl) targetNameEl.innerText = currentTargetTitle;
+
+                if (sessionStorage.getItem('alk_monitor_authenticated') === 'true') {
+                    if (currentTargetUrl.startsWith('http')) {
+                        window.open(currentTargetUrl, '_blank', 'noopener,noreferrer');
+                    } else {
+                        window.location.href = currentTargetUrl;
+                    }
+                    return;
+                }
+
+                modal.classList.add('active');
+                modal.setAttribute('aria-hidden', 'false');
+                pwdInput.value = '';
+                errorMsg.classList.remove('show');
+                pwdInput.classList.remove('input-error');
+                resetButtonState();
+                setTimeout(() => pwdInput.focus(), 150);
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal() {
+                modal.classList.remove('active');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                errorMsg.classList.remove('show');
+                pwdInput.classList.remove('input-error');
+                pwdInput.value = '';
+            }
+
+            function resetButtonState() {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-success');
+                submitBtn.innerHTML = '<span>Lås op & Åbn</span><i class="fas fa-arrow-right"></i>';
+                modalLockIcon.innerHTML = '<i class="fas fa-lock"></i>';
+                modalLockIcon.classList.remove('unlocked');
+            }
+
+            protectedApps.forEach(appEl => {
+                appEl.addEventListener('click', (e) => openModal(e, appEl));
+            });
+
+            closeModalBtn.addEventListener('click', closeModal);
+            cancelModalBtn.addEventListener('click', closeModal);
+
+            // Luk ved klik udenfor modal vinduet
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            // ESC-tast lukker modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeModal();
+                }
+            });
+
+            // Vis / skjul kodeord
+            togglePwdBtn.addEventListener('click', () => {
+                const isPassword = pwdInput.type === 'password';
+                pwdInput.type = isPassword ? 'text' : 'password';
+                togglePwdIcon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+            });
+
+            // Validering og redirection
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (isSubmitting) return;
+
+                const entered = pwdInput.value.trim();
+                if (entered === AUTH_KEY) {
+                    isSubmitting = true;
+                    errorMsg.classList.remove('show');
+                    pwdInput.classList.remove('input-error');
+
+                    // Success animation state
+                    sessionStorage.setItem('alk_monitor_authenticated', 'true');
+                    sessionStorage.setItem('alk_admin_key', AUTH_KEY);
+                    submitBtn.classList.add('btn-success');
+                    submitBtn.innerHTML = '<span>Adgang godkendt!</span><i class="fas fa-check"></i>';
+                    modalLockIcon.innerHTML = '<i class="fas fa-unlock"></i>';
+                    modalLockIcon.classList.add('unlocked');
+
+                    setTimeout(() => {
+                        if (currentTargetUrl.startsWith('http')) {
+                            window.open(currentTargetUrl, '_blank', 'noopener,noreferrer');
+                        } else {
+                            window.location.href = currentTargetUrl;
+                        }
+                        closeModal();
+                        isSubmitting = false;
+                        resetButtonState();
+                    }, 500);
+                } else {
+                    // Fejl håndtering
+                    errorMsg.classList.add('show');
+                    pwdInput.classList.add('input-error');
+                    
+                    // Ryst animation
+                    const container = modal.querySelector('.modal-container');
+                    container.classList.remove('shake');
+                    void container.offsetWidth; // trigger reflow
+                    container.classList.add('shake');
+
+                    pwdInput.focus();
+                    pwdInput.select();
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

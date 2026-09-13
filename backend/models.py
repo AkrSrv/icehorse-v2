@@ -311,3 +311,20 @@ class AuditLog(Base):
     snapshot = Column(Text)  # JSON representation of the entity before this change
 
 
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    source_system = Column(String, default="EquiEvent", index=True)
+    name = Column(String, index=True)
+    email = Column(String, index=True)
+    subject = Column(String)
+    message = Column(Text)
+    club_name = Column(String, nullable=True)
+    status = Column(String, default="Ny", index=True)  # "Ny", "I gang", "Løst", "Arkiveret"
+    priority = Column(String, default="Normal")  # "Lav", "Normal", "Høj"
+    internal_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+

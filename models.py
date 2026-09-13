@@ -41,6 +41,22 @@ class DiscountCode(Base):
     code = Column(String, unique=True, index=True)
     discount_amount = Column(Float)
     is_active = Column(Boolean, default=True)
+    max_uses_per_club = Column(Integer, nullable=True, default=None)
+    max_total_uses = Column(Integer, nullable=True, default=None)
+
+    usages = relationship("DiscountUsage", back_populates="discount_code", cascade="all, delete-orphan")
+
+class DiscountUsage(Base):
+    __tablename__ = "discount_usages"
+    id = Column(Integer, primary_key=True, index=True)
+    discount_code_id = Column(Integer, ForeignKey("discount_codes.id"))
+    club_id = Column(Integer, ForeignKey("clubs.id"))
+    competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    used_at = Column(DateTime, default=datetime.utcnow)
+
+    discount_code = relationship("DiscountCode", back_populates="usages")
+    club = relationship("Club")
 
 class Competition(Base):
     __tablename__ = "competitions"
@@ -77,6 +93,8 @@ class ClubPost(Base):
     max_value = Column(Float, default=10.0)
     discipline = Column(String, default="gait")
     scoring_method = Column(String, default="standard")
+    is_active = Column(Boolean, default=True)
+    configuration = Column(Text, nullable=True)
 
     club = relationship("Club", back_populates="club_posts")
     scores = relationship("Score", back_populates="club_post", cascade="all, delete-orphan")
@@ -291,5 +309,22 @@ class AuditLog(Base):
     changed_by = Column(String, nullable=True)
     change_reason = Column(String, nullable=True)
     snapshot = Column(Text)  # JSON representation of the entity before this change
+
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    source_system = Column(String, default="EquiEvent", index=True)
+    name = Column(String, index=True)
+    email = Column(String, index=True)
+    subject = Column(String)
+    message = Column(Text)
+    club_name = Column(String, nullable=True)
+    status = Column(String, default="Ny", index=True)  # "Ny", "I gang", "Løst", "Arkiveret"
+    priority = Column(String, default="Normal")  # "Lav", "Normal", "Høj"
+    internal_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 
