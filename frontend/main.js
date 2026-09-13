@@ -578,7 +578,9 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchProfile();
         fetchGlobalDirectory();
         fetchClubPosts();
-        window.updateScoringMethodOptions();
+        if (typeof window.updateScoringMethodOptions === 'function') {
+            window.updateScoringMethodOptions();
+        }
     }
 
     window.switchTab = function(tabName) {
