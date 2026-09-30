@@ -210,6 +210,24 @@ class Score(Base):
     competition_judge = relationship("CompetitionJudge", back_populates="scores")
     competition_rider = relationship("CompetitionRider", back_populates="scores")
 
+    @property
+    def rider_name(self):
+        return self.competition_rider.club_rider.name if self.competition_rider and self.competition_rider.club_rider else None
+
+    @property
+    def horse_name(self):
+        return self.competition_rider.horse.name if self.competition_rider and self.competition_rider.horse else None
+
+    @property
+    def start_number(self):
+        if not self.competition_rider:
+            return None
+        if self.club_post_id and self.competition_rider.rider_posts:
+            for rp in self.competition_rider.rider_posts:
+                if rp.club_post_id == self.club_post_id and rp.start_number:
+                    return rp.start_number
+        return self.competition_rider.start_number
+
 
 class RuleSet(Base):
     __tablename__ = "rulesets"

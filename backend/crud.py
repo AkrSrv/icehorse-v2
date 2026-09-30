@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
 import models, schemas
 import uuid
 import auth
@@ -409,6 +410,7 @@ def update_score(db: Session, score_id: int, score_update: schemas.ScoreUpdate, 
         update_data = score_update.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_score, key, value)
+        db_score.timestamp = datetime.utcnow()
         db.commit()
         db.refresh(db_score)
     return db_score

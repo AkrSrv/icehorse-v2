@@ -240,6 +240,9 @@ class ScoreOut(ScoreBase):
     competition_judge_id: int
     competition_rider_id: int
     timestamp: datetime
+    rider_name: Optional[str] = None
+    horse_name: Optional[str] = None
+    start_number: Optional[int] = None
     
     class Config:
         from_attributes = True

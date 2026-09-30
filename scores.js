@@ -28,6 +28,8 @@ window.activeClass = null;
 window.activeClassRiders = [];
 window.leaderboardData = null;
 window.drfDressageTemplates = [];
+window.judgeScores = [];
+window.pendingBulletComments = {};
 
 async function loadDrfTemplates() {
     try {
@@ -330,6 +332,17 @@ async function initMagicJudge(uuid) {
         // Hent stævnets leaderboard for at få ryttere samt disciplin-info
         await fetchCompetitionRidersForJudge(magicJudge.competition_id);
         
+        // Hent dommerens egne afgivne bedømmelser direkte
+        window.judgeScores = [];
+        try {
+            const scRes = await fetch(`${API_BASE}/magic/${uuid}/scores`);
+            if (scRes.ok) {
+                window.judgeScores = await scRes.json();
+            }
+        } catch(e) {
+            console.warn("Could not load judge scores:", e);
+        }
+        
         if (window.leaderboardData && window.leaderboardData.competition && window.leaderboardData.competition.club_id) {
             try {
                 const defsRes = await fetch(`${API_BASE}/api/v1/clubs/${window.leaderboardData.competition.club_id}/class-definitions`);
@@ -443,6 +456,11 @@ window.startJudging = function() {
             document.getElementById('mj-points-label').innerText = "Point (0.00 - 10.00)";
         }
     }
+    
+    // Render liste over ekvipager og seneste bedømmelser på denne post
+    if (typeof window.renderRecentScoresForJudge === 'function') {
+        window.renderRecentScoresForJudge();
+    }
 };
 
 window.changePost = function() {
@@ -452,10 +470,225 @@ window.changePost = function() {
     document.getElementById('mj-judging-area').style.display = 'none';
     document.getElementById('mj-post-selection').style.display = 'block';
     document.getElementById('mj-score-form').style.display = 'none';
+    document.getElementById('mj-rider-id').value = '';
+    document.getElementById('mj-score-id').value = '';
+    const editNotice = document.getElementById('mj-edit-notice');
+    if (editNotice) editNotice.style.display = 'none';
+};
+
+window.findExistingScoreForRider = function(riderId) {
+    if (!riderId) return null;
+    const numRiderId = parseInt(riderId);
+    
+    // 1. Tjek dommerens egne afgivne bedømmelser direkte fra DB
+    if (window.judgeScores && window.judgeScores.length) {
+        const found = window.judgeScores.find(s => 
+            s.competition_rider_id === numRiderId && 
+            (activePostId ? s.club_post_id === activePostId : true)
+        );
+        if (found) return found;
+    }
+    
+    // 2. Tjek leaderboard detaljer for den aktuelle klasse
+    if (window.activeClassRiders && window.activeClassRiders.length) {
+        const rData = window.activeClassRiders.find(r => 
+            (r.competition_rider_id === numRiderId || r.rider_id === numRiderId)
+        );
+        if (rData && rData.details && rData.details.length) {
+            const dScore = rData.details.find(d => 
+                (magicJudge ? (d.judge_id == magicJudge.id || (magicJudge.club_judge && d.judge_name === magicJudge.club_judge.name)) : true) &&
+                (activePostId ? (d.post_id == activePostId || !d.post_id) : true)
+            );
+            if (dScore) {
+                return {
+                    id: dScore.score_id,
+                    score_id: dScore.score_id,
+                    competition_rider_id: numRiderId,
+                    club_post_id: dScore.post_id || activePostId,
+                    points: (dScore.percentage !== undefined ? dScore.percentage : dScore.points),
+                    raw_points: dScore.points,
+                    style_points: dScore.style_points,
+                    deductions: dScore.deductions || 0,
+                    comment: dScore.comment || '',
+                    faults: dScore.faults,
+                    time_seconds: dScore.time_seconds,
+                    is_eliminated: dScore.is_eliminated,
+                    is_retired: dScore.is_retired,
+                    is_clear: dScore.is_clear,
+                    jump_off_faults: dScore.jump_off_faults,
+                    jump_off_time: dScore.jump_off_time
+                };
+            }
+        }
+    }
+    return null;
+};
+
+function parseBulletComments(text, targetObj) {
+    if (!text || typeof text !== 'string') return;
+    const lines = text.split('\n');
+    lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+            const clean = trimmed.replace(/^[•\-\*]\s*/, '');
+            const colonIdx = clean.indexOf(':');
+            if (colonIdx > 0) {
+                const header = clean.substring(0, colonIdx).trim();
+                const content = clean.substring(colonIdx + 1).trim();
+                const seqMatch = header.match(/(?:Øv\.|Spring|Del|Opgavedel)?\s*(\d+)/i);
+                if (seqMatch) {
+                    targetObj[seqMatch[1]] = content;
+                }
+                targetObj[header] = content;
+            }
+        }
+    });
+}
+
+window.renderRecentScoresForJudge = function() {
+    const container = document.getElementById('mj-recent-scores');
+    if (!container) return;
+    
+    if (!activePostId) {
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.85rem;">Vælg en post for at se bedømmelser.</p>';
+        return;
+    }
+    
+    let riders = window.activeClassRiders || [];
+    if ((!riders || riders.length === 0) && window.leaderboardData && window.leaderboardData.classes) {
+        const classData = window.leaderboardData.classes.find(c => c.class_id === activePostId);
+        if (classData && classData.leaderboard) {
+            riders = classData.leaderboard;
+            window.activeClassRiders = riders;
+        }
+    }
+    
+    const judgedMap = new Map();
+    const awaiting = [];
+    
+    // 1. Gennemgå ryttere registreret for denne post
+    riders.forEach(r => {
+        const rid = r.competition_rider_id || r.rider_id;
+        const score = window.findExistingScoreForRider(rid);
+        if (score) {
+            judgedMap.set(rid, { rider: r, score: score, rid: rid });
+        } else {
+            awaiting.push({ rider: r, rid: rid });
+        }
+    });
+    
+    // 2. Medtag også eventuelle scores fra window.judgeScores for denne post, som ikke var i listen
+    if (window.judgeScores && window.judgeScores.length) {
+        window.judgeScores.forEach(s => {
+            if (s.club_post_id === activePostId && !judgedMap.has(s.competition_rider_id)) {
+                let foundRider = null;
+                if (window.leaderboardData && window.leaderboardData.classes) {
+                    for (const cls of window.leaderboardData.classes) {
+                        const m = (cls.leaderboard || []).find(lr => (lr.competition_rider_id === s.competition_rider_id || lr.rider_id === s.competition_rider_id));
+                        if (m) { foundRider = m; break; }
+                    }
+                }
+                const riderObj = foundRider || {
+                    rider_id: s.competition_rider_id,
+                    competition_rider_id: s.competition_rider_id,
+                    rider_name: s.rider_name || `Ekvipage #${s.competition_rider_id}`,
+                    horse_name: s.horse_name || '',
+                    start_number: s.start_number || null
+                };
+                judgedMap.set(s.competition_rider_id, {
+                    rider: riderObj,
+                    score: s,
+                    rid: s.competition_rider_id
+                });
+            }
+        });
+    }
+    
+    const judged = Array.from(judgedMap.values());
+    
+    if (judged.length === 0 && awaiting.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.85rem;">Ingen ekvipager fundet for denne post endnu.</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    if (judged.length === 0) {
+        html += '<p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.8rem;">Du har endnu ikke afgivet point på denne post.</p>';
+    } else {
+        html += '<div style="display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.2rem;">';
+        judged.forEach(item => {
+            const r = item.rider;
+            const s = item.score;
+            const startNumberVal = r.start_number || s.start_number;
+            const startNoBadge = startNumberVal ? `<span class="badge" style="background: var(--primary); font-size: 0.75rem;">#${startNumberVal}</span>` : '';
+            
+            let scoreStr = '';
+            if (s.points !== null && s.points !== undefined) {
+                scoreStr = `${s.points} p`;
+            } else if (s.faults !== null && s.faults !== undefined) {
+                scoreStr = `${s.faults} fejl`;
+            } else if (s.is_eliminated) {
+                scoreStr = 'Elimineret';
+            } else if (s.is_retired) {
+                scoreStr = 'Udgået';
+            }
+            
+            const commentSnippet = s.comment ? `<div style="font-size: 0.78rem; color: #cbd5e1; font-style: italic; margin-top: 3px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">"${s.comment.split('\n')[0]}"</div>` : '';
+            const safeRiderName = (r.rider_name || s.rider_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeHorseName = (r.horse_name || s.horse_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const startNoParam = startNumberVal ? startNumberVal : 'null';
+            
+            html += `
+                <div class="list-item" style="border-left: 4px solid #38bdf8; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; margin-bottom: 0; background: rgba(15, 23, 42, 0.45); border-radius: 8px;">
+                    <div>
+                        <div style="font-weight: 600; color: #fff;">${r.rider_name || s.rider_name} ${startNoBadge} <span class="badge" style="background: #10b981; margin-left: 0.4rem;"><i class="fas fa-check"></i> ${scoreStr}</span></div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);"><i class="fas fa-horse-head"></i> ${r.horse_name || s.horse_name || '-'}</div>
+                        ${commentSnippet}
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.selectRiderToScore(${item.rid}, '${safeRiderName}', '${safeHorseName}', ${startNoParam})" style="white-space: nowrap; border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; font-weight: 600;">
+                        <i class="fas fa-edit"></i> Ret Point
+                    </button>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+    
+    if (awaiting.length > 0) {
+        html += `
+            <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1);">
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    Mangler bedømmelse (${awaiting.length}):
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+        `;
+        awaiting.forEach(item => {
+            const r = item.rider;
+            const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.15); font-size: 0.75rem;">#${r.start_number}</span>` : '';
+            const safeRiderName = (r.rider_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeHorseName = (r.horse_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const startNoParam = r.start_number ? r.start_number : 'null';
+            html += `
+                <div class="list-item" style="border-left: 4px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.9rem; margin-bottom: 0; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <div>
+                        <span style="font-weight: 600; color: #e2e8f0;">${r.rider_name}</span> ${startNo}
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.5rem;"><i class="fas fa-horse-head"></i> ${r.horse_name}</span>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="window.selectRiderToScore(${item.rid}, '${safeRiderName}', '${safeHorseName}', ${startNoParam})" style="white-space: nowrap; background: #10b981; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600;">
+                        <i class="fas fa-pencil-alt"></i> Bedøm
+                    </button>
+                </div>
+            `;
+        });
+        html += `</div></div>`;
+    }
+    
+    container.innerHTML = html;
 };
 
 window.searchRider = function() {
-    const query = document.getElementById('mj-rider-search').value.toLowerCase();
+    const query = document.getElementById('mj-rider-search').value.toLowerCase().trim();
     const resultsContainer = document.getElementById('mj-rider-search-results');
     resultsContainer.innerHTML = '';
     
@@ -463,18 +696,45 @@ window.searchRider = function() {
     
     const results = window.activeClassRiders.filter(r => 
         (r.start_number && r.start_number.toString().includes(query)) ||
-        r.rider_name.toLowerCase().includes(query) ||
-        r.horse_name.toLowerCase().includes(query)
+        (r.rider_name && r.rider_name.toLowerCase().includes(query)) ||
+        (r.horse_name && r.horse_name.toLowerCase().includes(query))
     );
+    
+    if (results.length === 0) {
+        resultsContainer.innerHTML = '<div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">Ingen ekvipager fundet der matcher søgningen.</div>';
+        return;
+    }
     
     results.forEach(r => {
         const startNo = r.start_number ? `<span class="badge" style="background: var(--primary);">#${r.start_number}</span>` : '';
         const rid = r.competition_rider_id || r.rider_id;
+        const existing = window.findExistingScoreForRider(rid);
+        
+        let scoreBadge = '';
+        if (existing) {
+            let scoreStr = '';
+            if (existing.points !== null && existing.points !== undefined) {
+                scoreStr = `${existing.points} p`;
+            } else if (existing.faults !== null && existing.faults !== undefined) {
+                scoreStr = `${existing.faults} fejl`;
+            } else if (existing.is_eliminated) {
+                scoreStr = 'Elimineret';
+            } else if (existing.is_retired) {
+                scoreStr = 'Udgået';
+            }
+            scoreBadge = `<span class="badge" style="background: #10b981; margin-left: 0.5rem;"><i class="fas fa-check"></i> Bedømt (${scoreStr}) - Klik for at rette</span>`;
+        } else {
+            scoreBadge = `<span class="badge" style="background: rgba(255,255,255,0.15); margin-left: 0.5rem;">Klar til bedømmelse</span>`;
+        }
+        
+        const safeRiderName = (r.rider_name || '').replace(/'/g, "\\'");
+        const safeHorseName = (r.horse_name || '').replace(/'/g, "\\'");
+        
         resultsContainer.innerHTML += `
-            <div class="list-item" style="cursor: pointer; border-left: 4px solid #10b981; margin-bottom: 0;" onclick="selectRiderFromSearch(${rid}, '${r.rider_name}', '${r.horse_name}', ${r.start_number})">
+            <div class="list-item" style="cursor: pointer; border-left: 4px solid ${existing ? '#38bdf8' : '#10b981'}; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;" onclick="window.selectRiderFromSearch(${rid}, '${safeRiderName}', '${safeHorseName}', ${r.start_number})">
                 <div>
-                    <strong>${r.rider_name}</strong> ${startNo}
-                    <div style="font-size: 0.8rem; color: var(--text-secondary);"><i class="fas fa-horse-head"></i> ${r.horse_name}</div>
+                    <strong>${r.rider_name}</strong> ${startNo} ${scoreBadge}
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;"><i class="fas fa-horse-head"></i> ${r.horse_name}</div>
                 </div>
                 <i class="fas fa-chevron-right" style="color: var(--text-secondary);"></i>
             </div>
@@ -485,49 +745,122 @@ window.searchRider = function() {
 window.selectRiderFromSearch = function(riderId, riderName, horseName, startNo) {
     document.getElementById('mj-rider-search-results').innerHTML = '';
     document.getElementById('mj-rider-search').value = '';
-    const riderData = window.activeClassRiders.find(r => (r.competition_rider_id === riderId || r.rider_id === riderId));
-    window.selectRiderToScore(riderId, riderName, horseName, startNo, riderData);
+    window.selectRiderToScore(riderId, riderName, horseName, startNo);
 };
 
 window.selectRiderToScore = function(riderId, riderName, horseName, startNo, existingScore) {
-    const isScored = existingScore && ((existingScore.status !== 'pending' && existingScore.points !== null) || existingScore.faults !== null || existingScore.is_eliminated || existingScore.is_retired || existingScore.is_clear);
+    const form = document.getElementById('mj-score-form');
+    if (form) form.style.display = 'block';
     
-    if (isScored) {
-        document.getElementById('mj-score-id').value = existingScore.score_id || '';
-        if (window.activeClass.discipline === 'jumping') {
-            const status = existingScore.is_eliminated ? 'eliminated' : (existingScore.is_retired ? 'retired' : (existingScore.is_clear ? 'clear' : 'completed'));
-            document.getElementById('mj-jump-status').value = status;
-            document.getElementById('mj-jump-faults-nedslag').value = existingScore.faults || 0;
-            document.getElementById('mj-jump-faults-refus').value = 0;
-            document.getElementById('mj-jump-faults-time').value = 0;
-            document.getElementById('mj-jump-time').value = existingScore.time_seconds || 0.0;
-            document.getElementById('mj-jump-style').value = existingScore.style_points || 0.0;
-            document.getElementById('mj-jump-off-faults').value = existingScore.jump_off_faults || 0;
-            document.getElementById('mj-jump-off-time').value = existingScore.jump_off_time || 0.0;
-            window.toggleJumpingStatusFields();
-        } else {
-            document.getElementById('mj-points').value = existingScore.points || '';
-            document.getElementById('mj-deductions').value = existingScore.deductions || 0;
-        }
-        document.getElementById('mj-comment').value = existingScore.comment || '';
+    document.getElementById('mj-rider-id').value = riderId;
+    const num = startNo ? `#${startNo} - ` : '';
+    document.getElementById('mj-selected-rider-name').innerText = `${num}${riderName} på ${horseName}`;
+    
+    let scoreObj = null;
+    if (existingScore && (existingScore.id || existingScore.score_id)) {
+        scoreObj = existingScore;
     } else {
-        document.getElementById('mj-score-id').value = ''; 
-        if (window.activeClass.discipline === 'jumping') {
-            document.getElementById('mj-jump-status').value = 'completed';
-            document.getElementById('mj-jump-faults-nedslag').value = 0;
-            document.getElementById('mj-jump-faults-refus').value = 0;
-            document.getElementById('mj-jump-faults-time').value = 0;
-            document.getElementById('mj-jump-time').value = 0.0;
-            document.getElementById('mj-jump-style').value = 0.0;
-            document.getElementById('mj-jump-off-faults').value = 0;
-            document.getElementById('mj-jump-off-time').value = 0.0;
+        scoreObj = window.findExistingScoreForRider(riderId);
+    }
+    
+    const submitBtn = document.getElementById('mj-submit-score-btn');
+    let editNotice = document.getElementById('mj-edit-notice');
+    if (!editNotice) {
+        editNotice = document.createElement('div');
+        editNotice.id = 'mj-edit-notice';
+        form.insertBefore(editNotice, form.children[3] || form.firstChild);
+    }
+    
+    const bulletComments = {};
+    
+    if (scoreObj) {
+        const scoreId = scoreObj.id || scoreObj.score_id;
+        document.getElementById('mj-score-id').value = scoreId;
+        
+        editNotice.style.display = 'flex';
+        editNotice.style.alignItems = 'center';
+        editNotice.style.gap = '0.75rem';
+        editNotice.style.background = 'rgba(2, 132, 199, 0.15)';
+        editNotice.style.border = '1px solid rgba(2, 132, 199, 0.4)';
+        editNotice.style.borderRadius = '8px';
+        editNotice.style.padding = '0.75rem 1rem';
+        editNotice.style.marginBottom = '1rem';
+        editNotice.style.color = '#bae6fd';
+        editNotice.style.fontSize = '0.88rem';
+        editNotice.innerHTML = `
+            <i class="fas fa-edit" style="font-size: 1.25rem; color: #38bdf8;"></i>
+            <div>
+                <strong>Tidligere point indlæst:</strong> Du kan nu ændre point og kommentarer. Tryk på <em>Opdater Resultat</em> for at gemme dine ændringer.
+            </div>
+        `;
+        
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Opdater Resultat';
+            submitBtn.style.background = '#0284c7';
+            submitBtn.disabled = false;
+        }
+        
+        if (window.activeClass?.discipline === 'jumping') {
+            const status = scoreObj.is_eliminated ? 'eliminated' : (scoreObj.is_retired ? 'retired' : (scoreObj.is_clear ? 'clear' : 'completed'));
+            if (document.getElementById('mj-jump-status')) document.getElementById('mj-jump-status').value = status;
+            if (document.getElementById('mj-jump-faults-nedslag')) document.getElementById('mj-jump-faults-nedslag').value = scoreObj.faults || 0;
+            if (document.getElementById('mj-jump-faults-refus')) document.getElementById('mj-jump-faults-refus').value = 0;
+            if (document.getElementById('mj-jump-faults-time')) document.getElementById('mj-jump-faults-time').value = 0;
+            if (document.getElementById('mj-jump-time')) document.getElementById('mj-jump-time').value = scoreObj.time_seconds || 0.0;
+            if (document.getElementById('mj-jump-style')) document.getElementById('mj-jump-style').value = scoreObj.style_points || 0.0;
+            if (document.getElementById('mj-jump-off-faults')) document.getElementById('mj-jump-off-faults').value = scoreObj.jump_off_faults || 0;
+            if (document.getElementById('mj-jump-off-time')) document.getElementById('mj-jump-off-time').value = scoreObj.jump_off_time || 0.0;
             window.toggleJumpingStatusFields();
         } else {
-            document.getElementById('mj-points').value = '';
-            document.getElementById('mj-deductions').value = 0;
+            const ptsVal = (scoreObj.points !== null && scoreObj.points !== undefined) ? scoreObj.points : '';
+            if (document.getElementById('mj-points')) document.getElementById('mj-points').value = ptsVal;
+            if (document.getElementById('mj-deductions')) document.getElementById('mj-deductions').value = scoreObj.deductions || 0;
         }
-        document.getElementById('mj-comment').value = '';
+        
+        // Parse comments
+        let rawComment = scoreObj.comment || '';
+        let generalComment = rawComment;
+        if (rawComment.includes("Generel kommentar:\n")) {
+            const parts = rawComment.split(/Generel kommentar:\s*\n/);
+            const exPart = parts[0] || '';
+            generalComment = (parts[1] || '').trim();
+            parseBulletComments(exPart, bulletComments);
+        } else if (rawComment.startsWith("Bemærkninger til")) {
+            parseBulletComments(rawComment, bulletComments);
+            generalComment = '';
+        }
+        
+        if (document.getElementById('mj-comment')) {
+            document.getElementById('mj-comment').value = generalComment;
+        }
+    } else {
+        document.getElementById('mj-score-id').value = '';
+        editNotice.style.display = 'none';
+        
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Gem Resultat';
+            submitBtn.style.background = '#10b981';
+            submitBtn.disabled = false;
+        }
+        
+        if (window.activeClass?.discipline === 'jumping') {
+            if (document.getElementById('mj-jump-status')) document.getElementById('mj-jump-status').value = 'completed';
+            if (document.getElementById('mj-jump-faults-nedslag')) document.getElementById('mj-jump-faults-nedslag').value = 0;
+            if (document.getElementById('mj-jump-faults-refus')) document.getElementById('mj-jump-faults-refus').value = 0;
+            if (document.getElementById('mj-jump-faults-time')) document.getElementById('mj-jump-faults-time').value = 0;
+            if (document.getElementById('mj-jump-time')) document.getElementById('mj-jump-time').value = 0.0;
+            if (document.getElementById('mj-jump-style')) document.getElementById('mj-jump-style').value = 0.0;
+            if (document.getElementById('mj-jump-off-faults')) document.getElementById('mj-jump-off-faults').value = 0;
+            if (document.getElementById('mj-jump-off-time')) document.getElementById('mj-jump-off-time').value = 0.0;
+            window.toggleJumpingStatusFields();
+        } else {
+            if (document.getElementById('mj-points')) document.getElementById('mj-points').value = '';
+            if (document.getElementById('mj-deductions')) document.getElementById('mj-deductions').value = 0;
+        }
+        if (document.getElementById('mj-comment')) document.getElementById('mj-comment').value = '';
     }
+    
+    window.pendingBulletComments = bulletComments;
     
     const disc = (window.activeClass?.discipline || '').toLowerCase();
     const jumpDyn = document.getElementById('mj-jumping-exercises-container');
@@ -539,14 +872,14 @@ window.selectRiderToScore = function(riderId, riderName, horseName, startNo, exi
         if (gaitDyn) gaitDyn.style.display = 'none';
         window.activeDrfTemplate = null;
         window.activeGaitTemplate = null;
-        renderJumpingObstaclesForm(window.activeClass?.name, existingScore, window.activeClass);
+        renderJumpingObstaclesForm(window.activeClass?.name, scoreObj, window.activeClass);
     } else if (disc === 'dressage') {
         if (jumpDyn) jumpDyn.style.display = 'none';
         if (gaitDyn) gaitDyn.style.display = 'none';
         window.activeGaitTemplate = null;
         window.activeDrfTemplate = findMatchingDrfTemplate(window.activeClass?.name, disc, window.activeClass);
         if (window.activeDrfTemplate) {
-            renderDrfDressageExercisesForm(window.activeDrfTemplate, existingScore);
+            renderDrfDressageExercisesForm(window.activeDrfTemplate, scoreObj);
         } else {
             if (dressDyn) dressDyn.style.display = 'none';
             document.getElementById('mj-points-group').style.display = 'block';
@@ -559,7 +892,7 @@ window.selectRiderToScore = function(riderId, riderName, horseName, startNo, exi
         window.activeDrfTemplate = null;
         window.activeGaitTemplate = findMatchingGaitTemplate(window.activeClass?.name, window.activeClass);
         if (window.activeGaitTemplate && window.activeGaitTemplate.sections && window.activeGaitTemplate.sections.length) {
-            renderGaitSectionsForm(window.activeGaitTemplate, existingScore);
+            renderGaitSectionsForm(window.activeGaitTemplate, scoreObj);
         } else {
             if (gaitDyn) gaitDyn.style.display = 'none';
             document.getElementById('mj-points-group').style.display = 'block';
@@ -568,15 +901,33 @@ window.selectRiderToScore = function(riderId, riderName, horseName, startNo, exi
         }
     }
     
-    document.getElementById('mj-score-form').style.display = 'block';
-    document.getElementById('mj-rider-id').value = riderId;
+    // Fill pending bullet comments into exercise comment inputs
+    if (Object.keys(bulletComments).length > 0) {
+        document.querySelectorAll('.drf-ex-comment').forEach(inp => {
+            const seq = inp.getAttribute('data-seq');
+            if (bulletComments[seq]) inp.value = bulletComments[seq];
+        });
+        document.querySelectorAll('.jump-obs-comment').forEach(inp => {
+            const obs = inp.getAttribute('data-obs');
+            if (bulletComments[obs]) inp.value = bulletComments[obs];
+        });
+        document.querySelectorAll('.gait-sec-comment').forEach(inp => {
+            const seq = inp.getAttribute('data-seq');
+            const name = inp.getAttribute('data-name');
+            if (bulletComments[seq]) inp.value = bulletComments[seq];
+            else if (name && bulletComments[name]) inp.value = bulletComments[name];
+        });
+        if (typeof updateDrfCommentsSummary === 'function') updateDrfCommentsSummary();
+        if (typeof updateGaitCommentsSummary === 'function') updateGaitCommentsSummary();
+        if (typeof updateJumpingCommentsSummary === 'function') updateJumpingCommentsSummary();
+    }
     
     // Opdater låsestatus på Gem-knap og advarselsbjælke
     window.updateJudgeActivationUI();
     window.refreshJudgeSession();
     
-    const num = startNo ? `#${startNo} - ` : '';
-    document.getElementById('mj-selected-rider-name').innerText = `${num}${riderName} på ${horseName}`;
+    // Scroll form into view
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 function getDefaultObstacleCount(className) {
@@ -645,11 +996,11 @@ function renderJumpingObstaclesForm(className, existingScore) {
     document.getElementById('mj-deductions-group').style.display = 'none';
     document.getElementById('mj-jumping-fields').style.display = 'none';
     
-    renderJumpingObstacleRows(className);
+    renderJumpingObstacleRows(className, existingScore);
     dynContainer.style.display = 'block';
 }
 
-function renderJumpingObstacleRows(className) {
+function renderJumpingObstacleRows(className, existingScore) {
     const dynContainer = document.getElementById('mj-jumping-exercises-container');
     if (!dynContainer) return;
     const obstacles = window.currentObstaclesList || [];
@@ -749,6 +1100,16 @@ function renderJumpingObstacleRows(className) {
     `;
     
     dynContainer.innerHTML = html;
+    if (existingScore) {
+        if (existingScore.time_seconds !== undefined && existingScore.time_seconds !== null) {
+            const timeInp = document.getElementById('mj-jump-time-live');
+            if (timeInp) timeInp.value = existingScore.time_seconds;
+        }
+        const statusSel = document.getElementById('mj-jump-status-live');
+        if (statusSel) {
+            statusSel.value = existingScore.is_eliminated ? 'eliminated' : (existingScore.is_retired ? 'retired' : (existingScore.is_clear ? 'clear' : 'completed'));
+        }
+    }
     calculateJumpingTotal();
 }
 
@@ -956,7 +1317,20 @@ function renderDrfDressageExercisesForm(tpl, existingScore) {
 
     dynContainer.innerHTML = html;
     dynContainer.style.display = 'block';
-    calculateDrfDressageTotal();
+    if (existingScore && existingScore.points !== undefined && existingScore.points !== null) {
+        const pctEl = document.getElementById('drf-live-percentage');
+        if (pctEl) pctEl.innerText = `${existingScore.percentage || existingScore.points} %`;
+        if (existingScore.deductions) {
+            const dedSel = document.getElementById('drf-fejlridning-select');
+            if (dedSel) dedSel.value = existingScore.deductions;
+        }
+        if (existingScore.style_points) {
+            const sumEl = document.getElementById('drf-live-points-summary');
+            if (sumEl) sumEl.innerText = `${existingScore.style_points} point`;
+        }
+    } else {
+        calculateDrfDressageTotal();
+    }
 }
 
 window.updateDrfCommentsSummary = function() {
@@ -1026,10 +1400,12 @@ window.calculateDrfDressageTotal = function() {
     const sumEl = document.getElementById('drf-live-points-summary');
     if (sumEl) sumEl.innerText = `${netPoints.toFixed(1)} opnåede point ud af ${maxPoints} maks (${scoredCount} øvelser bedømt)`;
     
-    const ptsInput = document.getElementById('mj-points');
-    if (ptsInput) ptsInput.value = pct.toFixed(2);
-    const dedInput = document.getElementById('mj-deductions');
-    if (dedInput) dedInput.value = dedVal;
+    if (scoredCount > 0 || dedVal > 0) {
+        const ptsInput = document.getElementById('mj-points');
+        if (ptsInput) ptsInput.value = pct.toFixed(2);
+        const dedInput = document.getElementById('mj-deductions');
+        if (dedInput) dedInput.value = dedVal;
+    }
 };
 
 // ==========================================
@@ -1128,7 +1504,12 @@ function renderGaitSectionsForm(tpl, existingScore) {
 
     dynContainer.innerHTML = html;
     dynContainer.style.display = 'block';
-    calculateGaitTotal();
+    if (existingScore && existingScore.points !== undefined && existingScore.points !== null) {
+        const totEl = document.getElementById('gait-live-total');
+        if (totEl) totEl.innerText = parseFloat(existingScore.points).toFixed(2);
+    } else {
+        calculateGaitTotal();
+    }
 }
 
 window.updateGaitCommentsSummary = function() {
@@ -1185,13 +1566,23 @@ window.calculateGaitTotal = function() {
     const sumEl = document.getElementById('gait-live-summary');
     if (sumEl) sumEl.innerText = `${scoredCount} ud af ${totalCount} opgavedele bedømt`;
     
-    const ptsInput = document.getElementById('mj-points');
-    if (ptsInput) ptsInput.value = avg.toFixed(2);
+    if (scoredCount > 0) {
+        const ptsInput = document.getElementById('mj-points');
+        if (ptsInput) ptsInput.value = avg.toFixed(2);
+    }
 };
 
 window.cancelScore = function() {
-    document.getElementById('mj-score-form').style.display = 'none';
+    const form = document.getElementById('mj-score-form');
+    if (form) form.style.display = 'none';
     document.getElementById('mj-rider-id').value = '';
+    document.getElementById('mj-score-id').value = '';
+    const editNotice = document.getElementById('mj-edit-notice');
+    if (editNotice) editNotice.style.display = 'none';
+    window.pendingBulletComments = {};
+    if (typeof window.renderRecentScoresForJudge === 'function') {
+        window.renderRecentScoresForJudge();
+    }
 };
 
 window.submitJudgeScore = async function(e) {
@@ -1251,8 +1642,12 @@ window.submitJudgeScore = async function(e) {
         calculateDrfDressageTotal();
     } else if (window.activeGaitTemplate && typeof calculateGaitTotal === 'function') {
         calculateGaitTotal();
-    } else if (window.activeClass?.discipline === 'jumping' && typeof calculateJumpingPenaltyTotal === 'function') {
-        calculateJumpingPenaltyTotal();
+    } else if (window.activeClass?.discipline === 'jumping') {
+        if (typeof window.calculateJumpingTotal === 'function') {
+            window.calculateJumpingTotal();
+        } else if (typeof calculateJumpingPenaltyTotal === 'function') {
+            calculateJumpingPenaltyTotal();
+        }
     }
     
     let finalComment = comment.trim();
@@ -1373,13 +1768,26 @@ window.submitJudgeScore = async function(e) {
         if (res.ok) {
             const savedData = await res.json();
             console.log("Score saved:", savedData);
-            alert('Resultat gemt!');
+            alert(scoreId ? 'Bedømmelse opdateret!' : 'Resultat gemt!');
+            
+            // Opdater dommerens lokale score-cache
+            if (!window.judgeScores) window.judgeScores = [];
+            const exIdx = window.judgeScores.findIndex(s => s.id === savedData.id);
+            if (exIdx >= 0) {
+                window.judgeScores[exIdx] = savedData;
+            } else {
+                window.judgeScores.push(savedData);
+            }
+            
             cancelScore();
             if (magicJudge && magicJudge.competition_id) {
                 await fetchCompetitionRidersForJudge(magicJudge.competition_id);
                 if (window.leaderboardData && window.leaderboardData.classes) {
                     const classData = window.leaderboardData.classes.find(c => c.class_id === activePostId);
                     window.activeClassRiders = classData ? classData.leaderboard : [];
+                }
+                if (typeof window.renderRecentScoresForJudge === 'function') {
+                    window.renderRecentScoresForJudge();
                 }
             }
         } else {
@@ -1391,6 +1799,11 @@ window.submitJudgeScore = async function(e) {
         console.error("Score submit network error:", err);
         alert(`Der opstod en netværksfejl ved gemning: ${err.message}`);
     } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            const currentScoreId = document.getElementById('mj-score-id')?.value;
+            submitBtn.innerHTML = currentScoreId ? '<i class="fas fa-sync-alt"></i> Opdater Resultat' : '<i class="fas fa-check"></i> Gem Resultat';
+        }
         window.updateJudgeActivationUI();
     }
 };
