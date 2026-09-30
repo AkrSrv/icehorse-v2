@@ -75,6 +75,7 @@ class Competition(Base):
     discipline = Column(String, default="gait")
     scoring_method = Column(String, default="standard")
     ruleVersion = Column(String, default="2026.1")
+    show_overall_leaderboard = Column(Boolean, default=True)
 
     club = relationship("Club", back_populates="competitions")
     competition_judges = relationship("CompetitionJudge", back_populates="competition", cascade="all, delete-orphan")

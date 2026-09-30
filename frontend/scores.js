@@ -1425,155 +1425,526 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
         
         listElement.innerHTML = '';
         
-        if (!data.classes || data.classes.length === 0) {
+        if ((!data.classes || data.classes.length === 0) && (!data.overall_leaderboard || data.overall_leaderboard.length === 0)) {
             listElement.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Ingen aktive stævneklasser fundet.</p>';
             return;
         }
+
+        const hasOverall = data.overall_leaderboard && data.overall_leaderboard.length > 0;
+        const compShowOverall = data.show_overall_leaderboard !== false;
         
-        data.classes.forEach(cls => {
-            const classHeader = document.createElement('div');
-            classHeader.className = 'glass-panel';
-            classHeader.style.padding = '1rem';
-            classHeader.style.marginTop = '2rem';
-            classHeader.style.marginBottom = '1rem';
-            classHeader.style.background = 'rgba(255,255,255,0.05)';
-            classHeader.style.borderRadius = '8px';
+        const storedPref = localStorage.getItem(`eq_show_overall_${compId}`);
+        let showOverall = storedPref !== null ? storedPref === 'true' : compShowOverall;
+        let activeView = localStorage.getItem(`eq_lb_view_${compId}`) || 'all';
+
+        // 1. KONTROLPANEL ØVERST (Visningsvalg & Til/Fravalg)
+        if (hasOverall && data.classes && data.classes.length > 1) {
+            const controlsPanel = document.createElement('div');
+            controlsPanel.className = 'glass-panel no-print';
+            controlsPanel.style.padding = '0.85rem 1.25rem';
+            controlsPanel.style.marginBottom = '1.75rem';
+            controlsPanel.style.display = 'flex';
+            controlsPanel.style.justifyContent = 'space-between';
+            controlsPanel.style.alignItems = 'center';
+            controlsPanel.style.flexWrap = 'wrap';
+            controlsPanel.style.gap = '0.75rem';
+            controlsPanel.style.background = 'rgba(15, 23, 42, 0.75)';
+            controlsPanel.style.borderRadius = '12px';
+            controlsPanel.style.border = '1px solid rgba(255, 255, 255, 0.12)';
             
-            const discName = cls.discipline === 'gait' ? 'Gangart' : cls.discipline === 'dressage' ? 'Dressur' : 'Springning';
-            const discColor = cls.discipline === 'gait' ? 'var(--primary)' : cls.discipline === 'dressage' ? '#60a5fa' : '#f87171';
-            classHeader.style.borderLeft = `4px solid ${discColor}`;
-            
-            const methodLabel = cls.scoring_method === 'percentage' ? 'Procent & Point' : cls.scoring_method === 'standard' ? 'Karakterer' : `Spring (${cls.scoring_method})`;
-            classHeader.innerHTML = `
-                <h4 style="margin: 0; color: white; display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; font-weight: bold;">
-                    <span>${cls.class_name} <small style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-left: 0.5rem;">(${discName} - ${methodLabel})</small></span>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">${cls.leaderboard.length} deltagere</span>
-                </h4>
+            const btnAllActive = activeView === 'all';
+            const btnOverallActive = activeView === 'overall';
+            const btnClassesActive = activeView === 'classes';
+
+            controlsPanel.innerHTML = `
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-right: 0.25rem;"><i class="fas fa-layer-group"></i> Visning:</span>
+                    <button class="btn btn-sm lb-view-btn" id="lb-view-all" onclick="window.setLeaderboardView('all', ${compId})" style="padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: 1px solid ${btnAllActive ? '#10b981' : 'rgba(255,255,255,0.15)'}; background: ${btnAllActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.06)'}; color: ${btnAllActive ? '#ffffff' : '#cbd5e1'}; font-weight: 600;">
+                        🌟 Begge dele
+                    </button>
+                    <button class="btn btn-sm lb-view-btn" id="lb-view-overall" onclick="window.setLeaderboardView('overall', ${compId})" style="padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: 1px solid ${btnOverallActive ? '#10b981' : 'rgba(255,255,255,0.15)'}; background: ${btnOverallActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.06)'}; color: ${btnOverallActive ? '#ffffff' : '#cbd5e1'}; font-weight: 600;">
+                        🏆 Kun Samlet Stilling
+                    </button>
+                    <button class="btn btn-sm lb-view-btn" id="lb-view-classes" onclick="window.setLeaderboardView('classes', ${compId})" style="padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: 1px solid ${btnClassesActive ? '#10b981' : 'rgba(255,255,255,0.15)'}; background: ${btnClassesActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.06)'}; color: ${btnClassesActive ? '#ffffff' : '#cbd5e1'}; font-weight: 600;">
+                        📋 Kun Enkeltposter (${data.classes.length})
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #cbd5e1; margin: 0; user-select: none;">
+                        <input type="checkbox" id="toggle-overall-cb" ${showOverall ? 'checked' : ''} onchange="window.toggleOverallLeaderboard(this.checked, ${compId})" style="width: 17px; height: 17px; cursor: pointer; accent-color: #10b981;">
+                        <span style="font-weight: 500;">Vis samlet score i toppen</span>
+                    </label>
+                </div>
             `;
-            listElement.appendChild(classHeader);
+            listElement.appendChild(controlsPanel);
+        }
+
+        // 2. SAMLET STILLING I TOPPEN (Overall Leaderboard Section)
+        if (hasOverall) {
+            const overallContainer = document.createElement('div');
+            overallContainer.id = 'overall-leaderboard-section';
+            overallContainer.style.display = (showOverall && activeView !== 'classes') ? 'block' : 'none';
+            overallContainer.style.marginBottom = '2.5rem';
+
+            const overallHeader = document.createElement('div');
+            overallHeader.className = 'glass-panel';
+            overallHeader.style.padding = '1.25rem 1.5rem';
+            overallHeader.style.marginBottom = '1rem';
+            overallHeader.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(251, 191, 36, 0.08))';
+            overallHeader.style.borderRadius = '12px';
+            overallHeader.style.borderLeft = '5px solid #10b981';
+            overallHeader.style.borderTop = '1px solid rgba(16, 185, 129, 0.3)';
+            overallHeader.style.borderRight = '1px solid rgba(16, 185, 129, 0.3)';
+            overallHeader.style.borderBottom = '1px solid rgba(16, 185, 129, 0.3)';
             
-            if (cls.leaderboard.length === 0) {
-                const empty = document.createElement('p');
-                empty.style.textAlign = 'center';
-                empty.style.color = 'var(--text-secondary)';
-                empty.style.fontSize = '0.9rem';
-                empty.style.padding = '0.5rem 0';
-                empty.innerText = 'Ingen deltagere registreret i denne klasse endnu.';
-                listElement.appendChild(empty);
-                return;
-            }
-            
-            cls.leaderboard.forEach((r, index) => {
+            const totalPostsCount = data.total_classes_count || (data.classes ? data.classes.length : 0);
+            overallHeader.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div>
+                        <h3 style="margin: 0; color: #ffffff; font-size: 1.35rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem;">
+                            <span>🏆 Samlet Stilling — Alle Opgaver</span>
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.25); color: #34d399; font-size: 0.75rem; border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.2rem 0.6rem; border-radius: 9999px;">Total Score</span>
+                        </h3>
+                        <p style="margin: 0.35rem 0 0 0; color: #94a3b8; font-size: 0.85rem;">
+                            Samlet pointsum for alle ${totalPostsCount} poster/opgaver til stævnet. Klik på en deltager for at se delresultater pr. post.
+                        </p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.9rem; color: #fbbf24; font-weight: 700;">${data.overall_leaderboard.length} deltagere</span>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">${totalPostsCount} poster i alt</div>
+                    </div>
+                </div>
+            `;
+            overallContainer.appendChild(overallHeader);
+
+            const overallList = document.createElement('div');
+            overallList.style.display = 'flex';
+            overallList.style.flexDirection = 'column';
+            overallList.style.gap = '0.75rem';
+
+            data.overall_leaderboard.forEach((r, index) => {
                 let medal = '';
-                if (index === 0) medal = '🥇';
-                else if (index === 1) medal = '🥈';
-                else if (index === 2) medal = '🥉';
+                let rankBg = 'rgba(255,255,255,0.05)';
+                let rankBorder = 'rgba(255,255,255,0.1)';
+                let rankColor = 'var(--text-secondary)';
                 
-                const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.2);">#${r.start_number}</span>` : '';
-                const progressPct = cls.total_expected_posts_per_rider > 0 ? (r.posts_completed / cls.total_expected_posts_per_rider) * 100 : 0;
-                
-                let detailsHtml = `<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: none;" class="lb-details">`;
-                if (r.details.length === 0) {
-                    detailsHtml += '<p style="font-size: 0.85rem; color: var(--text-secondary);">Ingen bedømmelser endnu.</p>';
-                } else {
-                    r.details.forEach(d => {
-                        if (cls.discipline === 'jumping') {
-                            let statusText = "Gennemført";
-                            if (d.is_eliminated) statusText = "Elimineret (ELI)";
-                            else if (d.is_retired) statusText = "Udgået (RET)";
-                            else if (d.is_clear) statusText = "Fejlfri (Clear)";
-                            
-                            detailsHtml += `
-                                <div style="margin-bottom: 0.8rem; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 6px;">
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <strong>Springning Resultat</strong>
-                                        <span style="color: #fbbf24; font-weight: bold;">${statusText}</span>
-                                    </div>
-                                    <div style="font-size: 0.85rem; margin-top: 0.5rem;">
-                                        Fejl: <span style="color: #ef4444; font-weight: bold;">${d.faults}</span> | 
-                                        Tid: <span style="color: #10b981; font-weight: bold;">${d.time_seconds}s</span>
-                                    </div>
-                                    ${d.style_points > 0 ? `<div style="font-size: 0.85rem; margin-top: 0.3rem;">Stilkarakter: ${d.style_points} | Slutkarakter: <span style="color: #fbbf24;">${d.final_style_score} p</span></div>` : ''}
-                                    ${d.jump_off_faults !== null && d.jump_off_faults !== undefined && d.jump_off_time !== null ? `
-                                        <div style="font-size: 0.85rem; margin-top: 0.3rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.3rem; color: #fbbf24;">
-                                            Omspringning: ${d.jump_off_faults} fejl | Tid: ${d.jump_off_time}s
-                                        </div>
-                                    ` : ''}
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Registreret af: ${d.judge_name}</div>
-                                    ${d.comment ? `<div style="font-size: 0.9rem; font-style: italic; color: #cbd5e1; margin-top: 0.5rem;">"${d.comment}"</div>` : ''}
-                                </div>
-                            `;
-                        } else {
-                            let pointsLabel = `${d.points.toFixed(2)} p`;
-                            if (cls.discipline === 'dressage') {
-                                const pctStr = d.percentage !== undefined ? `${d.percentage.toFixed(2)}%` : '';
-                                const ptsStr = `${d.points} p`;
-                                pointsLabel = pctStr ? `${pctStr} (${ptsStr})` : ptsStr;
-                                if (d.deductions > 0) {
-                                    pointsLabel += ` • Fradrag: -${d.deductions} p`;
-                                }
-                            }
-                            detailsHtml += `
-                                <div style="margin-bottom: 0.8rem; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 6px;">
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <strong>${cls.discipline === 'dressage' ? 'Dressurbedømmelse' : 'Pointbedømmelse'}</strong>
-                                        <span style="color: #10b981; font-weight: bold;">${pointsLabel}</span>
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">Dommer: ${d.judge_name}</div>
-                                    ${d.comment ? `<div style="font-size: 0.86rem; color: #cbd5e1; margin-top: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 6px; border-left: 3px solid #10b981; white-space: pre-line; line-height: 1.5;">${d.comment}</div>` : ''}
-                                </div>
-                            `;
-                        }
-                    });
-                    
-                    // Add print diploma button inside the expanded details card
-                    detailsHtml += `
-                        <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
-                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); window.printDiploma(${cls.class_id}, ${r.rider_id})" style="background: #fbbf24; color: #0f172a; border: none; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">
-                                <i class="fas fa-certificate"></i> Print Diplom
-                            </button>
-                        </div>
-                    `;
+                if (index === 0) {
+                    medal = '🥇';
+                    rankBg = 'rgba(251, 191, 36, 0.15)';
+                    rankBorder = '#fbbf24';
+                    rankColor = '#fbbf24';
+                } else if (index === 1) {
+                    medal = '🥈';
+                    rankBg = 'rgba(203, 213, 225, 0.15)';
+                    rankBorder = '#cbd5e1';
+                    rankColor = '#cbd5e1';
+                } else if (index === 2) {
+                    medal = '🥉';
+                    rankBg = 'rgba(217, 119, 6, 0.15)';
+                    rankBorder = '#d97706';
+                    rankColor = '#f59e0b';
                 }
-                detailsHtml += '</div>';
-                
-                const displayScore = r.display_score || r.total_score.toFixed(2);
-                
+
+                const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.15); margin-left: 0.4rem;">#${r.start_number}</span>` : '';
+                const completedBadge = r.posts_completed > 0
+                    ? `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.75rem;"><i class="fas fa-check-circle"></i> ${r.posts_completed} af ${r.total_posts} poster bedømt</span>`
+                    : `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 0.75rem;"><i class="fas fa-clock"></i> Afventer start</span>`;
+
+                const progressPct = r.total_posts > 0 ? (r.posts_completed / r.total_posts) * 100 : 0;
+
+                // Sub-cards for each post breakdown
+                let breakdownCards = '';
+                if (r.class_scores && r.class_scores.length > 0) {
+                    r.class_scores.forEach(cs => {
+                        const isDone = cs.completed;
+                        const scorePill = isDone 
+                            ? `<span style="font-weight: 700; color: #10b981; font-size: 0.95rem;">${cs.display_score}</span>`
+                            : `<span style="color: #64748b; font-size: 0.8rem; font-style: italic;">Ikke bedømt</span>`;
+                        const statusDot = isDone 
+                            ? '<i class="fas fa-check-circle" style="color: #10b981; font-size: 0.8rem;"></i>'
+                            : '<i class="fas fa-circle" style="color: #475569; font-size: 0.6rem;"></i>';
+                        
+                        let commentSnippet = '';
+                        if (cs.details && cs.details.length > 0 && cs.details[0].comment) {
+                            commentSnippet = `<div style="font-size: 0.78rem; color: #94a3b8; font-style: italic; margin-top: 0.3rem; border-left: 2px solid #10b981; padding-left: 0.4rem;">"${cs.details[0].comment}"</div>`;
+                        }
+
+                        breakdownCards += `
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                                    <span style="font-weight: 600; font-size: 0.85rem; color: #ffffff; display: flex; align-items: center; gap: 0.4rem;">
+                                        ${statusDot} ${cs.class_name}
+                                    </span>
+                                    ${scorePill}
+                                </div>
+                                ${commentSnippet}
+                            </div>
+                        `;
+                    });
+                }
+
                 const card = document.createElement('div');
                 card.className = 'list-item';
-                card.style.borderLeft = `4px solid ${discColor}`;
+                card.style.borderLeft = index < 3 ? `4px solid ${rankBorder}` : '4px solid #10b981';
                 card.style.flexDirection = 'column';
                 card.style.alignItems = 'stretch';
                 card.style.cursor = 'pointer';
+                card.style.transition = 'all 0.2s ease';
+                card.style.background = index === 0 ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(255, 255, 255, 0.03))' : 'rgba(255,255,255,0.03)';
+
                 card.onclick = () => {
-                    const det = card.querySelector('.lb-details');
-                    det.style.display = det.style.display === 'none' ? 'block' : 'none';
+                    const det = card.querySelector('.overall-details');
+                    if (det) {
+                        const isHidden = det.style.display === 'none';
+                        det.style.display = isHidden ? 'block' : 'none';
+                        const chevron = card.querySelector('.overall-chevron');
+                        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
                 };
-                
+
                 card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.75rem;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
-                            <div style="font-size: 1.5rem; width: 30px; text-align: center; color: var(--text-secondary);">${medal || (index+1)}</div>
+                            <div style="font-size: 1.4rem; min-width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: ${rankBg}; color: ${rankColor}; font-weight: bold; border: 1px solid ${rankBorder};">
+                                ${medal || (index + 1)}
+                            </div>
                             <div>
-                                <strong style="font-size: 1.1rem;">${r.rider_name}</strong> ${startNo}
-                                <div style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fas fa-horse-head"></i> ${r.horse_name}</div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <strong style="font-size: 1.15rem; color: #ffffff;">${r.rider_name}</strong>
+                                    ${startNo}
+                                </div>
+                                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.75rem;">
+                                    <span><i class="fas fa-horse-head"></i> ${r.horse_name}</span>
+                                    ${completedBadge}
+                                </div>
                             </div>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 1.3rem; font-weight: bold; color: #fbbf24;">${displayScore}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Fremdrift: ${r.posts_completed}/${cls.total_expected_posts_per_rider} bedømt</div>
+                        <div style="display: flex; align-items: center; gap: 1.25rem;">
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.5rem; font-weight: 800; color: #10b981; letter-spacing: -0.02em;">${r.display_score}</div>
+                                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Samlet Stilling</div>
+                            </div>
+                            <div style="color: #64748b; font-size: 0.9rem; transition: transform 0.2s;" class="overall-chevron">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
                         </div>
                     </div>
-                    <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 0.8rem; overflow: hidden;">
-                        <div style="height: 100%; width: ${progressPct}%; background: #fbbf24; transition: width 0.5s;"></div>
+                    <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 0.85rem; overflow: hidden;">
+                        <div style="height: 100%; width: ${progressPct}%; background: linear-gradient(90deg, #10b981, #fbbf24); transition: width 0.5s;"></div>
                     </div>
-                    ${detailsHtml}
+                    <div class="overall-details" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.05em;">
+                                <i class="fas fa-list-check" style="color: #10b981;"></i> Resultat pr. post:
+                            </div>
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); window.printOverallDiploma(${compId}, ${r.rider_id})" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <i class="fas fa-certificate"></i> Print Samlet Diplom
+                            </button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem;">
+                            ${breakdownCards}
+                        </div>
+                    </div>
                 `;
-                listElement.appendChild(card);
+                overallList.appendChild(card);
             });
-        });
+
+            overallContainer.appendChild(overallList);
+            listElement.appendChild(overallContainer);
+        }
+
+        // 3. ENKELTPOSTER / KLASSER
+        const classesContainer = document.createElement('div');
+        classesContainer.id = 'classes-leaderboard-section';
+        classesContainer.style.display = activeView !== 'overall' ? 'block' : 'none';
+
+        if (data.classes && data.classes.length > 0) {
+            data.classes.forEach(cls => {
+                const classHeader = document.createElement('div');
+                classHeader.className = 'glass-panel';
+                classHeader.style.padding = '1rem';
+                classHeader.style.marginTop = '2rem';
+                classHeader.style.marginBottom = '1rem';
+                classHeader.style.background = 'rgba(255,255,255,0.05)';
+                classHeader.style.borderRadius = '8px';
+                
+                const discName = cls.discipline === 'gait' ? 'Gangart' : cls.discipline === 'dressage' ? 'Dressur' : 'Springning';
+                const discColor = cls.discipline === 'gait' ? 'var(--primary)' : cls.discipline === 'dressage' ? '#60a5fa' : '#f87171';
+                classHeader.style.borderLeft = `4px solid ${discColor}`;
+                
+                const methodLabel = cls.scoring_method === 'percentage' ? 'Procent & Point' : cls.scoring_method === 'standard' ? 'Karakterer' : `Spring (${cls.scoring_method})`;
+                classHeader.innerHTML = `
+                    <h4 style="margin: 0; color: white; display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; font-weight: bold;">
+                        <span>${cls.class_name} <small style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-left: 0.5rem;">(${discName} - ${methodLabel})</small></span>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">${cls.leaderboard.length} deltagere</span>
+                    </h4>
+                `;
+                classesContainer.appendChild(classHeader);
+                
+                if (cls.leaderboard.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.style.textAlign = 'center';
+                    empty.style.color = 'var(--text-secondary)';
+                    empty.style.fontSize = '0.9rem';
+                    empty.style.padding = '0.5rem 0';
+                    empty.innerText = 'Ingen deltagere registreret i denne klasse endnu.';
+                    classesContainer.appendChild(empty);
+                    return;
+                }
+                
+                cls.leaderboard.forEach((r, index) => {
+                    let medal = '';
+                    if (index === 0) medal = '🥇';
+                    else if (index === 1) medal = '🥈';
+                    else if (index === 2) medal = '🥉';
+                    
+                    const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.2);">#${r.start_number}</span>` : '';
+                    const progressPct = cls.total_expected_posts_per_rider > 0 ? (r.posts_completed / cls.total_expected_posts_per_rider) * 100 : 0;
+                    
+                    let detailsHtml = `<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: none;" class="lb-details">`;
+                    if (r.details.length === 0) {
+                        detailsHtml += '<p style="font-size: 0.85rem; color: var(--text-secondary);">Ingen bedømmelser endnu.</p>';
+                    } else {
+                        r.details.forEach(d => {
+                            if (cls.discipline === 'jumping') {
+                                let statusText = "Gennemført";
+                                if (d.is_eliminated) statusText = "Elimineret (ELI)";
+                                else if (d.is_retired) statusText = "Udgået (RET)";
+                                else if (d.is_clear) statusText = "Fejlfri (Clear)";
+                                
+                                detailsHtml += `
+                                    <div style="margin-bottom: 0.8rem; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 6px;">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <strong>Springning Resultat</strong>
+                                            <span style="color: #fbbf24; font-weight: bold;">${statusText}</span>
+                                        </div>
+                                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">
+                                            Fejl: <span style="color: #ef4444; font-weight: bold;">${d.faults}</span> | 
+                                            Tid: <span style="color: #10b981; font-weight: bold;">${d.time_seconds}s</span>
+                                        </div>
+                                        ${d.style_points > 0 ? `<div style="font-size: 0.85rem; margin-top: 0.3rem;">Stilkarakter: ${d.style_points} | Slutkarakter: <span style="color: #fbbf24;">${d.final_style_score} p</span></div>` : ''}
+                                        ${d.jump_off_faults !== null && d.jump_off_faults !== undefined && d.jump_off_time !== null ? `
+                                            <div style="font-size: 0.85rem; margin-top: 0.3rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.3rem; color: #fbbf24;">
+                                                Omspringning: ${d.jump_off_faults} fejl | Tid: ${d.jump_off_time}s
+                                            </div>
+                                        ` : ''}
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Registreret af: ${d.judge_name}</div>
+                                        ${d.comment ? `<div style="font-size: 0.9rem; font-style: italic; color: #cbd5e1; margin-top: 0.5rem;">"${d.comment}"</div>` : ''}
+                                    </div>
+                                `;
+                            } else {
+                                let pointsLabel = `${d.points.toFixed(2)} p`;
+                                if (cls.discipline === 'dressage') {
+                                    const pctStr = d.percentage !== undefined ? `${d.percentage.toFixed(2)}%` : '';
+                                    const ptsStr = `${d.points} p`;
+                                    pointsLabel = pctStr ? `${pctStr} (${ptsStr})` : ptsStr;
+                                    if (d.deductions > 0) {
+                                        pointsLabel += ` • Fradrag: -${d.deductions} p`;
+                                    }
+                                }
+                                detailsHtml += `
+                                    <div style="margin-bottom: 0.8rem; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 6px;">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <strong>${cls.discipline === 'dressage' ? 'Dressurbedømmelse' : 'Pointbedømmelse'}</strong>
+                                            <span style="color: #10b981; font-weight: bold;">${pointsLabel}</span>
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">Dommer: ${d.judge_name}</div>
+                                        ${d.comment ? `<div style="font-size: 0.86rem; color: #cbd5e1; margin-top: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 6px; border-left: 3px solid #10b981; white-space: pre-line; line-height: 1.5;">${d.comment}</div>` : ''}
+                                    </div>
+                                `;
+                            }
+                        });
+                        
+                        detailsHtml += `
+                            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+                                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); window.printDiploma(${cls.class_id}, ${r.rider_id})" style="background: #fbbf24; color: #0f172a; border: none; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">
+                                    <i class="fas fa-certificate"></i> Print Diplom
+                                </button>
+                            </div>
+                        `;
+                    }
+                    detailsHtml += '</div>';
+                    
+                    const displayScore = r.display_score || r.total_score.toFixed(2);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'list-item';
+                    card.style.borderLeft = `4px solid ${discColor}`;
+                    card.style.flexDirection = 'column';
+                    card.style.alignItems = 'stretch';
+                    card.style.cursor = 'pointer';
+                    card.onclick = () => {
+                        const det = card.querySelector('.lb-details');
+                        det.style.display = det.style.display === 'none' ? 'block' : 'none';
+                    };
+                    
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="font-size: 1.5rem; width: 30px; text-align: center; color: var(--text-secondary);">${medal || (index+1)}</div>
+                                <div>
+                                    <strong style="font-size: 1.1rem;">${r.rider_name}</strong> ${startNo}
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fas fa-horse-head"></i> ${r.horse_name}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.3rem; font-weight: bold; color: #fbbf24;">${displayScore}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Fremdrift: ${r.posts_completed}/${cls.total_expected_posts_per_rider} bedømt</div>
+                            </div>
+                        </div>
+                        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 0.8rem; overflow: hidden;">
+                            <div style="height: 100%; width: ${progressPct}%; background: #fbbf24; transition: width 0.5s;"></div>
+                        </div>
+                        ${detailsHtml}
+                    `;
+                    classesContainer.appendChild(card);
+                });
+            });
+        }
+        listElement.appendChild(classesContainer);
         
     } catch(err) { console.error(err); }
+};
+
+window.setLeaderboardView = function(view, compId) {
+    localStorage.setItem(`eq_lb_view_${compId}`, view);
+    const overallSec = document.getElementById('overall-leaderboard-section');
+    const classesSec = document.getElementById('classes-leaderboard-section');
+    const cb = document.getElementById('toggle-overall-cb');
+
+    ['all', 'overall', 'classes'].forEach(v => {
+        const btn = document.getElementById(`lb-view-${v}`);
+        if (btn) {
+            const isAct = v === view;
+            btn.style.border = isAct ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.15)';
+            btn.style.background = isAct ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.06)';
+            btn.style.color = isAct ? '#ffffff' : '#cbd5e1';
+        }
+    });
+
+    if (view === 'overall') {
+        if (overallSec) overallSec.style.display = 'block';
+        if (classesSec) classesSec.style.display = 'none';
+        if (cb) cb.checked = true;
+    } else if (view === 'classes') {
+        if (overallSec) overallSec.style.display = 'none';
+        if (classesSec) classesSec.style.display = 'block';
+        if (cb) cb.checked = false;
+    } else {
+        const isChecked = cb ? cb.checked : true;
+        if (overallSec) overallSec.style.display = isChecked ? 'block' : 'none';
+        if (classesSec) classesSec.style.display = 'block';
+    }
+};
+
+window.toggleOverallLeaderboard = function(isChecked, compId) {
+    localStorage.setItem(`eq_show_overall_${compId}`, isChecked ? 'true' : 'false');
+    const overallSec = document.getElementById('overall-leaderboard-section');
+    if (overallSec) {
+        overallSec.style.display = isChecked ? 'block' : 'none';
+    }
+    if (isChecked) {
+        overallSec?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+window.printOverallDiploma = function(compId, riderId) {
+    if (!window.currentLeaderboardData || !window.currentLeaderboardData.overall_leaderboard) return;
+    
+    let riderIndex = -1;
+    const rider = window.currentLeaderboardData.overall_leaderboard.find((r, index) => {
+        if (r.rider_id === riderId) {
+            riderIndex = index;
+            return true;
+        }
+        return false;
+    });
+    if (!rider) return;
+    
+    const rank = riderIndex + 1;
+    let medal = '';
+    if (rank === 1) medal = '🥇 ';
+    else if (rank === 2) medal = '🥈 ';
+    else if (rank === 3) medal = '🥉 ';
+    
+    const compName = window.currentLeaderboardData.competition_name || 'Stævne';
+    const riderName = rider.rider_name;
+    const horseName = rider.horse_name;
+    const scoreText = rider.display_score;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Samlet Diplom - ${riderName}</title>
+            <style>
+                @page { size: A4 landscape; margin: 0; }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: 'Georgia', serif;
+                    background: #fff;
+                    color: #1a1a1a;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                .diploma-border {
+                    width: 90vw;
+                    height: 85vh;
+                    border: 8px double #10b981;
+                    padding: 40px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    align-items: center;
+                    text-align: center;
+                    background: #fafaf9;
+                    box-sizing: border-box;
+                }
+                .header-title { font-size: 32px; letter-spacing: 4px; text-transform: uppercase; color: #065f46; margin: 0; }
+                .stævne-name { font-size: 20px; font-style: italic; color: #4b5563; margin-top: 5px; }
+                .awarded-to { font-size: 16px; text-transform: uppercase; letter-spacing: 2px; color: #6b7280; margin-top: 25px; }
+                .recipient-name { font-size: 36px; font-weight: bold; color: #111827; margin: 5px 0; font-family: 'Helvetica Neue', sans-serif; }
+                .horse-name { font-size: 20px; font-style: italic; color: #374151; margin-bottom: 20px; }
+                .achievement { font-size: 18px; line-height: 1.6; max-width: 600px; color: #1f2937; }
+                .rank-badge { font-size: 28px; font-weight: bold; color: #059669; margin: 10px 0; }
+                .footer { display: flex; justify-content: space-around; width: 100%; margin-top: 30px; }
+                .footer-sign { border-top: 1px solid #9ca3af; width: 200px; padding-top: 5px; font-size: 13px; color: #4b5563; font-family: sans-serif; }
+            </style>
+        </head>
+        <body>
+            <div class="diploma-border">
+                <div>
+                    <h1 class="header-title">DIPLOM — SAMLET RESULTAT</h1>
+                    <div class="stævne-name">${compName}</div>
+                </div>
+                <div>
+                    <div class="awarded-to">Tildeles hermed</div>
+                    <div class="recipient-name">${riderName}</div>
+                    <div class="horse-name">med hesten ${horseName}</div>
+                    <div class="achievement">
+                        for sin samlede præstation i <strong>Samlet Stilling</strong>
+                        <div class="rank-badge">${medal}${rank}. PLADS</div>
+                        med en samlet pointsum på <strong>${scoreText}</strong>
+                    </div>
+                </div>
+                <div class="footer">
+                    <div class="footer-sign">Stævnearrangør</div>
+                    <div class="footer-sign">EquiEvent Verificeret</div>
+                </div>
+            </div>
+            <script>
+                window.onload = function() { window.print(); }
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 };
 
 window.printDiploma = function(classId, riderId) {

@@ -282,8 +282,92 @@ def get_public_leaderboard(comp_id: int, db: Session = Depends(database.get_db))
             "total_expected_posts_per_rider": total_judges_in_class if discipline != "jumping" else 1,
             "leaderboard": class_leaderboard
         })
+
+    # Beregn samlet stilling på tværs af alle opgaver/klasser
+    overall_riders = {}
+    is_all_dressage = all(c.get("discipline") == "dressage" for c in classes_leaderboards) if classes_leaderboards else False
+    
+    for cls in classes_leaderboards:
+        cls_id = cls["class_id"]
+        cls_name = cls["class_name"]
+        discipline = cls["discipline"]
+        
+        for r in cls["leaderboard"]:
+            rid = r["rider_id"]
+            if rid not in overall_riders:
+                overall_riders[rid] = {
+                    "rider_id": rid,
+                    "start_number": r["start_number"],
+                    "rider_name": r["rider_name"],
+                    "horse_name": r["horse_name"],
+                    "total_score": 0.0,
+                    "raw_points_sum": 0.0,
+                    "percentages": [],
+                    "posts_completed": 0,
+                    "total_posts": 0,
+                    "is_eliminated": False,
+                    "is_retired": False,
+                    "class_scores": []
+                }
+            
+            has_score = r.get("posts_completed", 0) > 0
+            score_val = r.get("total_score", 0.0)
+            
+            overall_riders[rid]["total_posts"] += 1
+            if has_score:
+                overall_riders[rid]["posts_completed"] += 1
+                overall_riders[rid]["total_score"] += score_val
+                if r.get("raw_points") is not None:
+                    overall_riders[rid]["raw_points_sum"] += r["raw_points"]
+                if discipline == "dressage" and r.get("percentage") is not None:
+                    overall_riders[rid]["percentages"].append(r["percentage"])
+            
+            if r.get("is_eliminated"):
+                overall_riders[rid]["is_eliminated"] = True
+            if r.get("is_retired"):
+                overall_riders[rid]["is_retired"] = True
+                
+            overall_riders[rid]["class_scores"].append({
+                "class_id": cls_id,
+                "class_name": cls_name,
+                "discipline": discipline,
+                "score": score_val if has_score else None,
+                "display_score": r.get("display_score", "0.0 p") if has_score else "Afventer",
+                "completed": has_score,
+                "details": r.get("details", [])
+            })
+            
+    overall_leaderboard = list(overall_riders.values())
+    
+    # Format display score og sortering
+    for r in overall_leaderboard:
+        if is_all_dressage and r["percentages"]:
+            avg_pct = round(sum(r["percentages"]) / len(r["percentages"]), 2)
+            raw_pts = round(r["raw_points_sum"], 1)
+            r["total_score"] = avg_pct
+            r["display_score"] = f"{avg_pct}% ({raw_pts} p)" if raw_pts > 0 else f"{avg_pct}%"
+        else:
+            total_pts = round(r["total_score"], 2)
+            r["display_score"] = f"{round(total_pts, 1)} p"
+            
+    def overall_sort_key(item):
+        elim_penalty = 1 if (item["is_eliminated"] or item["is_retired"]) else 0
+        start_no_val = item["start_number"] if item["start_number"] is not None else 999999
+        return (elim_penalty, -item["total_score"], -item["posts_completed"], start_no_val)
+        
+    overall_leaderboard.sort(key=overall_sort_key)
+    
+    for idx, item in enumerate(overall_leaderboard):
+        if idx > 0 and item["total_score"] == overall_leaderboard[idx - 1]["total_score"] and item["posts_completed"] == overall_leaderboard[idx - 1]["posts_completed"] and item["total_score"] > 0:
+            item["rank"] = overall_leaderboard[idx - 1]["rank"]
+        else:
+            item["rank"] = idx + 1
         
     return {
+        "competition_id": comp.id,
         "competition_name": comp.name,
+        "show_overall_leaderboard": getattr(comp, "show_overall_leaderboard", True),
+        "total_classes_count": len(active_posts),
+        "overall_leaderboard": overall_leaderboard,
         "classes": classes_leaderboards
     }

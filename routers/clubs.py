@@ -314,6 +314,20 @@ def read_competition(
 ):
     return get_competition_if_owner(comp_id, club_id, db, current_user)
 
+@router.post("/{club_id}/competitions/{comp_id}/toggle-overall-leaderboard", response_model=schemas.CompetitionOut)
+def toggle_overall_leaderboard(
+    club_id: int,
+    comp_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    comp = get_competition_if_owner(comp_id, club_id, db, current_user)
+    current_val = getattr(comp, "show_overall_leaderboard", True)
+    comp.show_overall_leaderboard = not current_val
+    db.commit()
+    db.refresh(comp)
+    return comp
+
 
 @router.delete("/{club_id}/competitions/{comp_id}")
 def delete_competition_for_club(

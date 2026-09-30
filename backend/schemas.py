@@ -59,15 +59,12 @@ class DiscountCodeBase(BaseModel):
     code: str
     discount_amount: float
     is_active: bool = True
-    max_uses_per_club: Optional[int] = None
-    max_total_uses: Optional[int] = None
 
 class DiscountCodeCreate(DiscountCodeBase):
     pass
 
 class DiscountCodeOut(DiscountCodeBase):
     id: int
-    total_used_count: Optional[int] = 0
     class Config:
         from_attributes = True
 
@@ -79,6 +76,7 @@ class CompetitionBase(BaseModel):
     location: str
     discipline: Optional[str] = "gait"
     scoring_method: Optional[str] = "standard"
+    show_overall_leaderboard: Optional[bool] = True
 
 class CompetitionCreate(CompetitionBase):
     import_standards: Optional[bool] = False
@@ -103,8 +101,6 @@ class ClubPostBase(BaseModel):
     max_value: Optional[float] = 10.0
     discipline: Optional[str] = "gait"
     scoring_method: Optional[str] = "standard"
-    is_active: Optional[bool] = True
-    configuration: Optional[str] = None
 
 class ClubPostCreate(ClubPostBase):
     pass
@@ -201,7 +197,6 @@ class CompetitionJudgeOut(CompetitionJudgeBase):
     magic_link_uuid: str
     club_judge: ClubJudgeOut
     club_posts: List[ClubPostOut] = []
-    competition: Optional[CompetitionOut] = None
     class Config:
         from_attributes = True
 

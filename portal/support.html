@@ -262,11 +262,17 @@
 
         .kpi-card.kpi-clickable {
             cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .kpi-card.kpi-clickable:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+        .kpi-card.kpi-active {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25) !important;
+            background: rgba(30, 41, 59, 0.85) !important;
         }
 
         .status-pill-filters {
@@ -795,7 +801,7 @@
 
         <!-- KPI Stats Cards -->
         <section class="kpi-grid">
-            <div class="kpi-card">
+            <div class="kpi-card kpi-clickable" id="kpiCardNew" onclick="filterByKpi('Ny')" title="Klik for at se nye ubehandlede henvendelser">
                 <div class="kpi-info">
                     <h3>Nye henvendelser</h3>
                     <div class="kpi-value" id="kpiNewCount">0</div>
@@ -803,7 +809,7 @@
                 <div class="kpi-icon new"><i class="fas fa-bell"></i></div>
             </div>
 
-            <div class="kpi-card">
+            <div class="kpi-card kpi-clickable" id="kpiCardReplied" onclick="filterByKpi('Modtaget svar')" title="Klik for at se henvendelser med svar fra kunden">
                 <div class="kpi-info">
                     <h3>Svar modtaget fra kunde</h3>
                     <div class="kpi-value" id="kpiRepliedCount" style="color: #38bdf8;">0</div>
@@ -811,7 +817,7 @@
                 <div class="kpi-icon sources"><i class="fas fa-reply"></i></div>
             </div>
 
-            <div class="kpi-card">
+            <div class="kpi-card kpi-clickable" id="kpiCardInProgress" onclick="filterByKpi('I gang')" title="Klik for at se henvendelser under behandling">
                 <div class="kpi-info">
                     <h3>I gang / Behandles</h3>
                     <div class="kpi-value" id="kpiInProgressCount">0</div>
@@ -819,7 +825,7 @@
                 <div class="kpi-icon progress"><i class="fas fa-spinner"></i></div>
             </div>
 
-            <div class="kpi-card kpi-clickable" onclick="switchViewMode('Arkiv')" title="Se alle løste og arkiverede sager">
+            <div class="kpi-card kpi-clickable" id="kpiCardResolved" onclick="filterByKpi('Arkiv')" title="Klik for at se alle løste og arkiverede sager">
                 <div class="kpi-info">
                     <h3>Arkiverede / Løste</h3>
                     <div class="kpi-value" id="kpiResolvedCount" style="color: #94a3b8;">0</div>
@@ -952,6 +958,38 @@
             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); padding: 0 0.25rem;">
                 <div><i class="fas fa-calendar-alt"></i> Modtaget: <strong id="dtlCreatedAt" style="color: #cbd5e1;"></strong></div>
                 <div><i class="fas fa-hourglass-half"></i> <span id="dtlSlaStatus"></span></div>
+            </div>
+
+            <!-- VEDHÆFTET SKÆRMBILLEDE / BILLEDE -->
+            <div id="dtlAttachmentSection" style="display: none; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 12px; padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-paperclip" style="color: #38bdf8;"></i> Vedhæftet Billede / Skærmbillede:
+                    </div>
+                    <span id="dtlAttachmentRetention" class="badge" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; font-size: 0.75rem; border: 1px solid rgba(251, 191, 36, 0.3);">
+                        <i class="fas fa-clock"></i> Slettes 8 dage efter løsning
+                    </span>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+                    <a id="dtlAttachmentLink" href="#" target="_blank" style="display: block; position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.4); background: #000; cursor: pointer;" title="Klik for at åbne i fuld størrelse">
+                        <img id="dtlAttachmentImg" src="" alt="Vedhæftet skærmbillede" style="max-width: 180px; max-height: 120px; object-fit: contain; display: block;">
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #38bdf8; font-size: 0.7rem; text-align: center; padding: 2px 0;">
+                            <i class="fas fa-search-plus"></i> Forstør
+                        </div>
+                    </a>
+                    <div style="flex: 1; min-width: 160px; font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                        <div><strong style="color: #ffffff;" id="dtlAttachmentFilename">skaermbillede.png</strong></div>
+                        <div style="color: var(--text-secondary);" id="dtlAttachmentSize">-- KB</div>
+                        <div style="margin-top: 0.3rem;">
+                            <a id="dtlAttachmentDownload" href="#" download class="btn-hub btn-hub-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-download"></i> Download Billede
+                            </a>
+                        </div>
+                        <div id="dtlAttachmentExpiryNotice" style="font-size: 0.75rem; color: #94a3b8; line-height: 1.3; margin-top: 0.2rem;">
+                            Billedet slettes automatisk fra serveren 8 dage efter, at sagen er sat til status 'Løst'.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Samtalehistorik / Tråd -->
@@ -1134,8 +1172,60 @@
             checkAuth();
         }
 
+        // --- KPI CARD HIGHLIGHT & FILTER LOGIC ---
+        function updateActiveKpiCard() {
+            const cardNew = document.getElementById('kpiCardNew');
+            const cardReplied = document.getElementById('kpiCardReplied');
+            const cardProgress = document.getElementById('kpiCardInProgress');
+            const cardResolved = document.getElementById('kpiCardResolved');
+
+            [cardNew, cardReplied, cardProgress, cardResolved].forEach(c => {
+                if (c) c.classList.remove('kpi-active');
+            });
+
+            if (currentViewMode === 'Arkiv') {
+                if (cardResolved) cardResolved.classList.add('kpi-active');
+            } else {
+                if (currentStatusFilter === 'Ny' && cardNew) cardNew.classList.add('kpi-active');
+                else if (currentStatusFilter === 'Modtaget svar' && cardReplied) cardReplied.classList.add('kpi-active');
+                else if (currentStatusFilter === 'I gang' && cardProgress) cardProgress.classList.add('kpi-active');
+            }
+        }
+
+        function filterByKpi(targetStatus) {
+            if (targetStatus === 'Arkiv' || targetStatus === 'Løst') {
+                switchViewMode('Arkiv');
+                return;
+            }
+
+            // Hvis vi er i Arkiv og klikker et aktivt KPI kort:
+            // Skift altid over til Aktive visning med den valgte status
+            if (currentViewMode !== 'Aktive') {
+                switchViewMode('Aktive', targetStatus);
+                return;
+            }
+
+            // Hvis vi allerede er i Aktive visning:
+            // Hvis det samme KPI kort klikkes igen, toggle tilbage til "Alle aktive"
+            const newStatus = (currentStatusFilter === targetStatus) ? 'Aktive' : targetStatus;
+            currentStatusFilter = newStatus;
+
+            // Synkroniser pill-filter knapperne
+            const pills = document.querySelectorAll('#statusPillFiltersContainer .pill-filter-btn');
+            pills.forEach(btn => {
+                if (btn.getAttribute('data-status') === newStatus) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            updateActiveKpiCard();
+            loadTickets();
+        }
+
         // --- VIEW MODE (AKTIVE vs. ARKIV) ---
-        function switchViewMode(mode) {
+        function switchViewMode(mode, targetStatus = null) {
             currentViewMode = mode;
             const tabActive = document.getElementById('tabModeActive');
             const tabArchive = document.getElementById('tabModeArchive');
@@ -1156,18 +1246,19 @@
             } else {
                 if (tabArchive) tabArchive.classList.remove('active');
                 if (tabActive) tabActive.classList.add('active');
-                currentStatusFilter = 'Aktive';
+                currentStatusFilter = targetStatus || 'Aktive';
 
                 if (pillsContainer) {
                     pillsContainer.innerHTML = `
-                        <button class="pill-filter-btn active" data-status="Aktive" onclick="setStatusFilter('Aktive', this)"><i class="fas fa-layer-group" style="font-size: 0.7rem;"></i> Alle aktive</button>
-                        <button class="pill-filter-btn" data-status="Modtaget svar" onclick="setStatusFilter('Modtaget svar', this)"><i class="fas fa-reply" style="color: #38bdf8; font-size: 0.6rem;"></i> Svar modtaget</button>
-                        <button class="pill-filter-btn" data-status="Ny" onclick="setStatusFilter('Ny', this)"><i class="fas fa-circle" style="color: #10b981; font-size: 0.6rem;"></i> Nye</button>
-                        <button class="pill-filter-btn" data-status="I gang" onclick="setStatusFilter('I gang', this)"><i class="fas fa-spinner" style="color: #f59e0b; font-size: 0.6rem;"></i> I gang</button>
+                        <button class="pill-filter-btn ${currentStatusFilter === 'Aktive' ? 'active' : ''}" data-status="Aktive" onclick="setStatusFilter('Aktive', this)"><i class="fas fa-layer-group" style="font-size: 0.7rem;"></i> Alle aktive</button>
+                        <button class="pill-filter-btn ${currentStatusFilter === 'Modtaget svar' ? 'active' : ''}" data-status="Modtaget svar" onclick="setStatusFilter('Modtaget svar', this)"><i class="fas fa-reply" style="color: #38bdf8; font-size: 0.6rem;"></i> Svar modtaget</button>
+                        <button class="pill-filter-btn ${currentStatusFilter === 'Ny' ? 'active' : ''}" data-status="Ny" onclick="setStatusFilter('Ny', this)"><i class="fas fa-circle" style="color: #10b981; font-size: 0.6rem;"></i> Nye</button>
+                        <button class="pill-filter-btn ${currentStatusFilter === 'I gang' ? 'active' : ''}" data-status="I gang" onclick="setStatusFilter('I gang', this)"><i class="fas fa-spinner" style="color: #f59e0b; font-size: 0.6rem;"></i> I gang</button>
                     `;
                 }
             }
 
+            updateActiveKpiCard();
             loadTickets();
         }
 
@@ -1268,6 +1359,12 @@
                         <h3 style="color: #ffffff; margin-bottom: 0.4rem;">Arkivet er tomt</h3>
                         <p>Der er i øjeblikket ingen løste eller arkiverede opgaver.</p>
                     `;
+                } else if (currentStatusFilter === 'Ny') {
+                    emptyEl.innerHTML = `
+                        <i class="fas fa-check-circle" style="font-size: 2.5rem; color: #10b981; margin-bottom: 0.75rem;"></i>
+                        <h3 style="color: #ffffff; margin-bottom: 0.4rem;">Ingen nye henvendelser</h3>
+                        <p>Du er helt up to date! Der er ingen nye henvendelser, der venter på svar.</p>
+                    `;
                 } else {
                     emptyEl.innerHTML = `
                         <i class="fas fa-check-circle" style="font-size: 2.5rem; color: #10b981; margin-bottom: 0.75rem;"></i>
@@ -1321,6 +1418,7 @@
                             <span class="sender-email">&lt;${escapeHtml(ticket.email)}&gt;</span>
                             ${ticket.club_name ? `<span class="sender-club"><i class="fas fa-shield-alt"></i> ${escapeHtml(ticket.club_name)}</span>` : ''}
                             ${ticket.priority === 'Høj' ? '<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;"><i class="fas fa-fire"></i> Høj</span>' : ''}
+                            ${ticket.has_attachment ? '<span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.72rem; padding: 0.15rem 0.5rem;"><i class="fas fa-paperclip"></i> Skærmbillede</span>' : ''}
                         </div>
                         <h4 class="ticket-subject">${escapeHtml(ticket.subject || 'Ingen emne')}</h4>
                         <div class="ticket-preview">${escapeHtml(ticket.message || '')}</div>
@@ -1336,11 +1434,20 @@
             });
         }
 
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
         // --- FILTERS & SEARCH ---
         function setStatusFilter(status, btn) {
             currentStatusFilter = status;
             document.querySelectorAll('.pill-filter-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
+            updateActiveKpiCard();
             loadTickets();
         }
 
@@ -1390,6 +1497,50 @@
             document.getElementById('dtlSlaStatus').innerHTML = ticket.status === 'Løst' 
                 ? '<span style="color: #34d399;">Sagen er løst</span>' 
                 : `<span class="sla-indicator ${timeInfo.slaClass}">${timeInfo.slaText}</span>`;
+
+            // Vedhæftet billede
+            const attSection = document.getElementById('dtlAttachmentSection');
+            if (attSection) {
+                if (ticket.has_attachment) {
+                    attSection.style.display = 'block';
+                    const adminToken = currentAdminPassword || sessionStorage.getItem('alk_admin_key') || 'SommerHaar2026';
+                    const attUrl = `${API_BASE}/support/tickets/${ticket.id}/attachment?password=${encodeURIComponent(adminToken)}`;
+                    
+                    const attImg = document.getElementById('dtlAttachmentImg');
+                    const attLink = document.getElementById('dtlAttachmentLink');
+                    const attDownload = document.getElementById('dtlAttachmentDownload');
+                    const attName = document.getElementById('dtlAttachmentFilename');
+                    const attSize = document.getElementById('dtlAttachmentSize');
+                    const attRetention = document.getElementById('dtlAttachmentRetention');
+                    const attExpiry = document.getElementById('dtlAttachmentExpiryNotice');
+
+                    if (attImg) attImg.src = attUrl;
+                    if (attLink) attLink.href = attUrl;
+                    if (attDownload) {
+                        attDownload.href = attUrl;
+                        attDownload.download = ticket.attachment_filename || 'screenshot.png';
+                    }
+                    if (attName) attName.innerText = ticket.attachment_filename || 'Vedhæftet billede';
+                    if (attSize) attSize.innerText = ticket.attachment_size ? formatFileSize(ticket.attachment_size) : '';
+
+                    if (ticket.status === 'Løst') {
+                        const daysLeft = ticket.days_until_file_deletion != null ? ticket.days_until_file_deletion : 8;
+                        attRetention.innerHTML = `<i class="fas fa-hourglass-half"></i> Slettes om ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dage'}`;
+                        attRetention.style.color = '#f87171';
+                        attRetention.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                        attRetention.style.background = 'rgba(239, 68, 68, 0.15)';
+                        if (attExpiry) attExpiry.innerText = `Sagen er markeret som løst. Billedet slettes automatisk og permanent fra serveren om ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dage'}.`;
+                    } else {
+                        attRetention.innerHTML = `<i class="fas fa-clock"></i> Slettes 8 dage efter løsning`;
+                        attRetention.style.color = '#fbbf24';
+                        attRetention.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+                        attRetention.style.background = 'rgba(251, 191, 36, 0.15)';
+                        if (attExpiry) attExpiry.innerText = 'Billedet opbevares sikkert, mens sagen behandles, og slettes automatisk 8 dage efter, at opgaven markeres som løst.';
+                    }
+                } else {
+                    attSection.style.display = 'none';
+                }
+            }
 
             // Samtalehistorik / Tråd
             renderConversationThread(ticket.messages, ticket);

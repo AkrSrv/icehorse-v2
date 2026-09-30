@@ -76,6 +76,7 @@ class CompetitionBase(BaseModel):
     location: str
     discipline: Optional[str] = "gait"
     scoring_method: Optional[str] = "standard"
+    show_overall_leaderboard: Optional[bool] = True
 
 class CompetitionCreate(CompetitionBase):
     import_standards: Optional[bool] = False
