@@ -3,10 +3,18 @@ import re
 import smtplib
 import mimetypes
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 from datetime import datetime
 
 def load_env_fallback():
-    paths = [".env", "../.env", "/app/.env"]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    paths = [
+        os.path.join(base_dir, ".env"),
+        os.path.join(base_dir, "../.env"),
+        ".env",
+        "../.env",
+        "/app/.env"
+    ]
     for path in paths:
         if os.path.exists(path):
             try:
@@ -15,12 +23,22 @@ def load_env_fallback():
                         line = line.strip()
                         if line and not line.startswith("#") and "=" in line:
                             k, v = line.split("=", 1)
-                            os.environ[k.strip()] = v.strip()
-                break
+                            key = k.strip()
+                            val = v.strip()
+                            if key not in os.environ or not os.environ[key]:
+                                os.environ[key] = val
             except Exception:
                 pass
 
 load_env_fallback()
+
+def get_smtp_config():
+    server = os.environ.get("SMTP_SERVER", "smtp.simply.com")
+    port = int(os.environ.get("SMTP_PORT", 587))
+    user = os.environ.get("SMTP_USERNAME")
+    pw = os.environ.get("SMTP_PASSWORD")
+    from_email = os.environ.get("SMTP_FROM_EMAIL", "equievent_support@alkdata.dk")
+    return server, port, user, pw, from_email
 
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.simply.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
@@ -29,14 +47,19 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", "equievent_support@alkdata.dk")
 
 def send_judge_magic_link_email(to_email: str, judge_name: str, comp_name: str, magic_link: str):
-    if not SMTP_USERNAME or not SMTP_PASSWORD or not SMTP_FROM_EMAIL:
+    server_host, server_port, username, password, from_email = get_smtp_config()
+    if not username or not password or not from_email:
         # Hvis vi mangler miljøvariablerne, kaster vi en fejl
         raise Exception("Mail-opsætningen mangler på serveren. Kontakt support eller tjek dine indstillinger.")
 
     msg = EmailMessage()
     msg['Subject'] = f'Dit dommer-link til {comp_name}'
-    msg['From'] = f"EquiEvent <{SMTP_FROM_EMAIL}>"
+    msg['From'] = f"EquiEvent <{from_email}>"
     msg['To'] = to_email
+    msg['Reply-To'] = f"EquiEvent Support <{from_email}>"
+    msg['Date'] = formatdate(localtime=True)
+    msg['Message-ID'] = make_msgid(domain="alkdata.dk")
+    msg['X-Mailer'] = "EquiEvent Mail Engine"
 
     # Plain text version (fallback, hvis deres mail-klient ikke understøtter HTML)
     text_content = f"""Kære {judge_name},
@@ -75,9 +98,9 @@ EquiEvent Teamet
 
     try:
         # Simply.com (og de fleste andre) kræver STARTTLS på port 587
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server = smtplib.SMTP(server_host, server_port)
         server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.login(username, password)
         server.send_message(msg)
         server.quit()
         return True
@@ -86,13 +109,18 @@ EquiEvent Teamet
         raise Exception(f"Kunne ikke sende mailen. Fejl fra udbyder: {str(e)}")
 
 def send_password_reset_email(to_email: str, reset_link: str):
-    if not SMTP_USERNAME or not SMTP_PASSWORD or not SMTP_FROM_EMAIL:
+    server_host, server_port, username, password, from_email = get_smtp_config()
+    if not username or not password or not from_email:
         raise Exception("Mail-opsætningen mangler på serveren.")
 
     msg = EmailMessage()
     msg['Subject'] = 'Nulstil din adgangskode til EquiEvent'
-    msg['From'] = f"EquiEvent <{SMTP_FROM_EMAIL}>"
+    msg['From'] = f"EquiEvent <{from_email}>"
     msg['To'] = to_email
+    msg['Reply-To'] = f"EquiEvent Support <{from_email}>"
+    msg['Date'] = formatdate(localtime=True)
+    msg['Message-ID'] = make_msgid(domain="alkdata.dk")
+    msg['X-Mailer'] = "EquiEvent Mail Engine"
 
     text_content = f"""
 Du har anmodet om at nulstille din adgangskode.

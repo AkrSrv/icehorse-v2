@@ -1241,8 +1241,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.sendJudgeEmail = async function(compJudgeId) {
         if(!window.activeClubId || !window.currentCompId) return;
-        if(!confirm('Vil du sende en email med login-link til denne dommer?')) return;
+
+        const compJudge = (window.currentCompJudges || []).find(j => j.id === compJudgeId);
+        const judgeName = compJudge?.club_judge?.name || 'denne dommer';
+        const judgeEmail = compJudge?.club_judge?.email;
+
+        if (!judgeEmail) {
+            alert(`Dommer "${judgeName}" har ingen registreret e-mailadresse.\n\nDu kan tilføje en e-mail under Stamdata -> Dommere, eller benytte knappen "Kopiér Link" for at sende Magic Linket via SMS eller WhatsApp.`);
+            return;
+        }
         
+        if(!confirm(`Vil du sende et personligt Magic Link til dommer ${judgeName} (${judgeEmail})?`)) return;
+        
+        const btn = document.getElementById(`send-judge-btn-${compJudgeId}`);
+        const originalHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender link...';
+        }
+
         try {
             const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/judges/${compJudgeId}/send-email`, {
                 method: 'POST',
@@ -1258,7 +1275,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             console.error(err);
-            alert('Der opstod en fejl.');
+            alert('Der opstod en netværksfejl under afsendelse.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml || '<i class="fas fa-paper-plane"></i> Send Dommer-link';
+            }
         }
     };
 
@@ -1469,6 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if(response.ok) {
                 const judges = await response.json();
+                window.currentCompJudges = judges;
                 const list = document.getElementById('comp-judges-list');
                 list.innerHTML = '';
                 judges.forEach(j => {
@@ -1479,6 +1502,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             return `<span class="badge" style="background: ${bg}; color: ${text}; margin-right: 0.3rem;">${p.name}</span>`;
                         }).join('')
                         : '<span style="font-size: 0.8rem; color: var(--text-secondary);">Ingen poster tilknyttet</span>';
+
+                    const emailDisplay = j.club_judge.email 
+                        ? `<div style="font-size: 0.8rem; color: #38bdf8; margin-top: 0.25rem;"><i class="fas fa-envelope"></i> ${j.club_judge.email}</div>`
+                        : `<div style="font-size: 0.8rem; color: #f87171; margin-top: 0.25rem;"><i class="fas fa-exclamation-triangle"></i> Ingen e-mailadresse (tilføj i Stamdata)</div>`;
                         
                     list.innerHTML += `
                         <div class="list-item" style="border-left: 4px solid #10b981; flex-direction: column; align-items: stretch;">
@@ -1486,13 +1513,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div>
                                     <strong>${j.club_judge.name}</strong>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Rolle: ${j.role}</div>
+                                    ${emailDisplay}
                                     <div style="margin-top: 0.5rem;">${postBadges}</div>
                                 </div>
                                 <button class="btn btn-danger btn-sm" onclick="deleteCompJudge(${j.id})"><i class="fas fa-unlink"></i> Fjern</button>
                             </div>
                             <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 <button class="btn btn-secondary btn-sm" onclick="window.copyJudgeLink('${j.magic_link_uuid}')"><i class="fas fa-copy"></i> Kopiér Link</button>
-                                <button class="btn btn-secondary btn-sm" onclick="sendJudgeEmail(${j.id})"><i class="fas fa-envelope"></i> Send Email</button>
+                                <button class="btn btn-secondary btn-sm" id="send-judge-btn-${j.id}" onclick="sendJudgeEmail(${j.id})"><i class="fas fa-paper-plane"></i> Send Dommer-link</button>
                                 <button class="btn btn-primary btn-sm" style="background: #10b981;" onclick="window.open('?magic=${j.magic_link_uuid}', '_blank')"><i class="fas fa-external-link-alt"></i> Åbn Dommer Panel</button>
                             </div>
                         </div>

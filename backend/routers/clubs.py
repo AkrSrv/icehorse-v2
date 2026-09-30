@@ -557,7 +557,10 @@ def send_magic_link_email(
             comp_name=comp.name,
             magic_link=magic_link
         )
-        return {"status": "success", "message": f"Email sendt til {club_judge.email}"}
+        return {
+            "status": "success", 
+            "message": f"Dommer-link er sendt til {club_judge.email}.\n\nBemærk: Bed dommeren tjekke mappen 'Uønsket post / Spam', hvis mailen ikke ses i indbakken inden for et par minutter."
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
