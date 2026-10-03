@@ -2045,6 +2045,9 @@
             <i class="fas fa-gavel" style="font-size: 3rem; color: #10b981; margin-bottom: 1rem;"></i>
             <h2 id="mj-title" style="color: #10b981;">Dommer Panel</h2>
             <p id="mj-subtitle" style="color: var(--text-secondary);">Velkommen! Vælg post for at dømme.</p>
+            <div id="mj-wake-lock-badge" style="display: none; align-items: center; justify-content: center; gap: 0.4rem; color: #34d399; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(52, 211, 153, 0.35); font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: 9999px; margin: 0.5rem auto 0; width: fit-content;">
+                <i class="fas fa-sun" style="color: #fbbf24;"></i> Skærm holdes vågen
+            </div>
         </div>
 
         <div id="mj-post-selection">
@@ -2059,7 +2062,12 @@
 
         <div id="mj-judging-area" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1rem;">
-                <h3 id="mj-active-post-name" style="color: #10b981;"></h3>
+                <div>
+                    <h3 id="mj-active-post-name" style="color: #10b981; margin: 0 0 0.2rem 0;"></h3>
+                    <div id="mj-wake-lock-active-badge" style="display: none; align-items: center; gap: 0.35rem; color: #34d399; font-size: 0.72rem; font-weight: 600;">
+                        <i class="fas fa-sun" style="color: #fbbf24;"></i> Skærm holdes aktiv (går ikke i dvale)
+                    </div>
+                </div>
                 <button class="btn btn-secondary btn-sm" onclick="changePost()"><i class="fas fa-exchange-alt"></i> Skift Post</button>
             </div>
 
@@ -2081,13 +2089,13 @@
                 </div>
 
                 <div class="input-group" id="mj-points-group">
-                    <label id="mj-points-label">Point (0.00 - 10.00)</label>
-                    <input type="number" step="0.01" min="0" max="10" id="mj-points" style="font-size: 1.5rem; text-align: center; color: #10b981; font-weight: bold;">
+                    <label id="mj-points-label" style="font-weight: 700; color: #34d399; font-size: 0.95rem; margin-bottom: 0.4rem; display: block;"><i class="fas fa-star"></i> Point (0.00 - 10.00)</label>
+                    <input type="number" step="0.01" min="0" max="10" id="mj-points" placeholder="0.00" style="font-size: 1.8rem; text-align: center; color: #a7f3d0; font-weight: 800; background: #064e3b; border: 2px solid #10b981; border-radius: 12px; padding: 0.75rem; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 15px rgba(16, 185, 129, 0.25);">
                 </div>
                 
                 <div class="input-group" id="mj-deductions-group" style="display: none;">
-                    <label>Fejl/Fradrag (Samlet for programmet, f.eks. -2 point)</label>
-                    <input type="number" step="1" min="0" id="mj-deductions" value="0" style="font-size: 1.25rem; text-align: center; color: #ef4444; font-weight: bold;">
+                    <label style="font-weight: 600; color: #f87171;"><i class="fas fa-minus-circle"></i> Fejl/Fradrag (Samlet for programmet, f.eks. -2 point)</label>
+                    <input type="number" step="1" min="0" id="mj-deductions" value="0" style="font-size: 1.25rem; text-align: center; color: #fca5a5; font-weight: bold; background: #3b181e; border: 2px solid #ef4444; border-radius: 12px;">
                 </div>
 
                 <div id="mj-jumping-fields" style="display: none; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
@@ -2139,17 +2147,18 @@
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label>Kommentar / Gode råd (Valgfrit men anbefales)</label>
-                    <textarea id="mj-comment" rows="4" style="width: 100%; padding: 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; color: white; resize: vertical;"></textarea>
+                <div class="input-group" style="margin-top: 1rem;">
+                    <label style="font-weight: 700; color: #a5b4fc; font-size: 0.95rem; margin-bottom: 0.4rem; display: block;"><i class="fas fa-comment-dots"></i> Kommentar / Gode råd (Valgfrit men anbefales)</label>
+                    <textarea id="mj-comment" rows="4" placeholder="Skriv din kommentar eller feedback til ekvipagen her..." style="width: 100%; padding: 0.9rem; background: #1e1b4b; border: 2px solid #6366f1; border-radius: 12px; color: #f8fafc; font-size: 0.95rem; line-height: 1.5; resize: vertical; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 15px rgba(99, 102, 241, 0.2);"></textarea>
                 </div>
                 <button type="button" id="mj-submit-score-btn" onclick="window.submitJudgeScore(event)" class="btn btn-primary" style="background: #10b981; font-weight: 700; width: 100%; padding: 0.8rem;">Gem Resultat</button>
                 <button type="button" class="btn btn-secondary" style="margin-top: 0.8rem; width: 100%;" onclick="cancelScore()">Annuller</button>
             </form>
             
             <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                <h4>Dine seneste bedømmelser på denne post</h4>
-                <div id="mj-recent-scores" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;"></div>
+                <h4 style="color: #ffffff; margin-bottom: 0.2rem;"><i class="fas fa-users"></i> Ekvipager på denne post</h4>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0 0 1rem 0;">Mangler bedømmelse vises øverst &bull; Allerede bedømte ekvipager vises sidst</p>
+                <div id="mj-recent-scores" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;"></div>
             </div>
         </div>
     </main>
@@ -2335,7 +2344,7 @@
         </div>
     </footer>
 
-    <script type="module" src="/scores.js?v=5.1"></script>
+    <script type="module" src="/scores.js?v=5.2"></script>
     <script type="module" src="/v1_judging.js?v=4.9"></script>
     <script type="module" src="/main.js?v=4.9"></script>
     <script type="module" src="/support-chat.js?v=4.9"></script>

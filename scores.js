@@ -307,6 +307,77 @@ window.updateJudgeActivationUI = function() {
     }
 };
 
+// --- SCREEN WAKE LOCK (FORHINDRER AT SKÆRM GÅR I DVALE UNDER BEDØMMELSE) ---
+let judgeWakeLock = null;
+let wakeLockVideoElement = null;
+
+async function enableScreenWakeLock() {
+    // 1. Native Screen Wake Lock API (Chrome, Edge, Safari iOS 16.4+)
+    if ('wakeLock' in navigator) {
+        try {
+            if (judgeWakeLock !== null) {
+                try { await judgeWakeLock.release(); } catch(e) {}
+                judgeWakeLock = null;
+            }
+            judgeWakeLock = await navigator.wakeLock.request('screen');
+            judgeWakeLock.addEventListener('release', () => {
+                console.log('Screen Wake Lock was released');
+                updateWakeLockUI(false);
+            });
+            console.log('Screen Wake Lock active');
+            updateWakeLockUI(true);
+            return;
+        } catch (err) {
+            console.warn('Native Wake Lock failed, applying video fallback:', err);
+        }
+    }
+    
+    // 2. Fallback til ældre Safari og enheder uden Wake Lock API
+    try {
+        if (!wakeLockVideoElement) {
+            wakeLockVideoElement = document.createElement('video');
+            wakeLockVideoElement.setAttribute('playsinline', '');
+            wakeLockVideoElement.setAttribute('webkit-playsinline', '');
+            wakeLockVideoElement.setAttribute('loop', '');
+            wakeLockVideoElement.setAttribute('muted', '');
+            wakeLockVideoElement.muted = true;
+            wakeLockVideoElement.src = 'data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAADpmcmVlAAAAG21kYXQAAAGzABAHAAABthBgYmUAAAAAeG5nAAAAAEAAAABAAAADG1vb3YAAABsbXZoZAAAAADaQ93w2kPd8AAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAACdHJhawAAAFx0a2hkAAAAD9pD3fDaQ93wAAAAAQAAAAEAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAEAAAAAAA';
+            wakeLockVideoElement.style.position = 'fixed';
+            wakeLockVideoElement.style.top = '-100px';
+            wakeLockVideoElement.style.left = '-100px';
+            wakeLockVideoElement.style.width = '1px';
+            wakeLockVideoElement.style.height = '1px';
+            wakeLockVideoElement.style.opacity = '0.01';
+            wakeLockVideoElement.style.pointerEvents = 'none';
+            document.body.appendChild(wakeLockVideoElement);
+        }
+        wakeLockVideoElement.play().catch(() => {});
+        updateWakeLockUI(true);
+    } catch(e) {
+        console.warn('Fallback wake lock error:', e);
+        updateWakeLockUI(false);
+    }
+}
+
+function updateWakeLockUI(isActive) {
+    const badge = document.getElementById('mj-wake-lock-badge');
+    const activeBadge = document.getElementById('mj-wake-lock-active-badge');
+    if (badge) badge.style.display = isActive ? 'inline-flex' : 'none';
+    if (activeBadge) activeBadge.style.display = isActive ? 'inline-flex' : 'none';
+}
+
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && magicUuid) {
+        await enableScreenWakeLock();
+    }
+});
+
+window.addEventListener('click', () => {
+    if (magicUuid && !judgeWakeLock && (!wakeLockVideoElement || wakeLockVideoElement.paused)) {
+        enableScreenWakeLock();
+    }
+}, { once: true });
+
 // --- MAGIC LINK / DOMMER PANEL ---
 async function initMagicJudge(uuid) {
     magicUuid = uuid;
@@ -369,9 +440,19 @@ async function initMagicJudge(uuid) {
             select.innerHTML += `<option value="${post.id}">${discBadge} ${post.name}</option>`;
         });
         
-        // Hide judging area initially
-        document.getElementById('mj-post-selection').style.display = 'block';
-        document.getElementById('mj-judging-area').style.display = 'none';
+        // Gendan automatisk aktiv post hvis siden genindlæses eller enheden har sovet
+        const savedPostId = localStorage.getItem('mj_active_post_' + uuid) || sessionStorage.getItem('mj_active_post_' + uuid);
+        if (savedPostId && magicJudge.club_posts.some(p => p.id === parseInt(savedPostId))) {
+            select.value = savedPostId;
+            window.startJudging(true);
+        } else {
+            // Hide judging area initially
+            document.getElementById('mj-post-selection').style.display = 'block';
+            document.getElementById('mj-judging-area').style.display = 'none';
+        }
+        
+        // Aktiver skærmlås mod dvale
+        enableScreenWakeLock();
         
     } catch(err) {
         console.error(err);
@@ -398,17 +479,30 @@ window.toggleJumpingStatusFields = function() {
     }
 };
 
-window.startJudging = function() {
+window.startJudging = function(silent = false) {
     const postSelect = document.getElementById('mj-post-select');
-    if (!postSelect.value) return alert('Du skal vælge en post for at starte!');
+    if (!postSelect.value) {
+        if (!silent) alert('Du skal vælge en post for at starte!');
+        return;
+    }
     
     activePostId = parseInt(postSelect.value);
     window.activeClass = magicJudge.club_posts.find(p => p.id === activePostId);
     
     if (!window.activeClass) {
-        alert('Klassen blev ikke fundet.');
+        if (!silent) alert('Klassen blev ikke fundet.');
         return;
     }
+    
+    // Gem valgt post så genindlæsning eller dvale ikke nulstiller sessionen
+    if (magicUuid && activePostId) {
+        try {
+            localStorage.setItem('mj_active_post_' + magicUuid, activePostId);
+            sessionStorage.setItem('mj_active_post_' + magicUuid, activePostId);
+        } catch(e) {}
+    }
+    
+    enableScreenWakeLock();
     
     const postName = postSelect.options[postSelect.selectedIndex].text;
     
@@ -467,6 +561,12 @@ window.changePost = function() {
     activePostId = null;
     window.activeClass = null;
     window.activeClassRiders = [];
+    if (magicUuid) {
+        try {
+            localStorage.removeItem('mj_active_post_' + magicUuid);
+            sessionStorage.removeItem('mj_active_post_' + magicUuid);
+        } catch(e) {}
+    }
     document.getElementById('mj-judging-area').style.display = 'none';
     document.getElementById('mj-post-selection').style.display = 'block';
     document.getElementById('mj-score-form').style.display = 'none';
@@ -613,10 +713,55 @@ window.renderRecentScoresForJudge = function() {
     
     let html = '';
     
-    if (judged.length === 0) {
-        html += '<p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.8rem;">Du har endnu ikke afgivet point på denne post.</p>';
+    // 1. MANGLER BEDØMMELSE (VISES FØRST)
+    if (awaiting.length > 0) {
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <div style="font-size: 0.95rem; font-weight: 700; color: #f59e0b; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fas fa-clock"></i> Mangler bedømmelse</span>
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 9999px;">${awaiting.length}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        `;
+        awaiting.forEach(item => {
+            const r = item.rider;
+            const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.15); font-size: 0.75rem;">#${r.start_number}</span>` : '';
+            const safeRiderName = (r.rider_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeHorseName = (r.horse_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const startNoParam = r.start_number ? r.start_number : 'null';
+            html += `
+                <div class="list-item" style="border-left: 4px solid #f59e0b; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; margin-bottom: 0; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                    <div>
+                        <div style="font-weight: 600; color: #fff;">${r.rider_name} ${startNo}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);"><i class="fas fa-horse-head"></i> ${r.horse_name || '-'}</div>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="window.selectRiderToScore(${item.rid}, '${safeRiderName}', '${safeHorseName}', ${startNoParam})" style="white-space: nowrap; background: #10b981; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700; border-radius: 6px;">
+                        <i class="fas fa-pencil-alt"></i> Giv Point
+                    </button>
+                </div>
+            `;
+        });
+        html += `</div></div>`;
     } else {
-        html += '<div style="display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.2rem;">';
+        html += `
+            <div style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 1rem; color: #34d399; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-check-circle" style="font-size: 1.1rem;"></i> Alle tilmeldte ekvipager på denne post er bedømt!
+            </div>
+        `;
+    }
+
+    // 2. ALLEREDE BEDØMT (VISES SIDST / NEDERST)
+    html += `
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.15);">
+            <div style="font-size: 0.95rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="fas fa-check-circle"></i> Allerede bedømt (${judged.length})</span>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">Klik på "Ret Point" for at ændre</span>
+            </div>
+    `;
+    if (judged.length === 0) {
+        html += '<p style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic; margin-bottom: 0.5rem;">Du har endnu ikke afgivet point til nogen ekvipager på denne post.</p>';
+    } else {
+        html += '<div style="display: flex; flex-direction: column; gap: 0.6rem;">';
         judged.forEach(item => {
             const r = item.rider;
             const s = item.score;
@@ -654,35 +799,7 @@ window.renderRecentScoresForJudge = function() {
         });
         html += '</div>';
     }
-    
-    if (awaiting.length > 0) {
-        html += `
-            <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1);">
-                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                    Mangler bedømmelse (${awaiting.length}):
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-        `;
-        awaiting.forEach(item => {
-            const r = item.rider;
-            const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.15); font-size: 0.75rem;">#${r.start_number}</span>` : '';
-            const safeRiderName = (r.rider_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            const safeHorseName = (r.horse_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            const startNoParam = r.start_number ? r.start_number : 'null';
-            html += `
-                <div class="list-item" style="border-left: 4px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.9rem; margin-bottom: 0; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                    <div>
-                        <span style="font-weight: 600; color: #e2e8f0;">${r.rider_name}</span> ${startNo}
-                        <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.5rem;"><i class="fas fa-horse-head"></i> ${r.horse_name}</span>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="window.selectRiderToScore(${item.rid}, '${safeRiderName}', '${safeHorseName}', ${startNoParam})" style="white-space: nowrap; background: #10b981; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600;">
-                        <i class="fas fa-pencil-alt"></i> Bedøm
-                    </button>
-                </div>
-            `;
-        });
-        html += `</div></div>`;
-    }
+    html += '</div>';
     
     container.innerHTML = html;
 };
@@ -704,6 +821,13 @@ window.searchRider = function() {
         resultsContainer.innerHTML = '<div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">Ingen ekvipager fundet der matcher søgningen.</div>';
         return;
     }
+    
+    // Sorter så ekvipager der mangler bedømmelse står først, og bedømte sidst
+    results.sort((a, b) => {
+        const aHasScore = window.findExistingScoreForRider(a.competition_rider_id || a.rider_id) ? 1 : 0;
+        const bHasScore = window.findExistingScoreForRider(b.competition_rider_id || b.rider_id) ? 1 : 0;
+        return aHasScore - bHasScore;
+    });
     
     results.forEach(r => {
         const startNo = r.start_number ? `<span class="badge" style="background: var(--primary);">#${r.start_number}</span>` : '';
