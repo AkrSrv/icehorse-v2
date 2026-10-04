@@ -289,6 +289,12 @@ def get_public_leaderboard(comp_id: int, db: Session = Depends(database.get_db))
         else:
             class_leaderboard.sort(key=lambda x: x["total_score"], reverse=True)
             
+        for idx, item in enumerate(class_leaderboard):
+            if idx > 0 and item["total_score"] == class_leaderboard[idx - 1]["total_score"] and item.get("posts_completed", 0) == class_leaderboard[idx - 1].get("posts_completed", 0) and item["total_score"] > 0:
+                item["rank"] = class_leaderboard[idx - 1]["rank"]
+            else:
+                item["rank"] = idx + 1
+            
         classes_leaderboards.append({
             "class_id": class_obj.id,
             "class_name": class_obj.name,

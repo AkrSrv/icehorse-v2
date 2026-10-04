@@ -2059,23 +2059,32 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
             overallList.style.flexDirection = 'column';
             overallList.style.gap = '0.75rem';
 
+            const overallRankCounts = {};
+            data.overall_leaderboard.forEach(r => {
+                const rk = r.rank !== undefined ? r.rank : null;
+                if (rk) overallRankCounts[rk] = (overallRankCounts[rk] || 0) + 1;
+            });
+
             data.overall_leaderboard.forEach((r, index) => {
+                const actualRank = r.rank !== undefined ? r.rank : (index + 1);
+                const isTied = (overallRankCounts[actualRank] || 0) > 1;
+
                 let medal = '';
                 let rankBg = 'rgba(255,255,255,0.05)';
                 let rankBorder = 'rgba(255,255,255,0.1)';
                 let rankColor = 'var(--text-secondary)';
                 
-                if (index === 0) {
+                if (actualRank === 1) {
                     medal = '🥇';
                     rankBg = 'rgba(251, 191, 36, 0.15)';
                     rankBorder = '#fbbf24';
                     rankColor = '#fbbf24';
-                } else if (index === 1) {
+                } else if (actualRank === 2) {
                     medal = '🥈';
                     rankBg = 'rgba(203, 213, 225, 0.15)';
                     rankBorder = '#cbd5e1';
                     rankColor = '#cbd5e1';
-                } else if (index === 2) {
+                } else if (actualRank === 3) {
                     medal = '🥉';
                     rankBg = 'rgba(217, 119, 6, 0.15)';
                     rankBorder = '#d97706';
@@ -2083,6 +2092,7 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
                 }
 
                 const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.15); margin-left: 0.4rem;">#${r.start_number}</span>` : '';
+                const tiedBadge = isTied ? `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fas fa-equals" style="font-size: 0.65rem;"></i> Delt ${actualRank}. plads</span>` : '';
                 const completedBadge = r.posts_completed > 0
                     ? `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.75rem;"><i class="fas fa-check-circle"></i> ${r.posts_completed} af ${r.total_posts} poster bedømt</span>`
                     : `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 0.75rem;"><i class="fas fa-clock"></i> Afventer start</span>`;
@@ -2122,12 +2132,12 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
 
                 const card = document.createElement('div');
                 card.className = 'list-item';
-                card.style.borderLeft = index < 3 ? `4px solid ${rankBorder}` : '4px solid #10b981';
+                card.style.borderLeft = actualRank <= 3 ? `4px solid ${rankBorder}` : '4px solid #10b981';
                 card.style.flexDirection = 'column';
                 card.style.alignItems = 'stretch';
                 card.style.cursor = 'pointer';
                 card.style.transition = 'all 0.2s ease';
-                card.style.background = index === 0 ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(255, 255, 255, 0.03))' : 'rgba(255,255,255,0.03)';
+                card.style.background = actualRank === 1 ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(255, 255, 255, 0.03))' : 'rgba(255,255,255,0.03)';
 
                 card.onclick = () => {
                     const det = card.querySelector('.overall-details');
@@ -2143,12 +2153,13 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.75rem;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <div style="font-size: 1.4rem; min-width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: ${rankBg}; color: ${rankColor}; font-weight: bold; border: 1px solid ${rankBorder};">
-                                ${medal || (index + 1)}
+                                ${medal || actualRank}
                             </div>
                             <div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                     <strong style="font-size: 1.15rem; color: #ffffff;">${r.rider_name}</strong>
                                     ${startNo}
+                                    ${tiedBadge}
                                 </div>
                                 <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.75rem;">
                                     <span><i class="fas fa-horse-head"></i> ${r.horse_name}</span>
@@ -2229,13 +2240,22 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
                     return;
                 }
                 
+                const classRankCounts = {};
+                cls.leaderboard.forEach(r => {
+                    const rk = r.rank !== undefined ? r.rank : null;
+                    if (rk) classRankCounts[rk] = (classRankCounts[rk] || 0) + 1;
+                });
+                
                 cls.leaderboard.forEach((r, index) => {
+                    const actualRank = r.rank !== undefined ? r.rank : (index + 1);
+                    const isTied = (classRankCounts[actualRank] || 0) > 1;
                     let medal = '';
-                    if (index === 0) medal = '🥇';
-                    else if (index === 1) medal = '🥈';
-                    else if (index === 2) medal = '🥉';
+                    if (actualRank === 1) medal = '🥇';
+                    else if (actualRank === 2) medal = '🥈';
+                    else if (actualRank === 3) medal = '🥉';
                     
                     const startNo = r.start_number ? `<span class="badge" style="background: rgba(255,255,255,0.2);">#${r.start_number}</span>` : '';
+                    const tiedBadge = isTied ? `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 4px; margin-left: 0.3rem;"><i class="fas fa-equals" style="font-size: 0.65rem;"></i> Delt ${actualRank}. plads</span>` : '';
                     const progressPct = cls.total_expected_posts_per_rider > 0 ? (r.posts_completed / cls.total_expected_posts_per_rider) * 100 : 0;
                     
                     let detailsHtml = `<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: none;" class="lb-details">`;
@@ -2318,9 +2338,9 @@ window.renderLeaderboard = async function(compId, listElement, titleElement) {
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="font-size: 1.5rem; width: 30px; text-align: center; color: var(--text-secondary);">${medal || (index+1)}</div>
+                                <div style="font-size: 1.5rem; width: 30px; text-align: center; color: var(--text-secondary);">${medal || actualRank}</div>
                                 <div>
-                                    <strong style="font-size: 1.1rem;">${r.rider_name}</strong> ${startNo}
+                                    <strong style="font-size: 1.1rem;">${r.rider_name}</strong> ${startNo} ${tiedBadge}
                                     <div style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fas fa-horse-head"></i> ${r.horse_name}</div>
                                 </div>
                             </div>
@@ -2398,7 +2418,7 @@ window.printOverallDiploma = function(compId, riderId) {
     });
     if (!rider) return;
     
-    const rank = riderIndex + 1;
+    const rank = (rider.rank !== undefined) ? rider.rank : (riderIndex + 1);
     let medal = '';
     if (rank === 1) medal = '🥇 ';
     else if (rank === 2) medal = '🥈 ';
@@ -2500,7 +2520,7 @@ window.printDiploma = function(classId, riderId) {
     });
     if (!rider) return;
     
-    const rank = riderIndex + 1;
+    const rank = (rider.rank !== undefined) ? rider.rank : (riderIndex + 1);
     let medal = '';
     if (rank === 1) medal = '🥇 ';
     else if (rank === 2) medal = '🥈 ';
