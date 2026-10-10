@@ -1370,6 +1370,7 @@
                                         <select id="comp-judge-select" required>
                                             <option value="">-- Vælg dommer --</option>
                                         </select>
+                                        <div id="comp-judge-contact-info" style="font-size: 0.82rem; margin-top: 0.4rem; color: #38bdf8; display: none;"></div>
                                     </div>
                                     <div class="input-group">
                                         <label>Rolle</label>
@@ -1381,7 +1382,17 @@
                                             <!-- Bliver fyldt af JS -->
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Tilknyt</button>
+                                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; margin-bottom: 0.35rem; font-weight: 600; color: #a7f3d0; font-size: 0.88rem;">
+                                            <input type="checkbox" id="comp-judge-send-sms" checked style="accent-color: #10b981; width: 17px; height: 17px;">
+                                            <i class="fas fa-comment-sms"></i> Send automatisk SMS med Magic Link til dommeren
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #93c5fd; font-size: 0.82rem;">
+                                            <input type="checkbox" id="comp-judge-send-email" style="accent-color: #3b82f6; width: 17px; height: 17px;">
+                                            <i class="fas fa-envelope"></i> Send også e-mail med Magic Link
+                                        </label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" id="add-comp-judge-submit-btn">Tilknyt Dommer</button>
                                 </form>
                                 <div id="comp-judges-list"></div>
                             </div>
@@ -2346,7 +2357,7 @@
 
     <script type="module" src="/scores.js?v=5.3"></script>
     <script type="module" src="/v1_judging.js?v=4.9"></script>
-    <script type="module" src="/main.js?v=4.9"></script>
+    <script type="module" src="/main.js?v=5.0"></script>
     <script type="module" src="/support-chat.js?v=4.9"></script>
 </body>
 

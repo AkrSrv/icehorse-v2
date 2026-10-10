@@ -1279,7 +1279,52 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = originalHtml || '<i class="fas fa-paper-plane"></i> Send Dommer-link';
+                btn.innerHTML = originalHtml || '<i class="fas fa-paper-plane"></i> Send E-mail';
+            }
+        }
+    };
+
+    window.sendJudgeSms = async function(compJudgeId) {
+        if(!window.activeClubId || !window.currentCompId) return;
+
+        const compJudge = (window.currentCompJudges || []).find(j => j.id === compJudgeId);
+        const judgeName = compJudge?.club_judge?.name || 'denne dommer';
+        const judgePhone = compJudge?.club_judge?.phone;
+
+        if (!judgePhone) {
+            alert(`Dommer "${judgeName}" har intet registreret telefonnummer.\n\nDu kan tilføje et mobilnummer under Stamdata -> Dommere, eller benytte knappen "Kopiér Link".`);
+            return;
+        }
+        
+        if(!confirm(`Vil du sende en SMS med personligt Magic Link til dommer ${judgeName} (${judgePhone})?`)) return;
+        
+        const btn = document.getElementById(`send-judge-sms-btn-${compJudgeId}`);
+        const originalHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sender SMS...';
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${window.currentCompId}/judges/${compJudgeId}/send-sms`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                }
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert(`✅ ${data.message || 'SMS med Magic Link er sendt!'}`);
+            } else {
+                alert(`Fejl: ${data.detail || 'Kunne ikke sende SMS'}`);
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Der opstod en netværksfejl under afsendelse af SMS.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml || '<i class="fas fa-comment-sms"></i> Send SMS';
             }
         }
     };
@@ -1322,8 +1367,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         judgeSelect.innerHTML = '<option value="">-- Vælg dommer --</option>';
         globalDirectory.judges.forEach(j => {
-            judgeSelect.innerHTML += `<option value="${j.id}">${j.name}</option>`;
+            const contact = j.phone ? `tlf: ${j.phone}` : (j.email ? `mail: ${j.email}` : 'ingen kontakt');
+            judgeSelect.innerHTML += `<option value="${j.id}">${j.name} (${contact})</option>`;
         });
+
+        judgeSelect.onchange = function() {
+            const selectedId = parseInt(judgeSelect.value);
+            const judge = (globalDirectory.judges || []).find(j => j.id === selectedId);
+            const infoDiv = document.getElementById('comp-judge-contact-info');
+            if (!infoDiv) return;
+            if (judge) {
+                let parts = [];
+                if (judge.phone) parts.push(`<span style="color: #a7f3d0;"><i class="fas fa-phone"></i> Mobil: ${judge.phone}</span>`);
+                else parts.push(`<span style="color: #fca5a5;"><i class="fas fa-exclamation-triangle"></i> Intet mobilnummer</span>`);
+                if (judge.email) parts.push(`<span style="color: #93c5fd;"><i class="fas fa-envelope"></i> E-mail: ${judge.email}</span>`);
+                infoDiv.innerHTML = parts.join(' &bull; ');
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        };
     }
 
     window.updateHorseSelect = function() {
@@ -1458,6 +1521,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const judgeId = document.getElementById('comp-judge-select').value;
         const role = document.getElementById('comp-judge-role').value;
         const postIds = Array.from(document.querySelectorAll('.post-checkbox:checked')).map(cb => parseInt(cb.value));
+        const shouldSendSms = document.getElementById('comp-judge-send-sms')?.checked;
+        const shouldSendEmail = document.getElementById('comp-judge-send-email')?.checked;
 
         if(!judgeId) return;
 
@@ -1467,6 +1532,13 @@ document.addEventListener('DOMContentLoaded', () => {
             post_ids: postIds
         };
 
+        const submitBtn = document.getElementById('add-comp-judge-submit-btn');
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Tilknyt Dommer';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tilknytter dommer...';
+        }
+
         const token = getToken();
         try {
             const response = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${currentCompId}/judges`, {
@@ -1475,11 +1547,79 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
             if(response.ok) {
+                const newCompJudge = await response.json();
+                const selectedJudge = (globalDirectory.judges || []).find(j => j.id === parseInt(judgeId));
+                let statusMessages = [];
+
+                // Send SMS automatisk hvis valgt
+                if (shouldSendSms) {
+                    if (selectedJudge?.phone) {
+                        try {
+                            const smsRes = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${currentCompId}/judges/${newCompJudge.id}/send-sms`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            const smsData = await smsRes.json();
+                            if (smsRes.ok) {
+                                statusMessages.push(`💬 SMS sendt til ${selectedJudge.name} (${selectedJudge.phone})`);
+                            } else {
+                                statusMessages.push(`⚠️ SMS kunne ikke sendes: ${smsData.detail || 'Fejl'}`);
+                            }
+                        } catch(smsErr) {
+                            statusMessages.push(`⚠️ SMS netværksfejl: ${smsErr.message}`);
+                        }
+                    } else {
+                        statusMessages.push(`ℹ️ SMS ikke sendt: Dommeren har intet mobilnummer angivet.`);
+                    }
+                }
+
+                // Send Email automatisk hvis valgt
+                if (shouldSendEmail) {
+                    if (selectedJudge?.email) {
+                        try {
+                            const mailRes = await fetch(`${API_BASE}/clubs/${window.activeClubId}/competitions/${currentCompId}/judges/${newCompJudge.id}/send-email`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            const mailData = await mailRes.json();
+                            if (mailRes.ok) {
+                                statusMessages.push(`✉️ E-mail sendt til ${selectedJudge.email}`);
+                            } else {
+                                statusMessages.push(`⚠️ E-mail kunne ikke sendes: ${mailData.detail || 'Fejl'}`);
+                            }
+                        } catch(mailErr) {
+                            statusMessages.push(`⚠️ E-mail netværksfejl: ${mailErr.message}`);
+                        }
+                    } else {
+                        statusMessages.push(`ℹ️ E-mail ikke sendt: Dommeren har ingen e-mailadresse angivet.`);
+                    }
+                }
+
                 document.getElementById('add-comp-judge-form').reset();
+                const infoDiv = document.getElementById('comp-judge-contact-info');
+                if (infoDiv) infoDiv.style.display = 'none';
+
                 fetchCompJudges();
                 fetchGlobalDirectory();
+
+                let alertMsg = `✅ Dommer "${selectedJudge?.name || ''}" er nu tilknyttet stævnet!`;
+                if (statusMessages.length > 0) {
+                    alertMsg += `\n\n${statusMessages.join('\n')}`;
+                }
+                alert(alertMsg);
+            } else {
+                const errData = await response.json();
+                alert(`Fejl: ${errData.detail || 'Kunne ikke tilknytte dommer'}`);
             }
-        } catch(err) { console.error(err); }
+        } catch(err) { 
+            console.error(err); 
+            alert(`Der opstod en fejl: ${err.message}`);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
     });
 
     async function fetchCompJudges() {
@@ -1506,6 +1646,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const emailDisplay = j.club_judge.email 
                         ? `<div style="font-size: 0.8rem; color: #38bdf8; margin-top: 0.25rem;"><i class="fas fa-envelope"></i> ${j.club_judge.email}</div>`
                         : `<div style="font-size: 0.8rem; color: #f87171; margin-top: 0.25rem;"><i class="fas fa-exclamation-triangle"></i> Ingen e-mailadresse (tilføj i Stamdata)</div>`;
+
+                    const phoneDisplay = j.club_judge.phone 
+                        ? `<div style="font-size: 0.8rem; color: #a7f3d0; margin-top: 0.25rem;"><i class="fas fa-phone"></i> ${j.club_judge.phone}</div>`
+                        : `<div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;"><i class="fas fa-phone-slash"></i> Intet mobilnummer</div>`;
                         
                     list.innerHTML += `
                         <div class="list-item" style="border-left: 4px solid #10b981; flex-direction: column; align-items: stretch;">
@@ -1514,13 +1658,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <strong>${j.club_judge.name}</strong>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Rolle: ${j.role}</div>
                                     ${emailDisplay}
+                                    ${phoneDisplay}
                                     <div style="margin-top: 0.5rem;">${postBadges}</div>
                                 </div>
                                 <button class="btn btn-danger btn-sm" onclick="deleteCompJudge(${j.id})"><i class="fas fa-unlink"></i> Fjern</button>
                             </div>
                             <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 <button class="btn btn-secondary btn-sm" onclick="window.copyJudgeLink('${j.magic_link_uuid}')"><i class="fas fa-copy"></i> Kopiér Link</button>
-                                <button class="btn btn-secondary btn-sm" id="send-judge-btn-${j.id}" onclick="sendJudgeEmail(${j.id})"><i class="fas fa-paper-plane"></i> Send Dommer-link</button>
+                                <button class="btn btn-secondary btn-sm" id="send-judge-btn-${j.id}" onclick="sendJudgeEmail(${j.id})"><i class="fas fa-paper-plane"></i> Send E-mail</button>
+                                <button class="btn btn-secondary btn-sm" id="send-judge-sms-btn-${j.id}" onclick="sendJudgeSms(${j.id})"><i class="fas fa-comment-sms"></i> Send SMS</button>
                                 <button class="btn btn-primary btn-sm" style="background: #10b981;" onclick="window.open('?magic=${j.magic_link_uuid}', '_blank')"><i class="fas fa-external-link-alt"></i> Åbn Dommer Panel</button>
                             </div>
                         </div>

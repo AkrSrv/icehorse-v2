@@ -170,6 +170,7 @@ def send_invoice_email(to_email: str, club_name: str, comp_name: str, price: flo
     msg['Subject'] = f'Faktura/Kvittering - Aktivering af {comp_name}'
     msg['From'] = f"EquiEvent <{SMTP_FROM_EMAIL}>"
     msg['To'] = to_email
+    msg['Bcc'] = "arno@alkdata.dk"
 
     discount_str = f"Rabatkode anvendt: {discount_code}" if discount_code else "Rabatkode: Ingen"
     invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{comp_name[:3].upper()}"
@@ -178,24 +179,31 @@ def send_invoice_email(to_email: str, club_name: str, comp_name: str, price: flo
     
 Tak for dit køb af aktiveringslicens til stævnet: {comp_name}.
 
+Udsteder:
+alkdata (CVR: 18001381)
+Marielystvej 3, 5500 Middelfart
+Email: arno@alkdata.dk
+
 Faktura nummer: {invoice_number}
-Pris: {price:.2f} DKK (moms 25% inkludert)
+Dato: {datetime.utcnow().strftime('%d.%m.%Y')}
+Pris: {price:.2f} DKK (moms 25% inkluderet)
 {discount_str}
 
 Stævnet er nu aktiveret og klar til afvikling.
 
 Bedste hilsner,
-EquiEvent Teamet
+Arno L. Kristiansen / EquiEvent & alkdata
 """
 
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
         <div style="background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <h2 style="color: #f43f5e; margin: 0; font-size: 24px; font-weight: bold;">EquiEvent</h2>
-              <p style="font-size: 12px; color: #64748b; margin: 5px 0 0 0;">Faktura / Kvittering</p>
+              <p style="font-size: 13px; font-weight: bold; color: #1e293b; margin: 5px 0 2px 0;">alkdata &bull; CVR: 18001381</p>
+              <p style="font-size: 11px; color: #64748b; margin: 0;">Marielystvej 3, 5500 Middelfart &bull; arno@alkdata.dk</p>
             </div>
             <div style="text-align: right;">
               <span style="font-size: 14px; font-weight: bold; color: #0f172a;">{invoice_number}</span><br>
@@ -225,7 +233,7 @@ EquiEvent Teamet
               </tr>
               <tr style="font-weight: bold; font-size: 16px;">
                 <td style="padding: 15px 10px; text-align: right;">Total inkl. moms:</td>
-                <td style="padding: 15px 10px; text-align: right; color: #fbbf24;">{price:.2f} DKK</td>
+                <td style="padding: 15px 10px; text-align: right; color: #059669;">{price:.2f} DKK</td>
               </tr>
             </tbody>
           </table>
@@ -235,8 +243,9 @@ EquiEvent Teamet
           </div>
           
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0 20px 0;">
-          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
-            EquiEvent • Support: equievent_support@alkdata.dk • Tak for din tillid!
+          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0; line-height: 1.5;">
+            EquiEvent leveres af alkdata &bull; CVR: 18001381 &bull; Marielystvej 3, 5500 Middelfart<br>
+            Support: equievent_support@alkdata.dk &bull; Tak for din tillid!
           </p>
         </div>
       </body>

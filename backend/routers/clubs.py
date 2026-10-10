@@ -563,7 +563,7 @@ def send_magic_link_email(
     # Afsend email via Simply.com (eller anden SMTP)
     try:
         from email_service import send_judge_magic_link_email
-        frontend_url = os.environ.get("FRONTEND_URL", "http://192.168.1.59:3000").rstrip("/")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://equievent.dk").rstrip("/")
         magic_link = f"{frontend_url}/?magic={comp_judge.magic_link_uuid}"
         send_judge_magic_link_email(
             to_email=club_judge.email,
@@ -574,6 +574,44 @@ def send_magic_link_email(
         return {
             "status": "success", 
             "message": f"Dommer-link er sendt til {club_judge.email}.\n\nBemærk: Bed dommeren tjekke mappen 'Uønsket post / Spam', hvis mailen ikke ses i indbakken inden for et par minutter."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{club_id}/competitions/{comp_id}/judges/{comp_judge_id}/send-sms")
+def send_judge_sms(
+    club_id: int,
+    comp_id: int,
+    comp_judge_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    get_competition_if_owner(comp_id, club_id, db, current_user)
+    
+    comp_judge = db.query(models.CompetitionJudge).filter(models.CompetitionJudge.id == comp_judge_id, models.CompetitionJudge.competition_id == comp_id).first()
+    if not comp_judge:
+        raise HTTPException(status_code=404, detail="Competition Judge not found")
+        
+    club_judge = comp_judge.club_judge
+    if not club_judge.phone:
+        raise HTTPException(status_code=400, detail="Denne dommer har intet registreret telefonnummer. Tilføj mobilnummer under Stamdata -> Dommere.")
+        
+    comp = db.query(models.Competition).filter(models.Competition.id == comp_id).first()
+    
+    # Afsend SMS via GatewayAPI
+    try:
+        from sms_service import send_judge_magic_link_sms
+        frontend_url = os.environ.get("FRONTEND_URL", "https://equievent.dk").rstrip("/")
+        magic_link = f"{frontend_url}/?magic={comp_judge.magic_link_uuid}"
+        send_judge_magic_link_sms(
+            phone=club_judge.phone,
+            judge_name=club_judge.name,
+            comp_name=comp.name if comp else "stævnet",
+            magic_link=magic_link
+        )
+        return {
+            "status": "success", 
+            "message": f"SMS med Magic Link er sendt til {club_judge.name} på {club_judge.phone}!"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -906,15 +944,17 @@ def activate_competition(
     db.commit()
     db.refresh(comp)
 
-    # Send faktura email
+    # Send faktura email (kopi sendes automatisk til arno@alkdata.dk via Bcc)
     try:
-        send_invoice_email(
-            to_email=club.contact_email,
-            club_name=club.name,
-            comp_name=comp.name,
-            price=price,
-            discount_code=payload.discount_code
-        )
+        invoice_recipient = club.contact_email or current_user.email
+        if invoice_recipient:
+            send_invoice_email(
+                to_email=invoice_recipient,
+                club_name=club.name,
+                comp_name=comp.name,
+                price=price,
+                discount_code=payload.discount_code
+            )
     except Exception as e:
         print(f"Fejl ved afsendelse af faktura email: {e}")
 

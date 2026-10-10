@@ -41,7 +41,7 @@ def forgot_password(req: schemas.ForgotPasswordRequest, db: Session = Depends(da
     user = crud.get_user_by_email(db, email=req.email)
     if user:
         token = create_reset_token(email=user.email)
-        frontend_url = os.environ.get("FRONTEND_URL", "http://192.168.1.59:3000").rstrip("/")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://equievent.dk").rstrip("/")
         reset_link = f"{frontend_url}/?reset_token={token}"
         try:
             send_password_reset_email(to_email=user.email, reset_link=reset_link)

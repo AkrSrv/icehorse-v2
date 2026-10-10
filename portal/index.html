@@ -5,8 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arno L. Kristiansen | ALKData</title>
     <meta name="description" content="Personlig portfolio og app-bibliotek for Arno L. Kristiansen og ALKData.">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="favicon-192x192.png">
+    <link rel="apple-touch-icon" href="favicon-192x192.png">
+    <meta property="og:image" content="alkdata-logo.png">
+    <meta property="og:title" content="Arno L. Kristiansen | ALKData">
+    <meta property="og:description" content="Personlig portfolio og app-bibliotek for Arno L. Kristiansen og ALKData.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=5">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -18,6 +24,11 @@
 
     <main class="container">
         <div class="glass-card profile-card">
+            <!-- Brand Logo Header -->
+            <div class="brand-header">
+                <img src="alkdata-logo.png" alt="ALKDATA Logo" class="brand-logo" width="175" height="106">
+            </div>
+
             <div class="profile-header">
                 <div class="avatar-container">
                     <img src="profile.jpg" alt="Arno L. Kristiansen" class="avatar-img">
@@ -25,6 +36,9 @@
                 <h1 class="name">Arno L. Kristiansen</h1>
                 <p class="title">Lead Domain Architect & Stifter af ALKData</p>
                 <div class="social-links">
+                    <a href="mailto:arno@alkdata.dk" class="social-btn email" title="Send e-mail: arno@alkdata.dk">
+                        <i class="fas fa-envelope"></i>
+                    </a>
                     <a href="https://www.linkedin.com/in/arnolkristiansen/" class="social-btn linkedin" target="_blank" title="LinkedIn Profil">
                         <i class="fab fa-linkedin-in"></i>
                     </a>
@@ -127,6 +141,41 @@
                     <i class="fas fa-chevron-right arrow"></i>
                 </a>
             </div>
+
+            <!-- Virksomhedsoplysninger -->
+            <div class="company-section">
+                <h2 class="section-title mt-4"><i class="fas fa-building"></i> Virksomhedsoplysninger</h2>
+                <div class="company-card">
+                    <div class="company-brand-header">
+                        <img src="alkdata-logo.png" alt="ALKData Logo" class="company-brand-logo" width="140" height="84">
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-label"><i class="fas fa-signature"></i> Virksomhed</span>
+                        <span class="info-value">alkdata</span>
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-label"><i class="fas fa-id-card"></i> CVR-nummer</span>
+                        <span class="info-value">18001381</span>
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-label"><i class="fas fa-user-tie"></i> Indehaver</span>
+                        <span class="info-value">ARNO L. KRISTIANSEN</span>
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-label"><i class="fas fa-map-marker-alt"></i> Adresse</span>
+                        <span class="info-value">Marielystvej 3, 5500 Middelfart</span>
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-label"><i class="fas fa-envelope"></i> Email</span>
+                        <span class="info-value"><a href="mailto:arno@alkdata.dk" class="company-email-link">arno@alkdata.dk</a></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portal Footer -->
+            <footer class="portal-footer">
+                <p>&copy; 2026 alkdata &bull; CVR: 18001381 &bull; Marielystvej 3, 5500 Middelfart</p>
+            </footer>
         </div>
     </main>
 
